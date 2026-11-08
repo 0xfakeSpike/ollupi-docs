@@ -2,77 +2,77 @@
 <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#94a3b8"/></marker><marker id="arrowI" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#4f46e5"/></marker><marker id="arrowR" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#f43f5e"/></marker></defs>
 <style>text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #1e1b4b; } .eyebrow { font-size: 16px; font-weight: 600; letter-spacing: 3px; fill: #4f46e5; } .title { font-size: 36px; font-weight: 700; } .sub { font-size: 19px; fill: #64748b; } .h { font-size: 22px; font-weight: 700; } .hs { font-size: 19px; font-weight: 600; } .q { font-size: 18px; font-weight: 700; } .b { font-size: 17px; fill: #334155; } .s { font-size: 15px; fill: #64748b; } .zt { font-size: 16px; font-weight: 600; fill: #64748b; letter-spacing: 1px; } .lab { font-size: 16px; fill: #334155; } .chip { font-size: 15px; font-weight: 600; } .chipb { font-size: 18px; font-weight: 700; } .foot { font-size: 15px; fill: #94a3b8; }</style>
 <rect width="1600" height="860" fill="#ffffff"/>
-<text class="eyebrow" x="72" y="62">图 5 · 形态 2 与形态 3</text>
-<text class="title" x="72" y="106">Cowork 把 agent 循环移出了虚拟机</text>
-<text class="sub" x="72" y="146">调整前，运行时、凭证和代码执行在同一个虚拟机里；调整后，虚拟机里只剩代码执行</text>
+<text class="eyebrow" x="72" y="62">FIG. 6 · TOPOLOGY 2 VS. 3</text>
+<text class="title" x="72" y="106">Cowork moved the agent loop out of the VM</text>
+<text class="sub" x="72" y="146">Before, runtime, credentials and code execution shared one VM. After, only code execution is left inside</text>
 <line x1="72" y1="800" x2="1528" y2="800" stroke="#e2e8f0" stroke-width="2"/>
-<text class="foot" x="72" y="832">依据：Anthropic《How we contain Claude across products》（2026-05）</text>
-<text class="foot" x="1528" y="832" text-anchor="end">水在青天云在瓶：agent 的身首错位现象</text>
-<text class="h" x="72.0" y="210.0" text-anchor="start">调整前：整体隔离（形态 2）</text>
+<text class="foot" x="72" y="832">Source: Anthropic, “How we contain Claude across products” (May 2026)</text>
+<text class="foot" x="1528" y="832" text-anchor="end">Head in the Cloud, Hands at Home</text>
+<text class="h" x="72.0" y="210.0" text-anchor="start">Before: whole agent in a box (topology 2)</text>
 <rect x="72.0" y="236.0" width="700.0" height="420.0" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
-<text class="zt" x="92.0" y="266.0" text-anchor="start">宿主机</text>
+<text class="zt" x="92.0" y="266.0" text-anchor="start">Host</text>
 <rect x="402.0" y="292.0" width="340.0" height="334.0" rx="16" fill="#fff1f2" stroke="#f43f5e" stroke-width="2" stroke-dasharray="8 6"/>
-<text class="zt" x="422.0" y="322.0" text-anchor="start">虚拟机</text>
+<text class="zt" x="422.0" y="322.0" text-anchor="start">VM</text>
 <rect x="104.0" y="306.0" width="250.0" height="88.0" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="2"/>
 <rect x="104.0" y="306.0" width="250.0" height="48.0" rx="12" fill="#0d9488" stroke="none" stroke-width="2"/>
 <rect x="104.0" y="342.0" width="250.0" height="12.0" rx="0" fill="#0d9488" stroke="none" stroke-width="2"/>
-<text class="hs" x="229.0" y="337.0" text-anchor="middle" style="fill:#ffffff">接入层</text>
-<text class="lab" x="229.0" y="380.0" text-anchor="middle">Cowork 界面</text>
+<text class="hs" x="229.0" y="337.0" text-anchor="middle" style="fill:#ffffff">Access layer</text>
+<text class="lab" x="229.0" y="380.0" text-anchor="middle">Cowork UI</text>
 <rect x="432.0" y="342.0" width="280.0" height="88.0" rx="12" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
 <rect x="432.0" y="342.0" width="280.0" height="48.0" rx="12" fill="#4f46e5" stroke="none" stroke-width="2"/>
 <rect x="432.0" y="378.0" width="280.0" height="12.0" rx="0" fill="#4f46e5" stroke="none" stroke-width="2"/>
-<text class="hs" x="572.0" y="373.0" text-anchor="middle" style="fill:#ffffff">运行时</text>
-<text class="lab" x="572.0" y="416.0" text-anchor="middle">agent 循环</text>
-<rect x="432.0" y="450.0" width="58.0" height="34.0" rx="8" fill="#334155" stroke="none" stroke-width="2"/>
-<text class="chip" x="461.0" y="472.4" text-anchor="middle" style="fill:#ffffff">凭证</text>
-<rect x="502.0" y="450.0" width="107.8" height="34.0" rx="8" fill="#334155" stroke="none" stroke-width="2"/>
-<text class="chip" x="555.9" y="472.4" text-anchor="middle" style="fill:#ffffff">MCP 服务器</text>
+<text class="hs" x="572.0" y="373.0" text-anchor="middle" style="fill:#ffffff">Runtime</text>
+<text class="lab" x="572.0" y="416.0" text-anchor="middle">Agent loop</text>
+<rect x="432.0" y="450.0" width="123.7" height="34.0" rx="8" fill="#334155" stroke="none" stroke-width="2"/>
+<text class="chip" x="493.9" y="472.4" text-anchor="middle" style="fill:#ffffff">Credentials</text>
+<rect x="567.7" y="450.0" width="123.7" height="34.0" rx="8" fill="#334155" stroke="none" stroke-width="2"/>
+<text class="chip" x="629.6" y="472.4" text-anchor="middle" style="fill:#ffffff">MCP servers</text>
 <rect x="432.0" y="502.0" width="280.0" height="88.0" rx="12" fill="#fdf2f8" stroke="#ec4899" stroke-width="2"/>
 <rect x="432.0" y="502.0" width="280.0" height="48.0" rx="12" fill="#ec4899" stroke="none" stroke-width="2"/>
 <rect x="432.0" y="538.0" width="280.0" height="12.0" rx="0" fill="#ec4899" stroke="none" stroke-width="2"/>
-<text class="hs" x="572.0" y="533.0" text-anchor="middle" style="fill:#ffffff">执行环境</text>
-<text class="lab" x="572.0" y="576.0" text-anchor="middle">代码执行</text>
+<text class="hs" x="572.0" y="533.0" text-anchor="middle" style="fill:#ffffff">Execution environment</text>
+<text class="lab" x="572.0" y="576.0" text-anchor="middle">Code execution</text>
 <path d="M356,346 H430" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
 <circle cx="84" cy="694" r="11" fill="#f43f5e"/>
 <path d="M79.5,689.5 L88.5,698.5 M88.5,689.5 L79.5,698.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
-<text class="b" x="106.0" y="700.0" text-anchor="start">虚拟机启动失败，整个产品就不能用</text>
+<text class="b" x="106.0" y="700.0" text-anchor="start">If the VM fails to boot, the whole product is down</text>
 <circle cx="84" cy="730" r="11" fill="#f43f5e"/>
 <path d="M79.5,725.5 L88.5,734.5 M88.5,725.5 L79.5,734.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
-<text class="b" x="106.0" y="736.0" text-anchor="start">被注入的指令与凭证处在同一环境中</text>
-<text class="h" x="828.0" y="210.0" text-anchor="start">调整后：本地运行时 + 隔离执行（形态 3）</text>
+<text class="b" x="106.0" y="736.0" text-anchor="start">Injected instructions share an environment with the keys</text>
+<text class="h" x="828.0" y="210.0" text-anchor="start">After: local runtime + sandbox (topology 3)</text>
 <rect x="828.0" y="236.0" width="700.0" height="420.0" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
-<text class="zt" x="848.0" y="266.0" text-anchor="start">宿主机</text>
+<text class="zt" x="848.0" y="266.0" text-anchor="start">Host</text>
 <rect x="1188.0" y="292.0" width="310.0" height="334.0" rx="16" fill="#fff1f2" stroke="#f43f5e" stroke-width="2" stroke-dasharray="8 6"/>
-<text class="zt" x="1208.0" y="322.0" text-anchor="start">虚拟机</text>
+<text class="zt" x="1208.0" y="322.0" text-anchor="start">VM</text>
 <rect x="860.0" y="306.0" width="220.0" height="88.0" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="2"/>
 <rect x="860.0" y="306.0" width="220.0" height="48.0" rx="12" fill="#0d9488" stroke="none" stroke-width="2"/>
 <rect x="860.0" y="342.0" width="220.0" height="12.0" rx="0" fill="#0d9488" stroke="none" stroke-width="2"/>
-<text class="hs" x="970.0" y="337.0" text-anchor="middle" style="fill:#ffffff">接入层</text>
-<text class="lab" x="970.0" y="380.0" text-anchor="middle">Cowork 界面</text>
+<text class="hs" x="970.0" y="337.0" text-anchor="middle" style="fill:#ffffff">Access layer</text>
+<text class="lab" x="970.0" y="380.0" text-anchor="middle">Cowork UI</text>
 <rect x="860.0" y="436.0" width="220.0" height="88.0" rx="12" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
 <rect x="860.0" y="436.0" width="220.0" height="48.0" rx="12" fill="#4f46e5" stroke="none" stroke-width="2"/>
 <rect x="860.0" y="472.0" width="220.0" height="12.0" rx="0" fill="#4f46e5" stroke="none" stroke-width="2"/>
-<text class="hs" x="970.0" y="467.0" text-anchor="middle" style="fill:#ffffff">运行时</text>
-<text class="lab" x="970.0" y="510.0" text-anchor="middle">agent 循环</text>
-<rect x="860.0" y="556.0" width="133.0" height="34.0" rx="8" fill="#334155" stroke="none" stroke-width="2"/>
-<text class="chip" x="926.5" y="578.4" text-anchor="middle" style="fill:#ffffff">凭证（钥匙串）</text>
-<rect x="860.0" y="600.0" width="107.8" height="34.0" rx="8" fill="#334155" stroke="none" stroke-width="2"/>
-<text class="chip" x="913.9" y="622.4" text-anchor="middle" style="fill:#ffffff">MCP 服务器</text>
+<text class="hs" x="970.0" y="467.0" text-anchor="middle" style="fill:#ffffff">Runtime</text>
+<text class="lab" x="970.0" y="510.0" text-anchor="middle">Agent loop</text>
+<rect x="860.0" y="556.0" width="219.4" height="34.0" rx="8" fill="#334155" stroke="none" stroke-width="2"/>
+<text class="chip" x="969.7" y="578.4" text-anchor="middle" style="fill:#ffffff">Credentials (keychain)</text>
+<rect x="860.0" y="600.0" width="123.7" height="34.0" rx="8" fill="#334155" stroke="none" stroke-width="2"/>
+<text class="chip" x="921.9" y="622.4" text-anchor="middle" style="fill:#ffffff">MCP servers</text>
 <path d="M970,406 V434" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
 <rect x="1218.0" y="422.0" width="250.0" height="88.0" rx="12" fill="#fdf2f8" stroke="#ec4899" stroke-width="2"/>
 <rect x="1218.0" y="422.0" width="250.0" height="48.0" rx="12" fill="#ec4899" stroke="none" stroke-width="2"/>
 <rect x="1218.0" y="458.0" width="250.0" height="12.0" rx="0" fill="#ec4899" stroke="none" stroke-width="2"/>
-<text class="hs" x="1343.0" y="453.0" text-anchor="middle" style="fill:#ffffff">执行环境</text>
-<text class="lab" x="1343.0" y="496.0" text-anchor="middle">代码执行</text>
+<text class="hs" x="1343.0" y="453.0" text-anchor="middle" style="fill:#ffffff">Execution environment</text>
+<text class="lab" x="1343.0" y="496.0" text-anchor="middle">Code execution</text>
 <rect x="1218.0" y="532.0" width="250.0" height="34.0" rx="8" fill="#334155" stroke="none" stroke-width="2"/>
-<text class="chip" x="1343.0" y="554.4" text-anchor="middle" style="fill:#ffffff">代理：只放行本会话令牌</text>
+<text class="chip" x="1343.0" y="554.4" text-anchor="middle" style="fill:#ffffff">Proxy: own token only</text>
 <path d="M1082,476 H1216" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
-<rect x="1096.0" y="445.0" width="76.0" height="29.0" rx="6" fill="#ffffff" stroke="none" stroke-width="2"/>
-<text class="s" x="1134.0" y="464.0" text-anchor="middle">会话令牌</text>
+<rect x="1104.2" y="445.0" width="59.5" height="29.0" rx="6" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text class="s" x="1134.0" y="464.0" text-anchor="middle">Token</text>
 <circle cx="840" cy="694" r="11" fill="#4f46e5"/>
 <path d="M835,694 L838.5,698 L845.5,690" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-<text class="b" x="862.0" y="700.0" text-anchor="start">虚拟机出错，只是一次工具调用失败</text>
+<text class="b" x="862.0" y="700.0" text-anchor="start">A VM failure is just one failed tool call</text>
 <circle cx="840" cy="730" r="11" fill="#4f46e5"/>
 <path d="M835,730 L838.5,734 L845.5,726" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-<text class="b" x="862.0" y="736.0" text-anchor="start">凭证留在宿主机，虚拟机只拿收窄、可吊销的令牌</text>
+<text class="b" x="862.0" y="736.0" text-anchor="start">Keys stay on the host; the VM gets a scoped, revocable token</text>
 </svg>

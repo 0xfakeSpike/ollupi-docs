@@ -2,11 +2,11 @@
 <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#94a3b8"/></marker><marker id="arrowI" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#4f46e5"/></marker><marker id="arrowR" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#f43f5e"/></marker></defs>
 <style>text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #1e1b4b; } .eyebrow { font-size: 16px; font-weight: 600; letter-spacing: 3px; fill: #4f46e5; } .title { font-size: 36px; font-weight: 700; } .sub { font-size: 19px; fill: #64748b; } .h { font-size: 22px; font-weight: 700; } .hs { font-size: 19px; font-weight: 600; } .q { font-size: 18px; font-weight: 700; } .b { font-size: 17px; fill: #334155; } .s { font-size: 15px; fill: #64748b; } .zt { font-size: 16px; font-weight: 600; fill: #64748b; letter-spacing: 1px; } .lab { font-size: 16px; fill: #334155; } .chip { font-size: 15px; font-weight: 600; } .chipb { font-size: 18px; font-weight: 700; } .foot { font-size: 15px; fill: #94a3b8; }</style>
 <rect width="1600" height="840" fill="#ffffff"/>
-<text class="eyebrow" x="72" y="62">FIG. 6 · MAINLAND CHINA</text>
+<text class="eyebrow" x="72" y="62">FIG. 4 · MAINLAND CHINA</text>
 <text class="title" x="72" y="106">The same software often ships in a different topology in China</text>
 <text class="sub" x="72" y="146">The weights changed: network reachability and compliance count for more</text>
 <line x1="72" y1="780" x2="1528" y2="780" stroke="#e2e8f0" stroke-width="2"/>
-<text class="foot" x="72" y="812">See section 4</text>
+<text class="foot" x="72" y="812">Why: see "Reachability and compliance" in section 3</text>
 <text class="foot" x="1528" y="812" text-anchor="end">Head in the Cloud, Hands at Home</text>
 <line x1="920" y1="180" x2="920" y2="770" stroke="#e2e8f0" stroke-width="2"/>
 <text class="h" x="320.0" y="206.0" text-anchor="start">As designed / common abroad</text>

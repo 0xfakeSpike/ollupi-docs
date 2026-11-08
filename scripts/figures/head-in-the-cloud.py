@@ -6,13 +6,14 @@ access = teal, runtime = indigo, execution = pink, model = slate, state = light 
 Isolation boundaries are rose and dashed. Text never takes a series color.
 
 Run: python3 scripts/figures/head-in-the-cloud.py zh && python3 scripts/figures/head-in-the-cloud.py en
-Output: docs/public/figures/head-in-the-cloud/fig-*.{zh,en}.svg (committed; the page links them).
+Output: docs/{zh,en}/articles/head-in-the-cloud/fig-*.svg, next to the article that uses them. Commit the output.
 """
 import os
 import sys
 
-OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "docs", "public", "figures", "head-in-the-cloud")
 LANG = sys.argv[1] if len(sys.argv) > 1 else "zh"
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+OUT = os.path.join(ROOT, "docs", LANG, "articles", "head-in-the-cloud")
 W, PAD = 1600, 72
 
 INDIGO, INDIGO_2, INDIGO_DEEP = "#4f46e5", "#818cf8", "#1e1b4b"
@@ -48,26 +49,26 @@ EN = {
     "agent 由五部分组成，部分之间有三条边界": "An agent has five parts and three boundaries",
     "接入层、运行时、执行环境是通常说的三层；模型服务和会话状态同样影响部署位置":
         "The usual three layers, plus the model service and session state, which also shape where things run",
-    "三条边界各自带来的工程问题见第五节": "The engineering problems at each boundary are covered in section 5",
+    "三条边界各自带来的工程问题见第四节": "The engineering problems at each boundary are covered in section 4",
     "图 3 · 九种部署形态": "FIG. 3 · NINE TOPOLOGIES",
     "同样三层，九种摆法": "Same three layers, nine arrangements",
     "按各部分部署在哪里分类。模型服务在所有形态中都在远端，图中省略；虚线表示可选位置":
         "Classified by where each part runs. The model service is remote in all of them and omitted; dashed means optional",
     "同一个产品可能支持多种形态": "One product may support several topologies",
-    "图 4 · 决定部署位置的因素": "FIG. 4 · FORCES",
+    "图 5 · 决定部署位置的因素": "FIG. 5 · FORCES",
     "每个因素只拉动一部分，各部分因此被分开": "Each force pulls on one part, so the parts come apart",
     "七个因素分别作用于某一层，或某两层之间的边界": "Seven forces, each acting on one layer or on the boundary between two",
     "各因素的具体分析见第三节": "Each force is discussed in section 3",
-    "图 5 · 形态 2 与形态 3": "FIG. 5 · TOPOLOGY 2 VS. 3",
+    "图 6 · 形态 2 与形态 3": "FIG. 6 · TOPOLOGY 2 VS. 3",
     "Cowork 把 agent 循环移出了虚拟机": "Cowork moved the agent loop out of the VM",
     "调整前，运行时、凭证和代码执行在同一个虚拟机里；调整后，虚拟机里只剩代码执行":
         "Before, runtime, credentials and code execution shared one VM. After, only code execution is left inside",
     "依据：Anthropic《How we contain Claude across products》（2026-05）":
         "Source: Anthropic, “How we contain Claude across products” (May 2026)",
-    "图 6 · 中国大陆": "FIG. 6 · MAINLAND CHINA",
+    "图 4 · 中国大陆": "FIG. 4 · MAINLAND CHINA",
     "同一个软件，在国内常被部署成另一种形态": "The same software often ships in a different topology in China",
     "各因素的权重变了：网络可达性和合规的分量更重": "The weights changed: network reachability and compliance count for more",
-    "详见第四节": "See section 4",
+    "原因见第三节的「网络可达性与合规」": "Why: see \"Reachability and compliance\" in section 3",
     "图 7 · 控制方向反转": "FIG. 7 · INVERTED CONTROL",
     "运行时在云端时，最终的权限检查要放在本地": "When the runtime is in the cloud, enforce permissions locally",
     "连接由本地发起，指令由云端下发；云端运行时一旦被注入，本地检查是最后一道防线":
@@ -336,7 +337,7 @@ class Figure:
             cx -= 10
 
     def save(self, name):
-        path = f"{OUT}/{name}.{LANG}.svg"
+        path = f"{OUT}/{name}.svg"
         with open(path, "w") as f:
             f.write("\n".join(self.p + ["</svg>"]) + "\n")
         return path
@@ -382,7 +383,7 @@ def fig_intro():
 def fig_parts():
     f = Figure(760, t("图 2 · 组成"), t("agent 由五部分组成，部分之间有三条边界"),
                t("接入层、运行时、执行环境是通常说的三层；模型服务和会话状态同样影响部署位置"),
-               t("三条边界各自带来的工程问题见第五节"))
+               t("三条边界各自带来的工程问题见第四节"))
     f.legend(W - PAD, 170, ["access", "runtime", "exec", "model", "state"])
     ry = 360
     f.layer(96, ry, 340, "access", t("接入层"), [t("桌面应用、网页、手机 app"), t("终端、聊天软件机器人")])
@@ -462,7 +463,7 @@ def fig_forms():
 
 
 def fig_cowork():
-    f = Figure(860, t("图 5 · 形态 2 与形态 3"), t("Cowork 把 agent 循环移出了虚拟机"),
+    f = Figure(860, t("图 6 · 形态 2 与形态 3"), t("Cowork 把 agent 循环移出了虚拟机"),
                t("调整前，运行时、凭证和代码执行在同一个虚拟机里；调整后，虚拟机里只剩代码执行"),
                t("依据：Anthropic《How we contain Claude across products》（2026-05）"))
     pw, top, zh = 700, 236, 420
@@ -494,11 +495,11 @@ def fig_cowork():
             ny = top + zh + 44 + j * 36
             f.mark(x + 12, ny - 6, ok)
             f.text(x + 34, ny, s, "b")
-    return f.save("fig-5-cowork")
+    return f.save("fig-6-cowork")
 
 
 def fig_forces():
-    f = Figure(910, t("图 4 · 决定部署位置的因素"), t("每个因素只拉动一部分，各部分因此被分开"),
+    f = Figure(910, t("图 5 · 决定部署位置的因素"), t("每个因素只拉动一部分，各部分因此被分开"),
                t("七个因素分别作用于某一层，或某两层之间的边界"), t("各因素的具体分析见第三节"))
     ry = 440
     f.layer(96, ry, 300, "access", t("接入层"))
@@ -530,7 +531,7 @@ def fig_forces():
     f.text(260, sy + 38, t("三部分的生命周期不同：运行时共享、执行环境按需创建、接入层随时断开"), "lab")
     f.text(120, sy + 76, t("合规"), "q")
     f.text(260, sy + 76, t("反方向的力：数据不能离开某个范围，就把包括模型在内的所有部分圈在里面"), "lab")
-    return f.save("fig-4-forces")
+    return f.save("fig-5-forces")
 
 
 def fig_reverse():
@@ -571,8 +572,8 @@ def strip(f, x, y, boxes, bw=176, bh=90, gap=30):
 
 
 def fig_china():
-    f = Figure(840, t("图 6 · 中国大陆"), t("同一个软件，在国内常被部署成另一种形态"),
-               t("各因素的权重变了：网络可达性和合规的分量更重"), t("详见第四节"))
+    f = Figure(840, t("图 4 · 中国大陆"), t("同一个软件，在国内常被部署成另一种形态"),
+               t("各因素的权重变了：网络可达性和合规的分量更重"), t("原因见第三节的「网络可达性与合规」"))
     lx, cx1, cx2 = PAD, 320, 935
     f.line(920, 180, 920, 770, RULE, 2)
     f.text(cx1, 206, t("设计初衷 / 海外常见"), "h")
@@ -603,7 +604,7 @@ def fig_china():
     strip(f, cx2, y + 164, [("device", t("用户电脑"), [("access", "接入", 0), ("exec", "执行", 0)], "tunnel"),
                             ("cloud", t("海外服务器"), [("runtime", "运行时", 0)], "->"),
                             ("cloud", "Anthropic", [("model", "模型", 0)], "")])
-    return f.save("fig-6-china")
+    return f.save("fig-4-china")
 
 
 def fig_decide():
