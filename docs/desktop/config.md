@@ -82,7 +82,7 @@ memory:
 | `models` | list | 必填，至少一个模型 | 见下 | 提供方和模型 |
 | `tools` | string list | 不写时不限制 | 不写 | 引擎的工具白名单 |
 | `permissions` | object | `approval` 必填 | 见下 | 代理默认的权限层 |
-| `slots` | int | `0`，取引擎默认的 32 | 注释掉 | 同时运行的会话数，不能为负 |
+| `slots` | int | `0`，取引擎默认的 32 | 注释掉 | 同时运行的轮次数，不能为负 |
 | `workspace` | object | `enabled` 为假 | 见下 | 命令和文件工具 |
 | `mcp` | list | 空 | 注释掉 | MCP 服务器 |
 | `memory` | object | 全部关闭 | 见下 | 记忆 |
