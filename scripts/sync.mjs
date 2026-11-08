@@ -30,7 +30,10 @@ function rewriteLinks(markdown, file) {
 async function syncPage({ from, to }) {
   const markdown = await readFile(path.join(desktop, 'docs', from), 'utf8')
   const page = `---\neditLink: false\n---\n\n${rewriteLinks(markdown, from)}`
-  await writeFile(path.join(root, 'docs', to), page)
+  const target = path.join(root, 'docs', to)
+  // The page is not committed, so its folder may not exist in a fresh clone.
+  await mkdir(path.dirname(target), { recursive: true })
+  await writeFile(target, page)
 }
 
 async function syncSvgs(from, to) {
