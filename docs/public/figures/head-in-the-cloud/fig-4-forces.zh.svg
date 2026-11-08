@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 910" width="1600" height="910">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#94a3b8"/></marker><marker id="arrowI" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#4f46e5"/></marker><marker id="arrowR" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#f43f5e"/></marker></defs>
+<style>text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #1e1b4b; } .eyebrow { font-size: 16px; font-weight: 600; letter-spacing: 3px; fill: #4f46e5; } .title { font-size: 36px; font-weight: 700; } .sub { font-size: 19px; fill: #64748b; } .h { font-size: 22px; font-weight: 700; } .hs { font-size: 19px; font-weight: 600; } .q { font-size: 18px; font-weight: 700; } .b { font-size: 17px; fill: #334155; } .s { font-size: 15px; fill: #64748b; } .zt { font-size: 16px; font-weight: 600; fill: #64748b; letter-spacing: 1px; } .lab { font-size: 16px; fill: #334155; } .chip { font-size: 15px; font-weight: 600; } .chipb { font-size: 18px; font-weight: 700; } .foot { font-size: 15px; fill: #94a3b8; }</style>
+<rect width="1600" height="910" fill="#ffffff"/>
+<text class="eyebrow" x="72" y="62">图 4 · 决定部署位置的因素</text>
+<text class="title" x="72" y="106">每个因素只拉动一部分，各部分因此被分开</text>
+<text class="sub" x="72" y="146">七个因素分别作用于某一层，或某两层之间的边界</text>
+<line x1="72" y1="850" x2="1528" y2="850" stroke="#e2e8f0" stroke-width="2"/>
+<text class="foot" x="72" y="882">各因素的具体分析见第三节</text>
+<text class="foot" x="1528" y="882" text-anchor="end">水在青天云在瓶：agent 的身首错位现象</text>
+<rect x="96.0" y="440.0" width="300.0" height="48.0" rx="12" fill="#0d9488" stroke="none" stroke-width="2"/>
+<rect x="96.0" y="440.0" width="300.0" height="48.0" rx="12" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="hs" x="246.0" y="471.0" text-anchor="middle" style="fill:#ffffff">接入层</text>
+<rect x="560.0" y="440.0" width="300.0" height="48.0" rx="12" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<rect x="560.0" y="440.0" width="300.0" height="48.0" rx="12" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="hs" x="710.0" y="471.0" text-anchor="middle" style="fill:#ffffff">运行时</text>
+<rect x="1168.0" y="440.0" width="300.0" height="48.0" rx="12" fill="#ec4899" stroke="none" stroke-width="2"/>
+<rect x="1168.0" y="440.0" width="300.0" height="48.0" rx="12" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="hs" x="1318.0" y="471.0" text-anchor="middle" style="fill:#ffffff">执行环境</text>
+<rect x="560.0" y="222.0" width="300.0" height="48.0" rx="12" fill="#64748b" stroke="none" stroke-width="2"/>
+<rect x="560.0" y="222.0" width="300.0" height="48.0" rx="12" fill="#64748b" stroke="none" stroke-width="2"/>
+<text class="hs" x="710.0" y="253.0" text-anchor="middle" style="fill:#ffffff">模型服务</text>
+<path d="M398,464 H558" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+<path d="M862,464 H1166" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M710,438 V272" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+<line x1="1014" y1="400" x2="1014" y2="528" stroke="#f43f5e" stroke-width="2" stroke-dasharray="8 6"/>
+<rect x="96.0" y="318.0" width="380.0" height="76.0" rx="12" fill="#ffffff" stroke="#c7d2fe" stroke-width="2"/>
+<text class="q" x="116.0" y="352.0" text-anchor="start">网络可达性</text>
+<text class="lab" x="116.0" y="378.0" text-anchor="start">运行时要能访问模型服务</text>
+<path d="M478,357 H704" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="944.0" y="222.0" width="524.0" height="100.0" rx="12" fill="#ffffff" stroke="#c7d2fe" stroke-width="2"/>
+<text class="q" x="964.0" y="256.0" text-anchor="start">安全隔离 · 故障隔离</text>
+<text class="lab" x="964.0" y="282.0" text-anchor="start">凭证和审批权不与执行环境放在一起</text>
+<text class="lab" x="964.0" y="306.0" text-anchor="start">执行环境出错不连累运行时</text>
+<path d="M1034,328 L1016,398" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="96.0" y="580.0" width="300.0" height="76.0" rx="12" fill="#ffffff" stroke="#c7d2fe" stroke-width="2"/>
+<text class="q" x="116.0" y="614.0" text-anchor="start">接入与身份</text>
+<text class="lab" x="116.0" y="640.0" text-anchor="start">拉向用户已经在用的地方</text>
+<path d="M246,578 V490" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="560.0" y="580.0" width="300.0" height="76.0" rx="12" fill="#ffffff" stroke="#c7d2fe" stroke-width="2"/>
+<text class="q" x="580.0" y="614.0" text-anchor="start">在线时长</text>
+<text class="lab" x="580.0" y="640.0" text-anchor="start">拉向常开的地方</text>
+<path d="M710,578 V490" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="1168.0" y="580.0" width="300.0" height="76.0" rx="12" fill="#ffffff" stroke="#c7d2fe" stroke-width="2"/>
+<text class="q" x="1188.0" y="614.0" text-anchor="start">资源位置</text>
+<text class="lab" x="1188.0" y="640.0" text-anchor="start">拉向资源所在的地方</text>
+<path d="M1318,578 V490" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="96.0" y="720.0" width="1372.0" height="100.0" rx="12" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2"/>
+<text class="q" x="120.0" y="758.0" text-anchor="start">闲置成本</text>
+<text class="lab" x="260.0" y="758.0" text-anchor="start">三部分的生命周期不同：运行时共享、执行环境按需创建、接入层随时断开</text>
+<text class="q" x="120.0" y="796.0" text-anchor="start">合规</text>
+<text class="lab" x="260.0" y="796.0" text-anchor="start">反方向的力：数据不能离开某个范围，就把包括模型在内的所有部分圈在里面</text>
+</svg>

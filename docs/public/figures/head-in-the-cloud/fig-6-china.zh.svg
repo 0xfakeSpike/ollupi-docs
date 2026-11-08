@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 840" width="1600" height="840">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#94a3b8"/></marker><marker id="arrowI" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#4f46e5"/></marker><marker id="arrowR" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#f43f5e"/></marker></defs>
+<style>text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #1e1b4b; } .eyebrow { font-size: 16px; font-weight: 600; letter-spacing: 3px; fill: #4f46e5; } .title { font-size: 36px; font-weight: 700; } .sub { font-size: 19px; fill: #64748b; } .h { font-size: 22px; font-weight: 700; } .hs { font-size: 19px; font-weight: 600; } .q { font-size: 18px; font-weight: 700; } .b { font-size: 17px; fill: #334155; } .s { font-size: 15px; fill: #64748b; } .zt { font-size: 16px; font-weight: 600; fill: #64748b; letter-spacing: 1px; } .lab { font-size: 16px; fill: #334155; } .chip { font-size: 15px; font-weight: 600; } .chipb { font-size: 18px; font-weight: 700; } .foot { font-size: 15px; fill: #94a3b8; }</style>
+<rect width="1600" height="840" fill="#ffffff"/>
+<text class="eyebrow" x="72" y="62">图 6 · 中国大陆</text>
+<text class="title" x="72" y="106">同一个软件，在国内常被部署成另一种形态</text>
+<text class="sub" x="72" y="146">各因素的权重变了：网络可达性和合规的分量更重</text>
+<line x1="72" y1="780" x2="1528" y2="780" stroke="#e2e8f0" stroke-width="2"/>
+<text class="foot" x="72" y="812">详见第四节</text>
+<text class="foot" x="1528" y="812" text-anchor="end">水在青天云在瓶：agent 的身首错位现象</text>
+<line x1="920" y1="180" x2="920" y2="770" stroke="#e2e8f0" stroke-width="2"/>
+<text class="h" x="320.0" y="206.0" text-anchor="start">设计初衷 / 海外常见</text>
+<text class="h" x="935.0" y="206.0" text-anchor="start">国内常见</text>
+<line x1="72" y1="226" x2="1528" y2="226" stroke="#e2e8f0" stroke-width="2"/>
+<text class="h" x="72.0" y="312.0" text-anchor="start">OpenClaw</text>
+<text class="s" x="72.0" y="342.0" text-anchor="start">本地优先的 agent 网关</text>
+<rect x="320.0" y="262.0" width="176.0" height="90.0" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="408.0" y="288.0" text-anchor="middle">手机 · 聊天软件</text>
+<rect x="379.0" y="302.0" width="58.0" height="28.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="408.0" y="321.4" text-anchor="middle" style="fill:#ffffff">接入</text>
+<path d="M500,307.0 H522" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="526.0" y="262.0" width="176.0" height="90.0" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="614.0" y="288.0" text-anchor="middle">家里的 Mac mini</text>
+<rect x="545.5" y="302.0" width="73.0" height="28.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="582.0" y="321.4" text-anchor="middle" style="fill:#ffffff">运行时</text>
+<rect x="624.5" y="302.0" width="58.0" height="28.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="653.5" y="321.4" text-anchor="middle" style="fill:#ffffff">执行</text>
+<path d="M706,307.0 H728" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="732.0" y="262.0" width="176.0" height="90.0" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="820.0" y="288.0" text-anchor="middle">模型服务</text>
+<rect x="791.0" y="302.0" width="58.0" height="28.0" rx="8" fill="#64748b" stroke="none" stroke-width="2"/>
+<text class="chip" x="820.0" y="321.4" text-anchor="middle" style="fill:#ffffff">模型</text>
+<rect x="935.0" y="262.0" width="176.0" height="90.0" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="1023.0" y="288.0" text-anchor="middle">飞书 / 钉钉 / 微信</text>
+<rect x="994.0" y="302.0" width="58.0" height="28.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="1023.0" y="321.4" text-anchor="middle" style="fill:#ffffff">接入</text>
+<path d="M1115,307.0 H1137" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="1141.0" y="262.0" width="176.0" height="90.0" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="1229.0" y="288.0" text-anchor="middle">云厂商轻量服务器</text>
+<rect x="1160.5" y="302.0" width="73.0" height="28.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="1197.0" y="321.4" text-anchor="middle" style="fill:#ffffff">运行时</text>
+<rect x="1239.5" y="302.0" width="58.0" height="28.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="1268.5" y="321.4" text-anchor="middle" style="fill:#ffffff">执行</text>
+<path d="M1321,307.0 H1343" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="1347.0" y="262.0" width="176.0" height="90.0" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="1435.0" y="288.0" text-anchor="middle">模型服务</text>
+<rect x="1406.0" y="302.0" width="58.0" height="28.0" rx="8" fill="#64748b" stroke="none" stroke-width="2"/>
+<text class="chip" x="1435.0" y="321.4" text-anchor="middle" style="fill:#ffffff">模型</text>
+<text class="s" x="935.0" y="386.0" text-anchor="start">变成形态 7；网关端口从家庭网络暴露到公网</text>
+<line x1="72" y1="440" x2="1528" y2="440" stroke="#e2e8f0" stroke-width="2"/>
+<text class="h" x="72.0" y="596.0" text-anchor="start">Claude Code</text>
+<text class="s" x="72.0" y="626.0" text-anchor="start">本地编码 agent</text>
+<rect x="320.0" y="572.0" width="260.0" height="90.0" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="450.0" y="598.0" text-anchor="middle">用户电脑</text>
+<rect x="349.5" y="612.0" width="58.0" height="28.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="378.5" y="631.4" text-anchor="middle" style="fill:#ffffff">接入</text>
+<rect x="413.5" y="612.0" width="73.0" height="28.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="450.0" y="631.4" text-anchor="middle" style="fill:#ffffff">运行时</text>
+<rect x="492.5" y="612.0" width="58.0" height="28.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="521.5" y="631.4" text-anchor="middle" style="fill:#ffffff">执行</text>
+<path d="M584,617.0 H606" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="610.0" y="572.0" width="260.0" height="90.0" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="740.0" y="598.0" text-anchor="middle">Anthropic</text>
+<rect x="711.0" y="612.0" width="58.0" height="28.0" rx="8" fill="#64748b" stroke="none" stroke-width="2"/>
+<text class="chip" x="740.0" y="631.4" text-anchor="middle" style="fill:#ffffff">模型</text>
+<text class="b" x="935.0" y="480.0" text-anchor="start">a · 保留运行时，替换模型</text>
+<rect x="935.0" y="494.0" width="260.0" height="90.0" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="1065.0" y="520.0" text-anchor="middle">用户电脑</text>
+<rect x="964.5" y="534.0" width="58.0" height="28.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="993.5" y="553.4" text-anchor="middle" style="fill:#ffffff">接入</text>
+<rect x="1028.5" y="534.0" width="73.0" height="28.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="1065.0" y="553.4" text-anchor="middle" style="fill:#ffffff">运行时</text>
+<rect x="1107.5" y="534.0" width="58.0" height="28.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="1136.5" y="553.4" text-anchor="middle" style="fill:#ffffff">执行</text>
+<path d="M1199,539.0 H1221" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="1225.0" y="494.0" width="260.0" height="90.0" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="1355.0" y="520.0" text-anchor="middle">国产模型</text>
+<rect x="1326.0" y="534.0" width="58.0" height="28.0" rx="8" fill="#64748b" stroke="none" stroke-width="2"/>
+<text class="chip" x="1355.0" y="553.4" text-anchor="middle" style="fill:#ffffff">模型</text>
+<text class="b" x="935.0" y="626.0" text-anchor="start">b · 运行时在海外服务器（引子）</text>
+<rect x="935.0" y="640.0" width="176.0" height="90.0" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="1023.0" y="666.0" text-anchor="middle">用户电脑</text>
+<rect x="962.0" y="680.0" width="58.0" height="28.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="991.0" y="699.4" text-anchor="middle" style="fill:#ffffff">接入</text>
+<rect x="1026.0" y="680.0" width="58.0" height="28.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="1055.0" y="699.4" text-anchor="middle" style="fill:#ffffff">执行</text>
+<path d="M1115,685.0 H1137" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" marker-start="url(#arrow)" stroke-dasharray="7 6"/>
+<rect x="1141.0" y="640.0" width="176.0" height="90.0" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="1229.0" y="666.0" text-anchor="middle">海外服务器</text>
+<rect x="1192.5" y="680.0" width="73.0" height="28.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="1229.0" y="699.4" text-anchor="middle" style="fill:#ffffff">运行时</text>
+<path d="M1321,685.0 H1343" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="1347.0" y="640.0" width="176.0" height="90.0" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="1435.0" y="666.0" text-anchor="middle">Anthropic</text>
+<rect x="1406.0" y="680.0" width="58.0" height="28.0" rx="8" fill="#64748b" stroke="none" stroke-width="2"/>
+<text class="chip" x="1435.0" y="699.4" text-anchor="middle" style="fill:#ffffff">模型</text>
+</svg>

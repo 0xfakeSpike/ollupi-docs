@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1234" width="1600" height="1234">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#94a3b8"/></marker><marker id="arrowI" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#4f46e5"/></marker><marker id="arrowR" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#f43f5e"/></marker></defs>
+<style>text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #1e1b4b; } .eyebrow { font-size: 16px; font-weight: 600; letter-spacing: 3px; fill: #4f46e5; } .title { font-size: 36px; font-weight: 700; } .sub { font-size: 19px; fill: #64748b; } .h { font-size: 22px; font-weight: 700; } .hs { font-size: 19px; font-weight: 600; } .q { font-size: 18px; font-weight: 700; } .b { font-size: 17px; fill: #334155; } .s { font-size: 15px; fill: #64748b; } .zt { font-size: 16px; font-weight: 600; fill: #64748b; letter-spacing: 1px; } .lab { font-size: 16px; fill: #334155; } .chip { font-size: 15px; font-weight: 600; } .chipb { font-size: 18px; font-weight: 700; } .foot { font-size: 15px; fill: #94a3b8; }</style>
+<rect width="1600" height="1234" fill="#ffffff"/>
+<text class="eyebrow" x="72" y="62">FIG. 3 · NINE TOPOLOGIES</text>
+<text class="title" x="72" y="106">Same three layers, nine arrangements</text>
+<text class="sub" x="72" y="146">Classified by where each part runs. The model service is remote in all of them and omitted; dashed means optional</text>
+<line x1="72" y1="1174" x2="1528" y2="1174" stroke="#e2e8f0" stroke-width="2"/>
+<text class="foot" x="72" y="1206">One product may support several topologies</text>
+<text class="foot" x="1528" y="1206" text-anchor="end">Head in the Cloud, Hands at Home</text>
+<rect x="1317.3" y="176.0" width="210.7" height="30.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="1422.6" y="196.4" text-anchor="middle" style="fill:#ffffff">Execution environment</text>
+<rect x="1218.4" y="176.0" width="88.9" height="30.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="1262.8" y="196.4" text-anchor="middle" style="fill:#ffffff">Runtime</text>
+<rect x="1076.0" y="176.0" width="132.4" height="30.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="1142.2" y="196.4" text-anchor="middle" style="fill:#ffffff">Access layer</text>
+<rect x="456.0" y="250.0" width="261.0" height="892.0" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text class="hs" x="586.5" y="284.0" text-anchor="middle">User's device</text>
+<rect x="725.0" y="250.0" width="261.0" height="892.0" rx="14" fill="#fff1f2" stroke="#f43f5e" stroke-width="2" stroke-dasharray="8 6"/>
+<text class="hs" x="855.5" y="284.0" text-anchor="middle">Local isolation</text>
+<rect x="994.0" y="250.0" width="261.0" height="892.0" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text class="hs" x="1124.5" y="284.0" text-anchor="middle">Always-on device</text>
+<rect x="1263.0" y="250.0" width="261.0" height="892.0" rx="14" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text class="hs" x="1393.5" y="284.0" text-anchor="middle">Cloud</text>
+<text class="h" x="72.0" y="344.0" text-anchor="start" style="fill:#4f46e5">1</text>
+<text class="hs" x="104.0" y="344.0" text-anchor="start">Fully local</text>
+<text class="s" x="104.0" y="372.0" text-anchor="start">Claude Code, Codex CLI, Gemini CLI</text>
+<rect x="462.5" y="335.0" width="80.2" height="34.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="502.6" y="357.4" text-anchor="middle" style="fill:#ffffff">Access</text>
+<rect x="550.8" y="335.0" width="88.9" height="34.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="595.2" y="357.4" text-anchor="middle" style="fill:#ffffff">Runtime</text>
+<rect x="647.6" y="335.0" width="62.8" height="34.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="679.0" y="357.4" text-anchor="middle" style="fill:#ffffff">Exec</text>
+<line x1="72" y1="398" x2="1528" y2="398" stroke="#e2e8f0" stroke-width="1.5"/>
+<text class="h" x="72.0" y="436.0" text-anchor="start" style="fill:#4f46e5">2</text>
+<text class="hs" x="104.0" y="436.0" text-anchor="start">Whole agent in a box</text>
+<text class="s" x="104.0" y="464.0" text-anchor="start">Agent in a devcontainer; early Cowork</text>
+<rect x="546.4" y="427.0" width="80.2" height="34.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="586.5" y="449.4" text-anchor="middle" style="fill:#ffffff">Access</text>
+<rect x="775.6" y="427.0" width="88.9" height="34.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="820.1" y="449.4" text-anchor="middle" style="fill:#ffffff">Runtime</text>
+<rect x="872.5" y="427.0" width="62.8" height="34.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="903.9" y="449.4" text-anchor="middle" style="fill:#ffffff">Exec</text>
+<line x1="72" y1="490" x2="1528" y2="490" stroke="#e2e8f0" stroke-width="1.5"/>
+<text class="h" x="72.0" y="528.0" text-anchor="start" style="fill:#4f46e5">3</text>
+<text class="hs" x="104.0" y="528.0" text-anchor="start">Local runtime + sandbox</text>
+<text class="s" x="104.0" y="556.0" text-anchor="start">Cowork today; Claude Code sandbox</text>
+<rect x="497.9" y="519.0" width="80.2" height="34.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="538.0" y="541.4" text-anchor="middle" style="fill:#ffffff">Access</text>
+<rect x="586.1" y="519.0" width="88.9" height="34.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="630.6" y="541.4" text-anchor="middle" style="fill:#ffffff">Runtime</text>
+<rect x="824.1" y="519.0" width="62.8" height="34.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="855.5" y="541.4" text-anchor="middle" style="fill:#ffffff">Exec</text>
+<rect x="1327.3" y="519.0" width="132.4" height="34.0" rx="8" fill="#fdf2f8" stroke="#ec4899" stroke-width="2" stroke-dasharray="8 6"/>
+<text class="chip" x="1393.5" y="541.4" text-anchor="middle" style="fill:#ec4899">or exec here</text>
+<line x1="72" y1="582" x2="1528" y2="582" stroke="#e2e8f0" stroke-width="1.5"/>
+<text class="h" x="72.0" y="620.0" text-anchor="start" style="fill:#4f46e5">4</text>
+<text class="hs" x="104.0" y="620.0" text-anchor="start">Cloud-hosted</text>
+<text class="s" x="104.0" y="648.0" text-anchor="start">Devin, Manus, Codex cloud, etc.</text>
+<rect x="546.4" y="611.0" width="80.2" height="34.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="586.5" y="633.4" text-anchor="middle" style="fill:#ffffff">Access</text>
+<rect x="1313.7" y="611.0" width="88.9" height="34.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="1358.1" y="633.4" text-anchor="middle" style="fill:#ffffff">Runtime</text>
+<rect x="1410.6" y="611.0" width="62.8" height="34.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="1442.0" y="633.4" text-anchor="middle" style="fill:#ffffff">Exec</text>
+<line x1="72" y1="674" x2="1528" y2="674" stroke="#e2e8f0" stroke-width="1.5"/>
+<text class="h" x="72.0" y="712.0" text-anchor="start" style="fill:#4f46e5">5</text>
+<text class="hs" x="104.0" y="712.0" text-anchor="start">Cloud runtime + local exec</text>
+<text class="s" x="104.0" y="740.0" text-anchor="start">Manus Browser Operator; fig. 1</text>
+<rect x="511.0" y="703.0" width="80.2" height="34.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="551.1" y="725.4" text-anchor="middle" style="fill:#ffffff">Access</text>
+<rect x="599.2" y="703.0" width="62.8" height="34.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="630.6" y="725.4" text-anchor="middle" style="fill:#ffffff">Exec</text>
+<rect x="1349.0" y="703.0" width="88.9" height="34.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="1393.5" y="725.4" text-anchor="middle" style="fill:#ffffff">Runtime</text>
+<line x1="72" y1="766" x2="1528" y2="766" stroke="#e2e8f0" stroke-width="1.5"/>
+<text class="h" x="72.0" y="804.0" text-anchor="start" style="fill:#4f46e5">6</text>
+<text class="hs" x="104.0" y="804.0" text-anchor="start">Remote access + home runtime</text>
+<text class="s" x="104.0" y="832.0" text-anchor="start">OpenClaw on a Mac mini; Remote Control</text>
+<rect x="546.4" y="795.0" width="80.2" height="34.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="586.5" y="817.4" text-anchor="middle" style="fill:#ffffff">Access</text>
+<rect x="1044.7" y="795.0" width="88.9" height="34.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="1089.1" y="817.4" text-anchor="middle" style="fill:#ffffff">Runtime</text>
+<rect x="1141.6" y="795.0" width="62.8" height="34.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="1173.0" y="817.4" text-anchor="middle" style="fill:#ffffff">Exec</text>
+<line x1="72" y1="858" x2="1528" y2="858" stroke="#e2e8f0" stroke-width="1.5"/>
+<text class="h" x="72.0" y="896.0" text-anchor="start" style="fill:#4f46e5">7</text>
+<text class="hs" x="104.0" y="896.0" text-anchor="start">Chat-app access + cloud</text>
+<text class="s" x="104.0" y="924.0" text-anchor="start">Agents in Feishu, DingTalk, WeCom; Coze</text>
+<rect x="546.4" y="887.0" width="80.2" height="34.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="586.5" y="909.4" text-anchor="middle" style="fill:#ffffff">Access</text>
+<rect x="1313.7" y="887.0" width="88.9" height="34.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="1358.1" y="909.4" text-anchor="middle" style="fill:#ffffff">Runtime</text>
+<rect x="1410.6" y="887.0" width="62.8" height="34.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="1442.0" y="909.4" text-anchor="middle" style="fill:#ffffff">Exec</text>
+<line x1="72" y1="950" x2="1528" y2="950" stroke="#e2e8f0" stroke-width="1.5"/>
+<text class="h" x="72.0" y="988.0" text-anchor="start" style="fill:#4f46e5">8</text>
+<text class="hs" x="104.0" y="988.0" text-anchor="start">Multiple execution envs</text>
+<text class="s" x="104.0" y="1016.0" text-anchor="start">Cowork; Manus (cloud + local browser)</text>
+<rect x="462.5" y="979.0" width="80.2" height="34.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="502.6" y="1001.4" text-anchor="middle" style="fill:#ffffff">Access</text>
+<rect x="550.8" y="979.0" width="88.9" height="34.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="595.2" y="1001.4" text-anchor="middle" style="fill:#ffffff">Runtime</text>
+<rect x="647.6" y="979.0" width="62.8" height="34.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="679.0" y="1001.4" text-anchor="middle" style="fill:#ffffff">Exec</text>
+<rect x="824.1" y="979.0" width="62.8" height="34.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="855.5" y="1001.4" text-anchor="middle" style="fill:#ffffff">Exec</text>
+<rect x="1362.1" y="979.0" width="62.8" height="34.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="1393.5" y="1001.4" text-anchor="middle" style="fill:#ffffff">Exec</text>
+<line x1="72" y1="1042" x2="1528" y2="1042" stroke="#e2e8f0" stroke-width="1.5"/>
+<text class="h" x="72.0" y="1080.0" text-anchor="start" style="fill:#4f46e5">9</text>
+<text class="hs" x="104.0" y="1080.0" text-anchor="start">Session migration</text>
+<text class="s" x="104.0" y="1108.0" text-anchor="start">Tasks handed between local and cloud</text>
+<rect x="497.9" y="1071.0" width="80.2" height="34.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="538.0" y="1093.4" text-anchor="middle" style="fill:#ffffff">Access</text>
+<rect x="586.1" y="1071.0" width="88.9" height="34.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="630.6" y="1093.4" text-anchor="middle" style="fill:#ffffff">Runtime</text>
+<rect x="1349.0" y="1071.0" width="88.9" height="34.0" rx="8" fill="#eef2ff" stroke="#4f46e5" stroke-width="2" stroke-dasharray="8 6"/>
+<text class="chip" x="1393.5" y="1093.4" text-anchor="middle" style="fill:#4f46e5">Runtime</text>
+<path d="M685.05,1088 H1339.05" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" marker-start="url(#arrow)" stroke-dasharray="7 6"/>
+<rect x="973.6" y="1062.0" width="76.9" height="29.0" rx="6" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text class="s" x="1012.0" y="1081.0" text-anchor="middle">migrate</text>
+</svg>

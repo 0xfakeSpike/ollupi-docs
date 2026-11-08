@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 840" width="1600" height="840">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#94a3b8"/></marker><marker id="arrowI" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#4f46e5"/></marker><marker id="arrowR" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#f43f5e"/></marker></defs>
+<style>text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #1e1b4b; } .eyebrow { font-size: 16px; font-weight: 600; letter-spacing: 3px; fill: #4f46e5; } .title { font-size: 36px; font-weight: 700; } .sub { font-size: 19px; fill: #64748b; } .h { font-size: 22px; font-weight: 700; } .hs { font-size: 19px; font-weight: 600; } .q { font-size: 18px; font-weight: 700; } .b { font-size: 17px; fill: #334155; } .s { font-size: 15px; fill: #64748b; } .zt { font-size: 16px; font-weight: 600; fill: #64748b; letter-spacing: 1px; } .lab { font-size: 16px; fill: #334155; } .chip { font-size: 15px; font-weight: 600; } .chipb { font-size: 18px; font-weight: 700; } .foot { font-size: 15px; fill: #94a3b8; }</style>
+<rect width="1600" height="840" fill="#ffffff"/>
+<text class="eyebrow" x="72" y="62">FIG. 6 · MAINLAND CHINA</text>
+<text class="title" x="72" y="106">The same software often ships in a different topology in China</text>
+<text class="sub" x="72" y="146">The weights changed: network reachability and compliance count for more</text>
+<line x1="72" y1="780" x2="1528" y2="780" stroke="#e2e8f0" stroke-width="2"/>
+<text class="foot" x="72" y="812">See section 4</text>
+<text class="foot" x="1528" y="812" text-anchor="end">Head in the Cloud, Hands at Home</text>
+<line x1="920" y1="180" x2="920" y2="770" stroke="#e2e8f0" stroke-width="2"/>
+<text class="h" x="320.0" y="206.0" text-anchor="start">As designed / common abroad</text>
+<text class="h" x="935.0" y="206.0" text-anchor="start">Common in China</text>
+<line x1="72" y1="226" x2="1528" y2="226" stroke="#e2e8f0" stroke-width="2"/>
+<text class="h" x="72.0" y="312.0" text-anchor="start">OpenClaw</text>
+<text class="s" x="72.0" y="342.0" text-anchor="start">Local-first agent gateway</text>
+<rect x="320.0" y="262.0" width="176.0" height="90.0" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="408.0" y="288.0" text-anchor="middle">Phone · chat app</text>
+<rect x="367.9" y="302.0" width="80.2" height="28.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="408.0" y="321.4" text-anchor="middle" style="fill:#ffffff">Access</text>
+<path d="M500,307.0 H522" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="526.0" y="262.0" width="176.0" height="90.0" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="614.0" y="288.0" text-anchor="middle">Mac mini at home</text>
+<rect x="535.1" y="302.0" width="88.9" height="28.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="579.6" y="321.4" text-anchor="middle" style="fill:#ffffff">Runtime</text>
+<rect x="630.0" y="302.0" width="62.8" height="28.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="661.4" y="321.4" text-anchor="middle" style="fill:#ffffff">Exec</text>
+<path d="M706,307.0 H728" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="732.0" y="262.0" width="176.0" height="90.0" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="820.0" y="288.0" text-anchor="middle">Model service</text>
+<rect x="784.2" y="302.0" width="71.5" height="28.0" rx="8" fill="#64748b" stroke="none" stroke-width="2"/>
+<text class="chip" x="820.0" y="321.4" text-anchor="middle" style="fill:#ffffff">Model</text>
+<rect x="935.0" y="262.0" width="176.0" height="90.0" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="1023.0" y="288.0" text-anchor="middle">Chinese chat apps</text>
+<rect x="982.9" y="302.0" width="80.2" height="28.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="1023.0" y="321.4" text-anchor="middle" style="fill:#ffffff">Access</text>
+<path d="M1115,307.0 H1137" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="1141.0" y="262.0" width="176.0" height="90.0" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="1229.0" y="288.0" text-anchor="middle">Chinese cloud VPS</text>
+<rect x="1150.2" y="302.0" width="88.9" height="28.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="1194.6" y="321.4" text-anchor="middle" style="fill:#ffffff">Runtime</text>
+<rect x="1245.1" y="302.0" width="62.8" height="28.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="1276.5" y="321.4" text-anchor="middle" style="fill:#ffffff">Exec</text>
+<path d="M1321,307.0 H1343" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="1347.0" y="262.0" width="176.0" height="90.0" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="1435.0" y="288.0" text-anchor="middle">Model service</text>
+<rect x="1399.2" y="302.0" width="71.5" height="28.0" rx="8" fill="#64748b" stroke="none" stroke-width="2"/>
+<text class="chip" x="1435.0" y="321.4" text-anchor="middle" style="fill:#ffffff">Model</text>
+<text class="s" x="935.0" y="386.0" text-anchor="start">Becomes topology 7; the gateway is now exposed to the internet</text>
+<line x1="72" y1="440" x2="1528" y2="440" stroke="#e2e8f0" stroke-width="2"/>
+<text class="h" x="72.0" y="596.0" text-anchor="start">Claude Code</text>
+<text class="s" x="72.0" y="626.0" text-anchor="start">Local coding agent</text>
+<rect x="320.0" y="572.0" width="260.0" height="90.0" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="450.0" y="598.0" text-anchor="middle">User's PC</text>
+<rect x="328.0" y="612.0" width="80.2" height="28.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="368.1" y="631.4" text-anchor="middle" style="fill:#ffffff">Access</text>
+<rect x="414.2" y="612.0" width="88.9" height="28.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="458.7" y="631.4" text-anchor="middle" style="fill:#ffffff">Runtime</text>
+<rect x="509.1" y="612.0" width="62.8" height="28.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="540.5" y="631.4" text-anchor="middle" style="fill:#ffffff">Exec</text>
+<path d="M584,617.0 H606" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="610.0" y="572.0" width="260.0" height="90.0" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="740.0" y="598.0" text-anchor="middle">Anthropic</text>
+<rect x="704.2" y="612.0" width="71.5" height="28.0" rx="8" fill="#64748b" stroke="none" stroke-width="2"/>
+<text class="chip" x="740.0" y="631.4" text-anchor="middle" style="fill:#ffffff">Model</text>
+<text class="b" x="935.0" y="480.0" text-anchor="start">a · Keep the runtime, swap the model</text>
+<rect x="935.0" y="494.0" width="260.0" height="90.0" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="1065.0" y="520.0" text-anchor="middle">User's PC</text>
+<rect x="943.0" y="534.0" width="80.2" height="28.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="983.1" y="553.4" text-anchor="middle" style="fill:#ffffff">Access</text>
+<rect x="1029.2" y="534.0" width="88.9" height="28.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="1073.7" y="553.4" text-anchor="middle" style="fill:#ffffff">Runtime</text>
+<rect x="1124.2" y="534.0" width="62.8" height="28.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="1155.6" y="553.4" text-anchor="middle" style="fill:#ffffff">Exec</text>
+<path d="M1199,539.0 H1221" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="1225.0" y="494.0" width="260.0" height="90.0" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="1355.0" y="520.0" text-anchor="middle">Chinese model</text>
+<rect x="1319.2" y="534.0" width="71.5" height="28.0" rx="8" fill="#64748b" stroke="none" stroke-width="2"/>
+<text class="chip" x="1355.0" y="553.4" text-anchor="middle" style="fill:#ffffff">Model</text>
+<text class="b" x="935.0" y="626.0" text-anchor="start">b · Runtime on an overseas server (fig. 1)</text>
+<rect x="935.0" y="640.0" width="176.0" height="90.0" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="1023.0" y="666.0" text-anchor="middle">User's PC</text>
+<rect x="948.5" y="680.0" width="80.2" height="28.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="988.6" y="699.4" text-anchor="middle" style="fill:#ffffff">Access</text>
+<rect x="1034.7" y="680.0" width="62.8" height="28.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="1066.1" y="699.4" text-anchor="middle" style="fill:#ffffff">Exec</text>
+<path d="M1115,685.0 H1137" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" marker-start="url(#arrow)" stroke-dasharray="7 6"/>
+<rect x="1141.0" y="640.0" width="176.0" height="90.0" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="1229.0" y="666.0" text-anchor="middle">Overseas server</text>
+<rect x="1184.5" y="680.0" width="88.9" height="28.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="1229.0" y="699.4" text-anchor="middle" style="fill:#ffffff">Runtime</text>
+<path d="M1321,685.0 H1343" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="1347.0" y="640.0" width="176.0" height="90.0" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text class="s" x="1435.0" y="666.0" text-anchor="middle">Anthropic</text>
+<rect x="1399.2" y="680.0" width="71.5" height="28.0" rx="8" fill="#64748b" stroke="none" stroke-width="2"/>
+<text class="chip" x="1435.0" y="699.4" text-anchor="middle" style="fill:#ffffff">Model</text>
+</svg>

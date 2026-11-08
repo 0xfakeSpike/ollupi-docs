@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1234" width="1600" height="1234">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#94a3b8"/></marker><marker id="arrowI" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#4f46e5"/></marker><marker id="arrowR" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#f43f5e"/></marker></defs>
+<style>text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #1e1b4b; } .eyebrow { font-size: 16px; font-weight: 600; letter-spacing: 3px; fill: #4f46e5; } .title { font-size: 36px; font-weight: 700; } .sub { font-size: 19px; fill: #64748b; } .h { font-size: 22px; font-weight: 700; } .hs { font-size: 19px; font-weight: 600; } .q { font-size: 18px; font-weight: 700; } .b { font-size: 17px; fill: #334155; } .s { font-size: 15px; fill: #64748b; } .zt { font-size: 16px; font-weight: 600; fill: #64748b; letter-spacing: 1px; } .lab { font-size: 16px; fill: #334155; } .chip { font-size: 15px; font-weight: 600; } .chipb { font-size: 18px; font-weight: 700; } .foot { font-size: 15px; fill: #94a3b8; }</style>
+<rect width="1600" height="1234" fill="#ffffff"/>
+<text class="eyebrow" x="72" y="62">图 3 · 九种部署形态</text>
+<text class="title" x="72" y="106">同样三层，九种摆法</text>
+<text class="sub" x="72" y="146">按各部分部署在哪里分类。模型服务在所有形态中都在远端，图中省略；虚线表示可选位置</text>
+<line x1="72" y1="1174" x2="1528" y2="1174" stroke="#e2e8f0" stroke-width="2"/>
+<text class="foot" x="72" y="1206">同一个产品可能支持多种形态</text>
+<text class="foot" x="1528" y="1206" text-anchor="end">水在青天云在瓶：agent 的身首错位现象</text>
+<rect x="1440.0" y="176.0" width="88.0" height="30.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="1484.0" y="196.4" text-anchor="middle" style="fill:#ffffff">执行环境</text>
+<rect x="1357.0" y="176.0" width="73.0" height="30.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="1393.5" y="196.4" text-anchor="middle" style="fill:#ffffff">运行时</text>
+<rect x="1274.0" y="176.0" width="73.0" height="30.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="1310.5" y="196.4" text-anchor="middle" style="fill:#ffffff">接入层</text>
+<rect x="456.0" y="250.0" width="261.0" height="892.0" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text class="hs" x="586.5" y="284.0" text-anchor="middle">用户设备</text>
+<rect x="725.0" y="250.0" width="261.0" height="892.0" rx="14" fill="#fff1f2" stroke="#f43f5e" stroke-width="2" stroke-dasharray="8 6"/>
+<text class="hs" x="855.5" y="284.0" text-anchor="middle">本地隔离区</text>
+<rect x="994.0" y="250.0" width="261.0" height="892.0" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text class="hs" x="1124.5" y="284.0" text-anchor="middle">用户的常开设备</text>
+<rect x="1263.0" y="250.0" width="261.0" height="892.0" rx="14" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text class="hs" x="1393.5" y="284.0" text-anchor="middle">云端</text>
+<text class="h" x="72.0" y="344.0" text-anchor="start" style="fill:#4f46e5">1</text>
+<text class="hs" x="104.0" y="344.0" text-anchor="start">全本地</text>
+<text class="s" x="104.0" y="372.0" text-anchor="start">Claude Code、Codex CLI、Gemini CLI</text>
+<rect x="484.0" y="335.0" width="58.0" height="34.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="513.0" y="357.4" text-anchor="middle" style="fill:#ffffff">接入</text>
+<rect x="550.0" y="335.0" width="73.0" height="34.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="586.5" y="357.4" text-anchor="middle" style="fill:#ffffff">运行时</text>
+<rect x="631.0" y="335.0" width="58.0" height="34.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="660.0" y="357.4" text-anchor="middle" style="fill:#ffffff">执行</text>
+<line x1="72" y1="398" x2="1528" y2="398" stroke="#e2e8f0" stroke-width="1.5"/>
+<text class="h" x="72.0" y="436.0" text-anchor="start" style="fill:#4f46e5">2</text>
+<text class="hs" x="104.0" y="436.0" text-anchor="start">整体隔离</text>
+<text class="s" x="104.0" y="464.0" text-anchor="start">devcontainer 中放开权限运行；早期的 Cowork</text>
+<rect x="557.5" y="427.0" width="58.0" height="34.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="586.5" y="449.4" text-anchor="middle" style="fill:#ffffff">接入</text>
+<rect x="786.0" y="427.0" width="73.0" height="34.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="822.5" y="449.4" text-anchor="middle" style="fill:#ffffff">运行时</text>
+<rect x="867.0" y="427.0" width="58.0" height="34.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="896.0" y="449.4" text-anchor="middle" style="fill:#ffffff">执行</text>
+<line x1="72" y1="490" x2="1528" y2="490" stroke="#e2e8f0" stroke-width="1.5"/>
+<text class="h" x="72.0" y="528.0" text-anchor="start" style="fill:#4f46e5">3</text>
+<text class="hs" x="104.0" y="528.0" text-anchor="start">本地运行时 + 隔离执行</text>
+<text class="s" x="104.0" y="556.0" text-anchor="start">现在的 Cowork；Claude Code 沙箱模式</text>
+<rect x="517.0" y="519.0" width="58.0" height="34.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="546.0" y="541.4" text-anchor="middle" style="fill:#ffffff">接入</text>
+<rect x="583.0" y="519.0" width="73.0" height="34.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="619.5" y="541.4" text-anchor="middle" style="fill:#ffffff">运行时</text>
+<rect x="826.5" y="519.0" width="58.0" height="34.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="855.5" y="541.4" text-anchor="middle" style="fill:#ffffff">执行</text>
+<rect x="1342.0" y="519.0" width="103.0" height="34.0" rx="8" fill="#fdf2f8" stroke="#ec4899" stroke-width="2" stroke-dasharray="8 6"/>
+<text class="chip" x="1393.5" y="541.4" text-anchor="middle" style="fill:#ec4899">或在此执行</text>
+<line x1="72" y1="582" x2="1528" y2="582" stroke="#e2e8f0" stroke-width="1.5"/>
+<text class="h" x="72.0" y="620.0" text-anchor="start" style="fill:#4f46e5">4</text>
+<text class="hs" x="104.0" y="620.0" text-anchor="start">云端托管</text>
+<text class="s" x="104.0" y="648.0" text-anchor="start">Devin、Manus、Codex cloud 等</text>
+<rect x="557.5" y="611.0" width="58.0" height="34.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="586.5" y="633.4" text-anchor="middle" style="fill:#ffffff">接入</text>
+<rect x="1324.0" y="611.0" width="73.0" height="34.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="1360.5" y="633.4" text-anchor="middle" style="fill:#ffffff">运行时</text>
+<rect x="1405.0" y="611.0" width="58.0" height="34.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="1434.0" y="633.4" text-anchor="middle" style="fill:#ffffff">执行</text>
+<line x1="72" y1="674" x2="1528" y2="674" stroke="#e2e8f0" stroke-width="1.5"/>
+<text class="h" x="72.0" y="712.0" text-anchor="start" style="fill:#4f46e5">5</text>
+<text class="hs" x="104.0" y="712.0" text-anchor="start">云端运行时 + 本地执行</text>
+<text class="s" x="104.0" y="740.0" text-anchor="start">Manus Browser Operator；引子中的方案</text>
+<rect x="524.5" y="703.0" width="58.0" height="34.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="553.5" y="725.4" text-anchor="middle" style="fill:#ffffff">接入</text>
+<rect x="590.5" y="703.0" width="58.0" height="34.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="619.5" y="725.4" text-anchor="middle" style="fill:#ffffff">执行</text>
+<rect x="1357.0" y="703.0" width="73.0" height="34.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="1393.5" y="725.4" text-anchor="middle" style="fill:#ffffff">运行时</text>
+<line x1="72" y1="766" x2="1528" y2="766" stroke="#e2e8f0" stroke-width="1.5"/>
+<text class="h" x="72.0" y="804.0" text-anchor="start" style="fill:#4f46e5">6</text>
+<text class="hs" x="104.0" y="804.0" text-anchor="start">远程接入 + 本地运行时</text>
+<text class="s" x="104.0" y="832.0" text-anchor="start">Mac mini 上的 OpenClaw；Remote Control</text>
+<rect x="557.5" y="795.0" width="58.0" height="34.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="586.5" y="817.4" text-anchor="middle" style="fill:#ffffff">接入</text>
+<rect x="1055.0" y="795.0" width="73.0" height="34.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="1091.5" y="817.4" text-anchor="middle" style="fill:#ffffff">运行时</text>
+<rect x="1136.0" y="795.0" width="58.0" height="34.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="1165.0" y="817.4" text-anchor="middle" style="fill:#ffffff">执行</text>
+<line x1="72" y1="858" x2="1528" y2="858" stroke="#e2e8f0" stroke-width="1.5"/>
+<text class="h" x="72.0" y="896.0" text-anchor="start" style="fill:#4f46e5">7</text>
+<text class="hs" x="104.0" y="896.0" text-anchor="start">聊天软件接入 + 云端</text>
+<text class="s" x="104.0" y="924.0" text-anchor="start">飞书、钉钉、企业微信中的 agent；扣子</text>
+<rect x="557.5" y="887.0" width="58.0" height="34.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="586.5" y="909.4" text-anchor="middle" style="fill:#ffffff">接入</text>
+<rect x="1324.0" y="887.0" width="73.0" height="34.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="1360.5" y="909.4" text-anchor="middle" style="fill:#ffffff">运行时</text>
+<rect x="1405.0" y="887.0" width="58.0" height="34.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="1434.0" y="909.4" text-anchor="middle" style="fill:#ffffff">执行</text>
+<line x1="72" y1="950" x2="1528" y2="950" stroke="#e2e8f0" stroke-width="1.5"/>
+<text class="h" x="72.0" y="988.0" text-anchor="start" style="fill:#4f46e5">8</text>
+<text class="hs" x="104.0" y="988.0" text-anchor="start">多执行环境</text>
+<text class="s" x="104.0" y="1016.0" text-anchor="start">Cowork；Manus 同时用云端与本地浏览器</text>
+<rect x="484.0" y="979.0" width="58.0" height="34.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="513.0" y="1001.4" text-anchor="middle" style="fill:#ffffff">接入</text>
+<rect x="550.0" y="979.0" width="73.0" height="34.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="586.5" y="1001.4" text-anchor="middle" style="fill:#ffffff">运行时</text>
+<rect x="631.0" y="979.0" width="58.0" height="34.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="660.0" y="1001.4" text-anchor="middle" style="fill:#ffffff">执行</text>
+<rect x="826.5" y="979.0" width="58.0" height="34.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="855.5" y="1001.4" text-anchor="middle" style="fill:#ffffff">执行</text>
+<rect x="1364.5" y="979.0" width="58.0" height="34.0" rx="8" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="chip" x="1393.5" y="1001.4" text-anchor="middle" style="fill:#ffffff">执行</text>
+<line x1="72" y1="1042" x2="1528" y2="1042" stroke="#e2e8f0" stroke-width="1.5"/>
+<text class="h" x="72.0" y="1080.0" text-anchor="start" style="fill:#4f46e5">9</text>
+<text class="hs" x="104.0" y="1080.0" text-anchor="start">会话迁移</text>
+<text class="s" x="104.0" y="1108.0" text-anchor="start">编码 agent 在本地与云端之间交接任务</text>
+<rect x="517.0" y="1071.0" width="58.0" height="34.0" rx="8" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="chip" x="546.0" y="1093.4" text-anchor="middle" style="fill:#ffffff">接入</text>
+<rect x="583.0" y="1071.0" width="73.0" height="34.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="chip" x="619.5" y="1093.4" text-anchor="middle" style="fill:#ffffff">运行时</text>
+<rect x="1357.0" y="1071.0" width="73.0" height="34.0" rx="8" fill="#eef2ff" stroke="#4f46e5" stroke-width="2" stroke-dasharray="8 6"/>
+<text class="chip" x="1393.5" y="1093.4" text-anchor="middle" style="fill:#4f46e5">运行时</text>
+<path d="M666.0,1088 H1347.0" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" marker-start="url(#arrow)" stroke-dasharray="7 6"/>
+<rect x="983.5" y="1062.0" width="46.0" height="29.0" rx="6" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text class="s" x="1006.5" y="1081.0" text-anchor="middle">迁移</text>
+</svg>

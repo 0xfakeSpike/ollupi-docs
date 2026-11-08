@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1060" width="1600" height="1060">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#94a3b8"/></marker><marker id="arrowI" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#4f46e5"/></marker><marker id="arrowR" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#f43f5e"/></marker></defs>
+<style>text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #1e1b4b; } .eyebrow { font-size: 16px; font-weight: 600; letter-spacing: 3px; fill: #4f46e5; } .title { font-size: 36px; font-weight: 700; } .sub { font-size: 19px; fill: #64748b; } .h { font-size: 22px; font-weight: 700; } .hs { font-size: 19px; font-weight: 600; } .q { font-size: 18px; font-weight: 700; } .b { font-size: 17px; fill: #334155; } .s { font-size: 15px; fill: #64748b; } .zt { font-size: 16px; font-weight: 600; fill: #64748b; letter-spacing: 1px; } .lab { font-size: 16px; fill: #334155; } .chip { font-size: 15px; font-weight: 600; } .chipb { font-size: 18px; font-weight: 700; } .foot { font-size: 15px; fill: #94a3b8; }</style>
+<rect width="1600" height="1060" fill="#ffffff"/>
+<text class="eyebrow" x="72" y="62">FIG. 8 · CHOOSING</text>
+<text class="title" x="72" y="106">Four questions pick the topology</text>
+<text class="sub" x="72" y="146">Answer from the top: yes goes right, no goes down</text>
+<line x1="72" y1="1000" x2="1528" y2="1000" stroke="#e2e8f0" stroke-width="2"/>
+<text class="foot" x="72" y="1032">Enterprise: use the company chat app as the access layer (7). Desktop assistants: add execution envs (8)</text>
+<text class="foot" x="1528" y="1032" text-anchor="end">Head in the Cloud, Hands at Home</text>
+<rect x="120.0" y="200.0" width="640.0" height="64.0" rx="12" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
+<text class="q" x="440.0" y="240.0" text-anchor="middle">Must data stay inside the company network?</text>
+<path d="M762,232.0 H896" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#arrowI)"/>
+<rect x="809.0" y="201.0" width="42.1" height="29.0" rx="6" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text class="s" x="830.0" y="220.0" text-anchor="middle">Yes</text>
+<rect x="900.0" y="194.0" width="628.0" height="76.0" rx="12" fill="#eef2ff" stroke="#c7d2fe" stroke-width="2"/>
+<text class="q" x="920.0" y="226.0" text-anchor="start">On-premises deployment</text>
+<text class="s" x="920.0" y="252.0" text-anchor="start">Access, runtime, execution and model all inside the network</text>
+<path d="M440.0,266 V326" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<text class="s" x="468.0" y="303.0" text-anchor="middle">No</text>
+<rect x="120.0" y="330.0" width="640.0" height="64.0" rx="12" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
+<text class="q" x="440.0" y="370.0" text-anchor="middle">Copyable resources, and need parallel or offline runs?</text>
+<path d="M762,362.0 H896" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#arrowI)"/>
+<rect x="809.0" y="331.0" width="42.1" height="29.0" rx="6" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text class="s" x="830.0" y="350.0" text-anchor="middle">Yes</text>
+<rect x="900.0" y="324.0" width="628.0" height="76.0" rx="12" fill="#eef2ff" stroke="#c7d2fe" stroke-width="2"/>
+<text class="q" x="920.0" y="356.0" text-anchor="start">4  Cloud-hosted</text>
+<text class="s" x="920.0" y="382.0" text-anchor="start">Gains parallel and offline runs; costs local resources and control</text>
+<path d="M440.0,396 V456" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<text class="s" x="468.0" y="433.0" text-anchor="middle">No</text>
+<rect x="120.0" y="460.0" width="640.0" height="64.0" rx="12" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
+<text class="q" x="440.0" y="500.0" text-anchor="middle">Tasks outlive the device, or dispatched from a phone?</text>
+<path d="M762,492.0 H896" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#arrowI)"/>
+<rect x="809.0" y="461.0" width="42.1" height="29.0" rx="6" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text class="s" x="830.0" y="480.0" text-anchor="middle">Yes</text>
+<rect x="900.0" y="460.0" width="628.0" height="64.0" rx="12" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
+<text class="q" x="1214.0" y="500.0" text-anchor="middle">Who runs the always-on runtime?</text>
+<path d="M1052.0,526 V580" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="1009.2" y="539.0" width="85.6" height="29.0" rx="6" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text class="s" x="1052.0" y="558.0" text-anchor="middle">The user</text>
+<rect x="900.0" y="584.0" width="304.0" height="76.0" rx="12" fill="#eef2ff" stroke="#c7d2fe" stroke-width="2"/>
+<text class="q" x="920.0" y="616.0" text-anchor="start">6  Home runtime</text>
+<text class="s" x="920.0" y="642.0" text-anchor="start">You maintain an always-on box</text>
+<path d="M1376.0,526 V580" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="1333.2" y="539.0" width="85.6" height="29.0" rx="6" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text class="s" x="1376.0" y="558.0" text-anchor="middle">A vendor</text>
+<rect x="1224.0" y="584.0" width="304.0" height="76.0" rx="12" fill="#eef2ff" stroke="#c7d2fe" stroke-width="2"/>
+<text class="q" x="1244.0" y="616.0" text-anchor="start">5  Cloud runtime</text>
+<text class="s" x="1244.0" y="642.0" text-anchor="start">Enforce permissions locally</text>
+<path d="M440.0,526 V716" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<text class="s" x="468.0" y="628.0" text-anchor="middle">No</text>
+<rect x="120.0" y="720.0" width="640.0" height="64.0" rx="12" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
+<text class="q" x="440.0" y="760.0" text-anchor="middle">Should the agent run without per-step approval?</text>
+<path d="M762,752.0 H896" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#arrowI)"/>
+<rect x="809.0" y="721.0" width="42.1" height="29.0" rx="6" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text class="s" x="830.0" y="740.0" text-anchor="middle">Yes</text>
+<rect x="900.0" y="714.0" width="628.0" height="76.0" rx="12" fill="#eef2ff" stroke="#c7d2fe" stroke-width="2"/>
+<text class="q" x="920.0" y="746.0" text-anchor="start">3  Local runtime + sandbox</text>
+<text class="s" x="920.0" y="772.0" text-anchor="start">Keys outside the sandbox; exec failures spare the runtime</text>
+<path d="M440.0,786 V846" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<text class="s" x="468.0" y="823.0" text-anchor="middle">No</text>
+<rect x="120.0" y="850.0" width="640.0" height="76.0" rx="12" fill="#eef2ff" stroke="#c7d2fe" stroke-width="2"/>
+<text class="q" x="140.0" y="882.0" text-anchor="start">1  Fully local</text>
+<text class="s" x="140.0" y="908.0" text-anchor="start">No setup, no added latency; stops when the device sleeps</text>
+</svg>

@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 650" width="1600" height="650">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#94a3b8"/></marker><marker id="arrowI" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#4f46e5"/></marker><marker id="arrowR" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#f43f5e"/></marker></defs>
+<style>text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #1e1b4b; } .eyebrow { font-size: 16px; font-weight: 600; letter-spacing: 3px; fill: #4f46e5; } .title { font-size: 36px; font-weight: 700; } .sub { font-size: 19px; fill: #64748b; } .h { font-size: 22px; font-weight: 700; } .hs { font-size: 19px; font-weight: 600; } .q { font-size: 18px; font-weight: 700; } .b { font-size: 17px; fill: #334155; } .s { font-size: 15px; fill: #64748b; } .zt { font-size: 16px; font-weight: 600; fill: #64748b; letter-spacing: 1px; } .lab { font-size: 16px; fill: #334155; } .chip { font-size: 15px; font-weight: 600; } .chipb { font-size: 18px; font-weight: 700; } .foot { font-size: 15px; fill: #94a3b8; }</style>
+<rect width="1600" height="650" fill="#ffffff"/>
+<text class="eyebrow" x="72" y="62">FIG. 1 · OPENING</text>
+<text class="title" x="72" y="106">The runtime is overseas, the execution environment is on the desk</text>
+<text class="sub" x="72" y="146">Users who can't reach the model move the runtime to an overseas server, then tunnel their own computer back to it</text>
+<line x1="72" y1="590" x2="1528" y2="590" stroke="#e2e8f0" stroke-width="2"/>
+<text class="foot" x="72" y="622">Same structure as topology 5 (cloud runtime + local exec), different cause</text>
+<text class="foot" x="1528" y="622" text-anchor="end">Head in the Cloud, Hands at Home</text>
+<rect x="72.0" y="200.0" width="520.0" height="270.0" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text class="zt" x="92.0" y="230.0" text-anchor="start">Mainland China · the user's computer</text>
+<rect x="104.0" y="256.0" width="210.0" height="88.0" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="2"/>
+<rect x="104.0" y="256.0" width="210.0" height="48.0" rx="12" fill="#0d9488" stroke="none" stroke-width="2"/>
+<rect x="104.0" y="292.0" width="210.0" height="12.0" rx="0" fill="#0d9488" stroke="none" stroke-width="2"/>
+<text class="hs" x="209.0" y="287.0" text-anchor="middle" style="fill:#ffffff">Access layer</text>
+<text class="lab" x="209.0" y="330.0" text-anchor="middle">Terminal, IDE</text>
+<rect x="332.0" y="256.0" width="248.0" height="114.0" rx="12" fill="#fdf2f8" stroke="#ec4899" stroke-width="2"/>
+<rect x="332.0" y="256.0" width="248.0" height="48.0" rx="12" fill="#ec4899" stroke="none" stroke-width="2"/>
+<rect x="332.0" y="292.0" width="248.0" height="12.0" rx="0" fill="#ec4899" stroke="none" stroke-width="2"/>
+<text class="hs" x="456.0" y="287.0" text-anchor="middle" style="fill:#ffffff">Execution environment</text>
+<text class="lab" x="456.0" y="330.0" text-anchor="middle">Code, files</text>
+<text class="lab" x="456.0" y="356.0" text-anchor="middle">Browser, dev tools</text>
+<text class="s" x="332.0" y="444.0" text-anchor="middle">All the resources are here</text>
+<line x1="676" y1="190" x2="676" y2="540" stroke="#f43f5e" stroke-width="2" stroke-dasharray="8 6"/>
+<rect x="602.8" y="163.0" width="146.5" height="29.0" rx="6" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text class="s" x="676.0" y="182.0" text-anchor="middle">Regional border</text>
+<rect x="760.0" y="200.0" width="400.0" height="270.0" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text class="zt" x="780.0" y="230.0" text-anchor="start">Overseas · cloud server</text>
+<rect x="792.0" y="256.0" width="336.0" height="88.0" rx="12" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<rect x="792.0" y="256.0" width="336.0" height="48.0" rx="12" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<rect x="792.0" y="292.0" width="336.0" height="12.0" rx="0" fill="#4f46e5" stroke="none" stroke-width="2"/>
+<text class="hs" x="960.0" y="287.0" text-anchor="middle" style="fill:#ffffff">Runtime</text>
+<text class="lab" x="960.0" y="330.0" text-anchor="middle">Claude Code or similar</text>
+<rect x="792.0" y="360.0" width="141.1" height="34.0" rx="8" fill="#334155" stroke="none" stroke-width="2"/>
+<text class="chip" x="862.5" y="382.4" text-anchor="middle" style="fill:#ffffff">Model API key</text>
+<rect x="945.1" y="360.0" width="167.2" height="34.0" rx="8" fill="#334155" stroke="none" stroke-width="2"/>
+<text class="chip" x="1028.7" y="382.4" text-anchor="middle" style="fill:#ffffff">Tunnel to the PC</text>
+<text class="s" x="960.0" y="440.0" text-anchor="middle">Server compromised = PC compromised</text>
+<rect x="1250.0" y="200.0" width="278.0" height="270.0" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text class="zt" x="1270.0" y="230.0" text-anchor="start">Overseas · model provider</text>
+<rect x="1280.0" y="256.0" width="218.0" height="88.0" rx="12" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<rect x="1280.0" y="256.0" width="218.0" height="48.0" rx="12" fill="#64748b" stroke="none" stroke-width="2"/>
+<rect x="1280.0" y="292.0" width="218.0" height="12.0" rx="0" fill="#64748b" stroke="none" stroke-width="2"/>
+<text class="hs" x="1389.0" y="287.0" text-anchor="middle" style="fill:#ffffff">Model service</text>
+<text class="lab" x="1389.0" y="330.0" text-anchor="middle">Anthropic API</text>
+<path d="M594,310 H758" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" marker-start="url(#arrow)" stroke-dasharray="7 6"/>
+<rect x="603.0" y="276.0" width="145.9" height="30.0" rx="6" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text class="lab" x="676.0" y="296.0" text-anchor="middle">Reverse tunnel</text>
+<path d="M1162,310 H1248" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="1157.8" y="277.0" width="94.3" height="29.0" rx="6" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text class="s" x="1205.0" y="296.0" text-anchor="middle">Reachable</text>
+<path d="M332,470 V512 H1389 V472" fill="none" stroke="#f43f5e" stroke-width="2" marker-end="url(#arrowR)" stroke-dasharray="7 6"/>
+<circle cx="1000" cy="512" r="11" fill="#f43f5e"/>
+<path d="M995.5,507.5 L1004.5,516.5 M1004.5,507.5 L995.5,516.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+<text class="s" x="1000.0" y="548.0" text-anchor="middle">Not reachable directly</text>
+</svg>
