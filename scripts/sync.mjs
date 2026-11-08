@@ -4,6 +4,7 @@
 import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { checkDrift } from './drift.mjs'
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
 const sources = path.resolve(root, process.env.OLLUPI_SOURCES ?? '..')
@@ -11,9 +12,9 @@ const engine = path.join(sources, 'ollupi')
 const desktop = path.join(sources, 'ollupi-desktop')
 
 const pages = [
-  { from: 'features.md', to: 'reference/features.md' },
-  { from: 'roadmap.md', to: 'reference/roadmap.md' },
-  { from: 'feishu.md', to: 'desktop/feishu.md' },
+  { from: 'features.md', to: 'zh/reference/features.md' },
+  { from: 'roadmap.md', to: 'zh/reference/backlog.md' },
+  { from: 'feishu.md', to: 'zh/app/feishu.md' },
 ]
 const routes = Object.fromEntries(
   pages.map(({ from, to }) => [from, `/${to.replace(/\.md$/, '')}`]),
@@ -51,3 +52,5 @@ await Promise.all([
   syncSvgs(path.join(engine, 'docs/images'), 'images'),
   syncSvgs(path.join(engine, 'docs/logo'), 'logo'),
 ])
+// After the copies, so that a strict failure never leaves them half done.
+await checkDrift(root, engine)

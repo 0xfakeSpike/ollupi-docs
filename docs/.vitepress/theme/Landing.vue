@@ -12,7 +12,8 @@ const copy = {
   zh: {
     title: '大规模个人 agent 服务的运行时',
     lead: 'Ollupi 是一个 Go agent 框架。它不给每个 agent 开虚拟机或容器，而是池化 runtime，把每一步运行状态写进数据库。',
-    actions: { docs: '阅读文档', download: '下载桌面端', source: 'GitHub' },
+    home: '/zh/',
+    actions: { docs: '为什么做 Ollupi', download: '下载桌面端', source: 'GitHub' },
     properties: [
       { title: '随时可恢复', body: '每一步先落库再执行，调度状态不留在内存。发版、重启或崩溃之后，会话从停下的地方继续。' },
       { title: '不活跃的会话没有成本', body: '等用户、等审批或等子代理的会话离开执行池，只剩数据库记录，不占内存和算力。' },
@@ -40,20 +41,23 @@ const copy = {
     numbersLink: '方法和完整数据',
     productsTitle: '两个项目',
     products: [
-      { name: '引擎 ollupi', body: 'Go 库。执行池、持久化、多用户分片、沙箱、记忆、MCP，通过 WebSocket 上的 JSON-RPC 对外提供。', link: '/engine/architecture', linkText: '引擎文档', source: engineRepo },
-      { name: '桌面端 ollupi-desktop', body: '基于引擎的 macOS 应用。内置浏览器、文件和改动面板、飞书机器人，状态存在本机。需要 macOS 12 或更新和 Apple 芯片。', link: '/guide/desktop-quickstart', linkText: '上手指南', source: desktopRepo },
+      { name: '引擎 ollupi', body: 'Go 库。执行池、持久化、多用户分片、沙箱、记忆、MCP，通过 WebSocket 上的 JSON-RPC 对外提供。', link: '/zh/engine/architecture', linkText: '引擎文档', source: engineRepo },
+      { name: '桌面端 ollupi-desktop', body: '基于引擎的 macOS 应用。内置浏览器、文件和改动面板、飞书机器人，状态存在本机。需要 macOS 12 或更新和 Apple 芯片。', link: '/zh/app/install', linkText: '上手指南', source: desktopRepo },
     ],
-    notesTitle: '项目沉淀',
-    notesBody: '这个项目做过哪些决定、放弃了什么、走过哪些弯路，都按提交记录写了下来。',
+    notesTitle: '公开地做',
+    notesBody: '接下来做什么、每一步怎样算做完，写在路线图里；做过哪些决定、放弃了什么、走过哪些弯路，按提交记录写了下来。',
     notesLinks: [
-      { text: '设计决策', link: '/notes/decisions' },
-      { text: '开发历程', link: '/notes/history' },
+      { text: '路线图', link: '/zh/roadmap' },
+      { text: '文章', link: '/zh/articles/' },
+      { text: '设计决策', link: '/zh/reference/decisions' },
+      { text: '开发历程', link: '/zh/reference/history' },
     ],
   },
   en: {
     title: 'A runtime for personal agent services at scale',
     lead: 'Ollupi is a Go agent framework. Instead of isolating each agent in its own VM or container, it pools the runtime and persists every step of each run.',
-    actions: { docs: 'Read the docs (Chinese)', download: 'Download for macOS', source: 'GitHub' },
+    home: '/',
+    actions: { docs: 'Why Ollupi', download: 'Download for macOS', source: 'GitHub' },
     properties: [
       { title: 'Recoverable at any moment', body: 'Every step is written to the database before it runs, and no scheduling state lives in memory. After a release, restart or crash, sessions continue from where they stopped.' },
       { title: 'Inactive sessions cost nothing', body: 'A session waiting on a user, an approval or a subagent leaves the execution pool and remains only as database records.' },
@@ -78,17 +82,19 @@ const copy = {
       { value: '4096', label: 'active sessions on one 8 GB M1, p50 20.9 s against about 17 s alone' },
     ],
     numbersNote: 'The model and tools are simulated, so these measure scheduling and persistence, not model quality. They predate the multi-user, shard and sandbox interface changes and have not been re-measured.',
-    numbersLink: 'Method and full data (Chinese)',
+    numbersLink: 'Method and full data',
     productsTitle: 'Two projects',
     products: [
-      { name: 'Engine: ollupi', body: 'A Go library: execution pool, persistence, multi-user shards, sandbox, memory and MCP, served as JSON-RPC over WebSocket.', link: '/engine/architecture', linkText: 'Engine docs (Chinese)', source: engineRepo },
-      { name: 'Desktop: ollupi-desktop', body: 'A macOS app built on the engine, with a built-in browser, file and diff panels and a Feishu bot. State stays on your Mac. Needs macOS 12 or later on Apple silicon.', link: '/guide/desktop-quickstart', linkText: 'Getting started (Chinese)', source: desktopRepo },
+      { name: 'Engine: ollupi', body: 'A Go library: execution pool, persistence, multi-user shards, sandbox, memory and MCP, served as JSON-RPC over WebSocket.', link: '/engine/architecture', linkText: 'Engine manual', source: engineRepo },
+      { name: 'Desktop: ollupi-desktop', body: 'A macOS app built on the engine, with a built-in browser, file and diff panels and a Feishu bot. State stays on your Mac. Needs macOS 12 or later on Apple silicon.', link: '/app/install', linkText: 'Getting started', source: desktopRepo },
     ],
-    notesTitle: 'Project notes',
-    notesBody: 'The decisions made, the options dropped and the wrong turns taken, written down from the commit history.',
+    notesTitle: 'Built in public',
+    notesBody: 'What comes next and how each step will be judged done is on the roadmap. The decisions made, the options dropped and the wrong turns taken are written down from the commit history.',
     notesLinks: [
-      { text: 'Design decisions (Chinese)', link: '/notes/decisions' },
-      { text: 'History (Chinese)', link: '/notes/history' },
+      { text: 'Roadmap', link: '/roadmap' },
+      { text: 'Articles', link: '/articles/' },
+      { text: 'Design decisions', link: '/reference/decisions' },
+      { text: 'History', link: '/reference/history' },
     ],
   },
 }
@@ -104,7 +110,7 @@ const t = computed(() => copy[props.locale])
       <h1>{{ t.title }}</h1>
       <p class="lead">{{ t.lead }}</p>
       <div class="actions">
-        <a class="action primary" :href="withBase('/guide/overview')">{{ t.actions.docs }}</a>
+        <a class="action primary" :href="withBase(t.home + 'intro/why')">{{ t.actions.docs }}</a>
         <a class="action" :href="download">{{ t.actions.download }}</a>
         <a class="action" :href="engineRepo">{{ t.actions.source }}</a>
       </div>
@@ -149,7 +155,7 @@ const t = computed(() => copy[props.locale])
       </div>
       <p class="note">
         {{ t.numbersNote }}
-        <a :href="withBase('/engine/benchmarks')">{{ t.numbersLink }}</a>
+        <a :href="withBase(t.home + 'benchmarks/')">{{ t.numbersLink }}</a>
       </p>
     </section>
 

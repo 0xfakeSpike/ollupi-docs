@@ -28,7 +28,12 @@ jobs:
         with:
           repository: 0xfakeSpike/ollupi
           path: .sources/ollupi
-          sparse-checkout: docs
+          # Tags and the protocol contract let scripts/drift.mjs tell whether
+          # the engine pages are behind the latest release.
+          fetch-depth: 0
+          sparse-checkout: |
+            docs
+            gateway
 
       - uses: actions/checkout@v7
         with:

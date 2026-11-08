@@ -6,6 +6,7 @@ docs/.vitepress/cache
 # Written by scripts/sync.mjs from the code repositories.
 docs/public/images
 docs/public/logo
-docs/reference/features.md
-docs/reference/roadmap.md
-docs/desktop/feishu.md
+docs/zh/reference/features.md
+docs/zh/reference/backlog.md
+docs/zh/app/feishu.md
+docs/.vitepress/drift.json
