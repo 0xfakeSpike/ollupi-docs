@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "docs",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev", "--port", "5177"],
+      "port": 5177,
+      "url": "http://localhost:5177"
+    }
+  ]
+}

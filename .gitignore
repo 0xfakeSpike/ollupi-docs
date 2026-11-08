@@ -1,0 +1,11 @@
+node_modules
+.sources
+.DS_Store
+docs/.vitepress/dist
+docs/.vitepress/cache
+# Written by scripts/sync.mjs from the code repositories.
+docs/public/images
+docs/public/logo
+docs/reference/features.md
+docs/reference/roadmap.md
+docs/desktop/feishu.md

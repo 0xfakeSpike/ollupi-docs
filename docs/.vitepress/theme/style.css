@@ -1,0 +1,44 @@
+/* Colours come from the Ollupi logo: indigo for the fur shadow and slate for
+   the wordmark. */
+:root {
+  --vp-c-brand-1: #3f3a9e;
+  --vp-c-brand-2: #312e81;
+  --vp-c-brand-3: #312e81;
+  --vp-c-brand-soft: rgba(165, 180, 252, 0.22);
+  --vp-font-family-base: 'Inter', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', -apple-system,
+    BlinkMacSystemFont, sans-serif;
+  --vp-sidebar-width: 280px;
+}
+
+.dark {
+  --vp-c-bg: #0e1118;
+  --vp-c-bg-alt: #0b0d13;
+  --vp-c-bg-elv: #151924;
+  --vp-c-bg-soft: #151924;
+  --vp-c-brand-1: #a5b4fc;
+  --vp-c-brand-2: #8b9cf8;
+  --vp-c-brand-3: #4f46b8;
+  --vp-c-brand-soft: rgba(165, 180, 252, 0.14);
+}
+
+.VPNavBarTitle .logo {
+  height: 26px;
+}
+
+.vp-doc table {
+  display: table;
+  width: 100%;
+}
+
+/* The figures from the engine repository have white backgrounds. */
+.vp-doc img[src*='/images/'] {
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+  border: 1px solid var(--vp-c-divider);
+}
+
+.mermaid {
+  margin: 16px 0;
+  text-align: center;
+}
