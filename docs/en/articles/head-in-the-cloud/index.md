@@ -1,12 +1,13 @@
 ---
-title: Head in the Cloud, Hands at Home
-description: Why an agent's access layer, runtime and execution environment end up in different places. Nine topologies, seven forces, the engineering problems at each boundary, and which topology fits which job.
+title: 'Head in the Cloud, Hands at Home: Where AI Agents Actually Run'
+description: Why an AI agent's access layer, runtime and execution environment end up in different places. Nine topologies, seven forces, the engineering problems at each boundary, and which topology fits which job.
 outline: [2, 3]
+image: /og/head-in-the-cloud.png
 ---
 
 # Head in the Cloud, Hands at Home
 
-*Why the parts of an agent end up in different places*
+*Where AI agents actually run, and why the parts end up in different places*
 
 November 8, 2026 · [中文版](/zh/articles/head-in-the-cloud)
 

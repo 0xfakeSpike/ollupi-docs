@@ -2,6 +2,7 @@
 title: 水在青天云在瓶：agent 的身首错位现象
 description: 为什么 agent 的接入层、运行时和执行环境会被部署在不同的地方：九种部署形态、七个决定因素、每条边界上的工程问题，以及什么场景该用什么形态。
 outline: [2, 3]
+image: /og/head-in-the-cloud.png
 ---
 
 # 水在青天云在瓶：agent 的身首错位现象

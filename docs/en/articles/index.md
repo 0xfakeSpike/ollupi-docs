@@ -6,7 +6,7 @@ Each article stands on its own and links to the manual for details.
 
 ## Published
 
-- **[Head in the Cloud, Hands at Home](/articles/head-in-the-cloud)** · November 8, 2026. Why an agent's access layer, runtime and execution environment end up in different places: nine topologies, seven forces, the engineering problems at each boundary, and which topology fits which job. Includes a section on mainland China, where the same software often ships in a different shape.
+- **[Head in the Cloud, Hands at Home: Where AI Agents Actually Run](/articles/head-in-the-cloud)** · November 8, 2026. Why an agent's access layer, runtime and execution environment end up in different places: nine topologies, seven forces, the engineering problems at each boundary, and which topology fits which job. Includes a section on mainland China, where the same software often ships in a different shape.
 
 ## Planned
 

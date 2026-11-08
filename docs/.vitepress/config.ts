@@ -202,6 +202,33 @@ export default defineConfig({
   lastUpdated: true,
   sitemap: { hostname: `https://0xfakespike.github.io${base}` },
   head: [['link', { rel: 'icon', href: `${base}logo/favicon.svg` }]],
+  // Link previews on X, LinkedIn, Slack and the like. A page can set `image`
+  // in its frontmatter to a file in docs/public; it needs a fixed URL, so it
+  // lives there rather than beside the page.
+  transformHead({ pageData }) {
+    const fm = pageData.frontmatter
+    const title = fm.title ?? pageData.title
+    const description = fm.description ?? pageData.description
+    const path = pageData.relativePath.replace(/(^|\/)index\.md$/, '$1').replace(/\.md$/, '')
+    const site = `https://0xfakespike.github.io${base}`
+    const tags: [string, Record<string, string>][] = [
+      ['meta', { property: 'og:type', content: path.includes('articles/') ? 'article' : 'website' }],
+      ['meta', { property: 'og:url', content: site + path }],
+      ['meta', { property: 'og:title', content: title }],
+      ['meta', { name: 'twitter:title', content: title }],
+    ]
+    if (description) {
+      tags.push(['meta', { property: 'og:description', content: description }])
+      tags.push(['meta', { name: 'twitter:description', content: description }])
+    }
+    if (fm.image) {
+      const image = site + String(fm.image).replace(/^\//, '')
+      tags.push(['meta', { property: 'og:image', content: image }])
+      tags.push(['meta', { name: 'twitter:image', content: image }])
+    }
+    tags.push(['meta', { name: 'twitter:card', content: fm.image ? 'summary_large_image' : 'summary' }])
+    return tags
+  },
   // Sources are split by language: docs/en/ and docs/zh/, one mirror of the
   // other. English is served at the root, so docs/en/x.md becomes /x.
   // An article is a folder holding index.md and its figures; it is served as
