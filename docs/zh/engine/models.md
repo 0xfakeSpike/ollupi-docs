@@ -11,6 +11,16 @@ type Client interface {
 
 一个客户端对应一条连接（connection）：一个 Base URL、一把密钥、一组声明了上限的模型和一个并发名额池。`Agent` 的配置里 `Connections` 按连接名存客户端，`Models` 列出可选模型，每条连接只能出现一次。
 
+## 为什么这样设计
+
+- **原生接口，而不是只走 OpenAI 兼容层。** 初版只有 Chat Completions 客户端。Anthropic 和 Gemini 的思考内容带签名，要按服务商自己的格式原样送回，兼容层表达不了，所以加了 `NewAnthropic` 和 `NewGemini`，每次回答另存一份服务商格式的原始消息（`9ac61ec`）。见[设计决策 12](/zh/reference/decisions#_12-原生-anthropic-与-gemini-接口)。
+- **上限由连接声明，引擎不猜。** 早期内置过一张常见模型的上限表，按模型名查；`cd0efe2` 删掉了它，没声明上限的模型直接报错，不再按名字猜。见[设计决策 18](/zh/reference/decisions#_18-出错即暴露)。
+- **并发名额按连接算，不按步骤算。** 早期 4 个 worker 按整个步骤计数，4 个跑长工具的步骤就能卡住所有会话。现在只有模型调用占名额，工具执行不占（`64f8593`）。见[设计决策 4](/zh/reference/decisions#_4-两层并发)。
+- **三个客户端统一重试 8 次。** 之前 OpenAI 和 Anthropic 的 SDK 在约 1.5 秒内只重试两次，Gemini 的 SDK 不重试，服务商短暂缺配额就让工具已经跑完的轮次失败（`a7bf0b2`）。模拟模型下 5% 请求返回 500 的负载，加重试前 326 个轮次失败，加重试后 0 个，见[性能基准](/zh/benchmarks/#故障与长尾)。
+- **错误只留状态码。** 服务商的错误响应正文可能复述提示词，`safeRequestError` 只保留 HTTP 状态码，不把正文带进返回的错误。
+
+代价：三个客户端在思考、缓存、回答上限、结束原因上的行为要各自对齐和测试；原始消息存在 `items.native` 列，体积大；用户必须自己填每个模型的上限；重试期间调用一直占着名额和槽位，最多约 40 秒。
+
 ## 三种客户端
 
 | 项 | `OpenAI` | `Anthropic` | `Gemini` |
@@ -127,13 +137,7 @@ OpenAI 兼容接口和 Gemini 用服务商的隐式前缀缓存，客户端不�
 
 ### 估算
 
-`EstimateTokens` 不用分词器：ASCII 字符每 4 个算 1 个 token（向上取整），非 ASCII 字符每个算 1 个。
-
-```go
-return (ascii+3)/4 + nonASCII
-```
-
-上下文管理器把估算值按服务商上报的真实用量校准，得到 `CalibratedTokens`，它作为 `ChatRequest.InputTokens` 传给客户端，用来算回答上限。校准方法见[上下文管理](/zh/engine/context)。
+`pkg/llm` 的 `EstimateTokens` 不用分词器，上下文管理器再按服务商上报的真实用量校准，得到的 `CalibratedTokens` 作为 `ChatRequest.InputTokens` 传给客户端，用来算回答上限。公式和校准方法见[上下文管理](/zh/engine/context#token-估算)。
 
 ### 上报
 
@@ -165,28 +169,7 @@ return (ascii+3)/4 + nonASCII
 
 ### 窗口怎么分
 
-回答上限是一次回答最多能用的量，很少真的用满，所以窗口只为它留一部分：
-
-```go
-func (l Limits) reserve() int { return min(l.Output, l.Context/4) }
-```
-
-| 方法 | 公式 |
-| --- | --- |
-| `Input()` | `Context - reserve`，有 `MaxInput` 时再取较小值 |
-| `Answer(input)` | `min(Output, max(reserve, Context - input))` |
-
-`Answer` 用于必须声明回答上限的 API。输入是估算值，所以无论输入多大都保留 `reserve`。
-
-| `Context` | `Output` | `MaxInput` | `Input()` |
-| --- | --- | --- | --- |
-| 1000 | 100 | | 900 |
-| 1000 | 100 | 500 | 500 |
-| 131072 | 16384 | 130048 | 114688 |
-| 1048576 | 393216 | | 786432 |
-| 1000 | 1000 | | 750 |
-
-`Context` 200000、`Output` 128000 时，`Answer` 在输入为 0、100000、150000、190000 时分别是 128000、100000、50000、50000。
+`Limits` 有两个方法：`Input()` 是输入预算，窗口减去为回答预留的 `min(Output, Context/4)`，有 `MaxInput` 时再取较小值；`Answer(input)` 是给 Anthropic 和 Gemini 的回答上限，按估算输入收紧，但不低于预留量。公式、例子和从输入预算派生的各项份额见[上下文管理](/zh/engine/context#窗口预算)。
 
 ### 启动检查和选择模型
 
@@ -201,7 +184,7 @@ func (l Limits) reserve() int { return min(l.Output, l.Context/4) }
 
 ## 附件
 
-用户消息可以带图片和文本文件。它们不进数据库，内容放在 `blobs.Store`，条目里只存元数据。
+用户消息可以带图片和文本文件。它们不进数据库，内容放在 `blobs.Store`，条目里只存元数据（列见[持久化](/zh/engine/persistence#items)）。
 
 ```go
 type Store interface {
@@ -224,11 +207,20 @@ type Store interface {
 
 类型按内容判断：取前 512 字节，调用方给了 MIME 类型就用给的，否则嗅探。PNG、JPEG、GIF、WebP 算图片。其余文件前 512 字节含 NUL、整体不是 UTF-8 或含 NUL，都拒绝。
 
-文件经用户的沙箱读取（`Box.Stat`、`sandbox.ReadFile`），路径必须是绝对路径。`describe` 量出大小后，`copyAttachment` 只复制这么多字节，读到的长度不等就拒绝（"the file changed while it was being attached"）。这一步在消息进入主循环之前做，带超时，慢的沙箱或存储不会卡住同一分片上的其他会话。
+文件经用户的沙箱读取（`Box.Stat`、`sandbox.ReadFile`），路径必须是绝对路径。`describe` 量出大小后，`copyAttachment` 只复制这么多字节，读到的长度不等就拒绝（"the file changed while it was being attached"）。这一步在消息进入事件循环之前做，带超时，慢的沙箱或存储不会卡住同一分片（shard）上的其他会话（`fb3e2d1`，见[引擎架构](/zh/engine/architecture)）。
 
 Token 估算：图片按长边缩到 1568 后每 750 像素 1 个 token，最少 85，读不出尺寸时算 1600；文本文件按 `EstimateTokens` 加文件名再加 8。
 
 发送时运行时从存储读出内容：图片放进 `Data`，文本加上 `--- file: <名字> ---` 头放进 `Text`，脱敏打开时一起脱敏。模型 `Images` 为假时，消息带图片或会话里已有图片都拒绝，不丢弃内容（`this conversation shows the model images`）。
+
+## 边界与已知问题
+
+- **流开始之后断开不重试。** 重试只覆盖拿到响应之前；流中途断开时这一轮失败，见[重试](#重试)。
+- **重试期间一直占着名额和槽位。** 全部等完约 40 秒，同一连接上的其他调用要排队等。
+- **会话中途换服务商会丢掉签名。** 旧的原始消息被忽略，按 `Content` 和 `ToolCalls` 重建，思考内容的签名不再回放，见[思考内容和签名回放](#思考内容和签名回放)。
+- **OpenAI 兼容接口不声明回答上限。** 回答能有多长由服务商的默认值决定；OpenAI 客户端也不读上限，先取名额再转换请求。
+- **用户自己的客户端仍按共享连接算窗口。** `Config.ClientFor` 换的是密钥和请求的去处，输入预算和回答上限仍取 `Connections` 里共享客户端声明的上限。
+- **有图片的会话不能换到不接受图片的模型。** 新消息会被拒绝，不会去掉旧图片再发。
 
 ## 代码位置
 

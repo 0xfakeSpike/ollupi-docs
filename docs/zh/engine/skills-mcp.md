@@ -1,6 +1,16 @@
 # 技能与 MCP
 
-技能和 MCP 都是把引擎之外的内容接进模型的方式：技能是一份写给模型看的说明，MCP 是一个别人实现好的工具服务器。两者都通过 `tools.Provider` 进入注册表，注册表、一次调用的生命周期和延迟加载见[工具系统](/zh/engine/tools)；这里写各自的格式、装配方式和边界。
+技能和 MCP 都是把引擎之外的内容接进模型的方式：技能（skill）是一份写给模型看的说明，MCP（Model Context Protocol）服务器是一个别人实现好的工具服务。两者都通过 `tools.Provider` 进入注册表，注册表、一次调用的生命周期和延迟加载见[工具系统](/zh/engine/tools)；这里写各自的格式、装配方式和边界。
+
+## 为什么这样设计
+
+- **系统提示词只列名字和一句描述，正文按需激活。** 技能目录早期每个技能是一段缩进 JSON，带源文件、版本、大小、资源和允许的工具；`7728a41` 改成每行 `- name: description`，其余由 `activate_skill` 返回，同样的预算能列更多技能。正文作为工具结果的一部分存进条目，所以重启和压缩之后仍然有效。
+- **坏技能让启动失败，不跳过。** 任何一个技能解析失败，整个 agent 起不来，错误写明是哪个文件，不会悄悄少一个技能，见[设计决策 18](/zh/reference/decisions#_18-出错即暴露)。所以改技能的一方要在写入之前先校验，桌面端就是这样做的。
+- **MCP 工具名总带服务器前缀。** 工具一律注册成 `<server>__<tool>`，服务器以后新增的工具不会和别的工具撞名，也不会让启动失败，工具名也不随其他配置变化（`0fb4289`）。
+- **连不上的服务器跳过，并报告原因。** 配错或连不上的服务器不阻止启动，状态里写明原因（`0fb4289`）。引用这些服务器工具的权限规则照样保留、本次不匹配任何调用；之前这样的规则会让 agent 起不来，或让相关会话每一轮都失败（`39e17df`）。
+- **每个用户的服务器在自己的沙箱里按需启动。** 用户第一次需要时才在他的 `Box`（沙箱的运行环境）里启动，掉线后再启动（`f1ff694`）。各用户的服务器和连接互不共享。
+
+代价：每个用户一组服务器进程；一台服务器掉线时整组关掉重连；MCP 工具没有 `PermissionContent`，权限规则只能写到工具名，也没有审批前冻结；技能改动要重启才生效。
 
 ## 技能是什么
 
@@ -62,7 +72,7 @@ metadata:
 
 `Agent.buildTools` 只在 `Config.SkillsDir` 非空时创建目录并加上 `skills` 提供者，所以空字符串表示技能关掉。`ToolList` 把当前目录里的名字做成枚举：`activate_skill` 的 `name`、`read_skill_resource` 的 `skill` 都只接受这些值（`agent/skills/provider.go`）。新增或改名技能要重启后端才生效。
 
-桌面端是一个现成实例：`skills_dir` 指向 `<home>/skills`，还没有 `config.yaml` 的首次启动会把 `sidecar/skills` 里内嵌的技能拷进去（自带 `zhou-shenghua-woodcut-style` 一个），已有同名目录不动。界面上的改动先写进技能目录里的 `.staging-*`，用 `ollupid --check-skills` 过同一个 `skills.New`，通过才 `rename` 到正式目录，然后重启后端；不通过就整份丢弃，原目录不动。所以界面写不进一个会让后端起不来的技能。能力页对比文件夹里的名字和运行中后端的枚举，不一致时提示两者不同。
+桌面端的技能目录默认是 `<home>/skills`，首次启动装入随应用发布的技能；界面上的改动先暂存在以点开头的目录里，用后端同一个 `skills.New` 校验通过才换进去并重启后端，所以界面写不进一个会让后端起不来的技能。见[内置技能](/zh/desktop/sidecar#内置技能)、[界面怎么改配置](/zh/desktop/config#界面怎么改配置)和[不一致检测](/zh/desktop/config#不一致检测)。
 
 ## 技能如何进入上下文
 
@@ -104,9 +114,9 @@ metadata:
 | 名字校验 | `^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$`，不含 `__`，同一份配置内不重名 |
 | stdio | `box.Executable` 解析命令，`box.Start` 起进程，`mcp.IOTransport` 接 stdin/stdout，stderr 收进一个 2048 字节的环形缓冲 |
 | HTTP | `box.Transport()` 包一层写 header 的 `RoundTripper`，交给 `mcp.StreamableClientTransport` |
-| 握手 | `client.Connect`，`InitializeResult().ServerInfo.Name` 记作服务器标题；客户端身份默认 `ollupi` / `0.1`，桌面端传 `ollupi-desktop` 加 sidecar 的构建版本（`debug.ReadBuildInfo`，取不到时为 `dev`） |
+| 握手 | `client.Connect`，`InitializeResult().ServerInfo.Name` 记作服务器标题；客户端身份默认 `ollupi` / `0.1`，嵌入方可以在 `NewUsers` 的 `Client` 里改（桌面端传 `ollupi-desktop` 和 sidecar 的构建版本） |
 
-工具名是 `<server>__<tool>`，分隔符 `tools.ProviderSeparator` 即 `__`。拼好的全名要匹配 `^[A-Za-z0-9_-]{1,64}$`（长度把前缀算在内），否则这个工具不提供，工具名记进 `skippedTools`。因为带前缀，两台服务器之间不会撞名；`checkName` 还要求同一份配置里的名字唯一，第二台同名的直接跳过。撞的是提供者名：服务器叫 `workspace`、`skills` 这类内置名字时，装配这个用户的注册表会报 `duplicate provider`；注册表里两个提供者给出同一个工具名则报 `duplicate tool`。两种情况都让 `registryFor` 失败，错误交回那一轮。桌面端在配置校验里先拦一层：`browser` 归内置浏览器，不能用作服务器名。
+工具名是 `<server>__<tool>`，分隔符 `tools.ProviderSeparator` 即 `__`。拼好的全名要匹配 `^[A-Za-z0-9_-]{1,64}$`（长度把前缀算在内），否则这个工具不提供，工具名记进 `skippedTools`。因为带前缀，两台服务器之间不会撞名；`checkName` 还要求同一份配置里的名字唯一，第二台同名的直接跳过。撞的是提供者名：服务器叫 `workspace`、`skills` 这类内置名字时，装配这个用户的注册表会报 `duplicate provider`；注册表里两个提供者给出同一个工具名则报 `duplicate tool`。两种情况都让 `registryFor` 失败，错误交回那一轮。嵌入方可以在自己的配置校验里先拦一层，桌面端就不让服务器叫 `browser`，见[校验分三层](/zh/desktop/config#校验分三层)。
 
 `Session.Invoke` 在调用里带上 `ollupi/caller` 的 `_meta`：`threadId`、`workspaceId`、`subagent`；没有 `threadId` 时不发，`Root` 不转发。
 
@@ -137,7 +147,7 @@ metadata:
 | 结果不能序列化成 JSON | 注册表的 `guard` 报 `output that cannot be encoded as JSON`，超过 1 MiB 则截断 |
 | 工具没给 `inputSchema` | 注册表报 `missing schema`，这个用户的工具装配失败 |
 
-清理跟着连接走：stdio 进程活到创建 `Users` 的那个 context 结束，`Users.Close` 关掉每个用户的会话；连接失败时进程在 `connect` 返回前就关掉。桌面端在 `host.New` 里连接全部服务器，耗在启动握手内，见[侧车](/zh/desktop/sidecar)。
+清理跟着连接走：stdio 进程活到创建 `Users` 的那个 context 结束，`Users.Close` 关掉每个用户的会话；连接失败时进程在 `connect` 返回前就关掉。桌面端在 `host.New` 里连接全部服务器，耗在启动握手内，见 [sidecar 的握手](/zh/desktop/sidecar#握手)。
 
 界面上的表现：能力页每张卡标 `stdio` 或 `HTTP`；连上显示工具数，连不上显示红色徽章和 `error` 原文，`skippedTools` 单独一行；后端不认识配置里的服务器时显示未启动。配置的形状与校验见[配置文件](/zh/app/config)。
 
@@ -167,11 +177,23 @@ MCP 工具进 `tools.Spec` 时字段是这样填的：
 
 沙箱边界分两处：
 
-- **进程在哪跑**：stdio 服务器由嵌入方给的 `Box` 启动，一直运行到那个 context 结束。桌面端专门建一个 `full-access` 的运行环境，根目录是 home，透传后端环境变量但去掉 `OLLUPI_` 开头的，所以 MCP 服务器不在工作区沙箱里。
+- **进程在哪跑**：stdio 服务器在嵌入方为这个用户给出的 `Box` 里启动（`NewUsers` 的 `boxFor`），一直运行到创建 `Users` 的 context 结束。这个 `Box` 不必是工作区沙箱：桌面端给 MCP 服务器的是一个不受限的运行环境，见 [MCP 的运行环境](/zh/desktop/sidecar#mcp-的运行环境)。
 - **HTTP 走哪条路**：请求用 `box.Transport()`。本机的 `Sandbox` 返回 `http.DefaultTransport`；远程 `Box` 用自己的 transport，连内网地址会被拒。
 - **技能目录**：`SkillsDir` 作为只读路径交给沙箱，所以 `run_command` 改不了技能文件；技能自己的读取直接读目录，不经 `Box`。
 
 工具调用本身不受 `Workspace` 的沙箱限制：`Invoke` 只是把参数交给服务器，引擎管不了服务器拿它做了什么。
+
+## 边界与已知问题
+
+- **技能改动要重启才生效。** 目录只在启动时扫描一次，`name` 的枚举也是那时定的，见[发现与加载](#发现与加载)。
+- **一个坏技能让整个 agent 起不来。** 没有跳过坏技能继续跑的模式。
+- **frontmatter 只读三个键。** 其他键被忽略；`allowed-tools` 以前读过但从没执行，`701ac2a` 删掉了。
+- **技能正文太大时激活失败。** 超过 20000 rune 或输入预算的 15% 时这次调用失败，模型拿不到正文；精简模式下技能不列出，四个工具也被延迟。
+- **起初连不上的服务器不会自动重试。** 只有已经连上的服务器掉线才触发整组重连（`gone()` 只看已连上的会话）；起初就失败的那台要等到同一用户的另一台掉线，或进程重启。
+- **一台掉线，整组重连。** 这个用户的其他服务器进程也会被关掉重启。
+- **MCP 工具只能按名字管。** 没有 `PermissionContent`，规则不能带说明符，也不走审批前冻结；只读标注由服务器自己声明，引擎不核对，见[权限与沙箱](#权限与沙箱)。
+- **调用超时不代表没生效。** 5 分钟没回应时调用失败，但服务器那边可能已经做了，错误信息提醒模型先检查再重试。
+- **引擎管不到服务器做了什么。** stdio 服务器在哪个 `Box` 里跑、HTTP 请求走哪条路由嵌入方决定，工具调用本身不经过工作区沙箱。
 
 ## 代码位置
 
@@ -187,8 +209,7 @@ MCP 工具进 `tools.Spec` 时字段是这样填的：
 | ollupi | `tools/spec.go`、`tools/registry.go` | `Spec`、`Annotations`、`tools.Set`、`Unavailable`、输出上限 |
 | ollupi | `agent/permission/policy.go`、`permission.go` | 审批判定读哪两个 hint；连不上的服务器与规则的关系 |
 | ollupi | `gateway/server.go` | `mcpServer/list` |
-| ollupi-desktop | `sidecar/skills/` | 首次启动安装的内嵌技能 |
-| ollupi-desktop | `sidecar/internal/config/config.go` | `skills_dir`、`mcp` 的形状、`${NAME}` 展开、`browser` 名称限制 |
-| ollupi-desktop | `sidecar/internal/host/host.go` | `mcpBox`、`mcpServers`、启动时连接全部服务器 |
-| ollupi-desktop | `apps/desktop/src/main/backend/skills.ts` | 技能改动：暂存、`--check-skills`、通过后重启 |
+| ollupi-desktop | `sidecar/internal/host/host.go` | 桌面端怎么装配：`mcpBox`、`mcpServers`、客户端身份 |
 | ollupi-desktop | `apps/desktop/src/renderer/src/views/capabilities/` | 能力页的技能列表与 MCP 状态 |
+
+桌面端的技能目录、暂存校验和配置形状的代码位置见 [sidecar](/zh/desktop/sidecar#代码位置) 和[配置的实现](/zh/desktop/config#代码位置)。

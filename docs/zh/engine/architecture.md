@@ -1,18 +1,25 @@
 # 引擎架构
 
-Ollupi 引擎是一个 Go 库，模块路径 `github.com/0xfakeSpike/ollupi`。它把所有会话（thread）放进同一个进程运行：运行状态全部写在 SQLite 里，内存里只保留正在运行的部分。会话等待用户、审批或子 agent 时，它只是数据库里的几行记录，不占内存和算力。
-
-引擎本身没有 `main`。宿主程序（host）负责组装：打开数据库，创建模型客户端和工具，构造 `agent.Agent` 和 `gateway.Server`，再调用它们的启动方法。桌面端的 `sidecar/internal/host/host.go` 是一个宿主。`bench/` 是另一个。
+Ollupi 引擎是一个 Go 库，模块路径 `github.com/0xfakeSpike/ollupi`。一个进程运行一个分片上的所有会话（thread）：运行状态全部写在 SQLite 里，内存里只保留正在运行的部分。这一页讲引擎分几层、依赖往哪个方向走、宿主怎样把各部分装起来，以及一条消息从客户端进来、到回答回到界面经过哪些代码。
 
 ![Ollupi 架构](/images/architecture.svg)
+
+## 为什么这样设计
+
+- **引擎是库，宿主负责装配。** 引擎没有 `main`。宿主程序（host）打开数据库，创建模型客户端和工具，构造 `agent.Agent` 和 `gateway.Server`，再启动定时器和记忆提炼。桌面端的 `sidecar/internal/host/host.go` 是一个宿主，`bench/` 是另一个。初版提交就这样定位：应用导入它，自带工具、技能和界面（`acfb8e4`）。早期 `Agent.Start` 自己启动记忆提炼的后台循环，定时任务的计时器是调度循环里的一个分支；`527fe58` 和 `ee7776c` 把两者移到宿主，agent 不再知道定时任务的存在，到点时宿主调用和用户消息相同的入口。
+- **依赖只朝下，每个概念一个主人。** `repo` 拥有会话状态机，也就是轮次和条目的状态转换及其约束；`agent` 负责调度，并发出每一次变化；`gateway` 只做编解码、认证和分页的字节预算。`eedc2c8` 把工作区操作从网关移进 agent、把状态转换移进 repo；`701ac2a` 删掉了网关在调用之后补发通知、复制定时任务校验的代码。所以不经网关、直接嵌入 agent 的宿主拿到的是同一套规则。agent 也不知道网关存在：事件经 `Config.OnEvent` 回调往上走，库里只有 `gateway` 导入 `agent`。见[设计决策 19](/zh/reference/decisions#_19-逻辑放在拥有它的层)。
+- **调度状态只在一个事件循环里改。** 会改变调度状态的操作都投进同一个 goroutine 依次执行，槽位表只在这个 goroutine 上读写，不需要锁。它取代了早期的全局互斥锁加条件变量（`bca8b52`）。纯读操作直接访问数据库，不进循环。见[设计决策 3](/zh/reference/decisions#_3-无内存调度状态)。
+- **一个进程承载一个分片的全部会话。** 不按 agent 分进程或容器，等待中的会话只剩数据库记录。槽位和停放的细节见[执行模型](/zh/engine/execution)和[设计决策 1](/zh/reference/decisions#_1-池化-runtime)。
+
+代价是装配的正确性落在宿主身上：启动和关闭的顺序、失去租约时停掉库上的其他组件、定时器和记忆提炼的生命周期，引擎都不替宿主检查。`OnEvent` 在调度循环或槽位的 goroutine 上同步调用，所以它必须很快返回（见[边界](#边界与已知问题)）；循环里的数据库读写也是同步的，任何慢操作都会拖住整个分片，附件读写因此在进循环之前完成（`fb3e2d1`）。
 
 ## 分层
 
 | 层 | 目录 | 负责什么 |
 |---|---|---|
 | 网关 | `gateway` | WebSocket 上的 JSON-RPC 2.0；认证；把引擎事件推给客户端；路由器（`gateway/router.go`） |
-| agent | `agent` | 调度循环、槽位、一轮（turn）的生命周期、子 agent、会话管理、分片租约 |
-| 运行时 | `agent/runtime` | 一轮在槽位里的执行：决定工具调用、执行工具、调用模型 |
+| agent | `agent` | 调度循环、槽位、轮次（turn）的生命周期、子 agent、会话管理、分片租约 |
+| 运行时 | `agent/runtime` | 一个轮次在槽位里的执行：决定工具调用、执行工具、调用模型 |
 | 上下文 | `agent/contextmanager`、`agent/systemprompt` | 窗口预算、提示词组装、压缩、工具输出裁剪 |
 | 策略 | `agent/permission`、`agent/memory`、`agent/skills` | 权限判定、记忆提炼与召回、技能目录 |
 | 存储 | `repo` | SQLite 表、事务、migration、分片租约行、分片目录 |
@@ -22,9 +29,10 @@ Ollupi 引擎是一个 Go 库，模块路径 `github.com/0xfakeSpike/ollupi`。�
 本页用到的术语：
 
 - 会话（thread）：一段对话，是 `threads` 表的一行。
-- 一轮（turn）：用户发一条消息后 agent 的一次完整处理，是 `turns` 表的一行。
-- 条目（item）：一轮里的一步，比如一条消息、一段思考、一次工具调用，是 `items` 表的一行。
-- 槽位（slot）：执行池里的一个运行名额，一轮只有占着槽位才在执行。
+- 轮次（turn，口语"一轮"）：用户发一条消息后 agent 的一次完整处理，是 `turns` 表的一行。
+- 条目（item）：轮次里的一步，比如一条消息、一段思考、一次工具调用，是 `items` 表的一行。
+- 槽位（slot）：执行池里的一个运行名额，轮次只有占着槽位才在执行。
+- 宿主（host）：导入引擎、负责装配和启动的程序。
 
 ## 依赖方向
 
@@ -33,6 +41,7 @@ Ollupi 引擎是一个 Go 库，模块路径 `github.com/0xfakeSpike/ollupi`。�
 ```mermaid
 flowchart TD
   gateway["gateway"] --> agent["agent"]
+  gateway --> repo
   agent --> runtime["agent/runtime"]
   runtime --> cm["agent/contextmanager"]
   runtime --> sp["agent/systemprompt"]
@@ -53,6 +62,7 @@ flowchart TD
 - `tools` 根包和 `pkg/*` 不导入仓库里的任何其他包，它们是最底层。
 - `repo` 只导入 `tools` 和 `pkg/llm`，用的是它们的类型（`tools.Await`、`tools.ContextArtifact`、`llm.Model` 等），因为这些类型要存进条目和轮次的 JSON 列。
 - 库内只有 `gateway` 这一层导入 `agent`。引擎事件通过 `Config.OnEvent` 回调往上走，`agent` 不知道网关存在。
+- `gateway` 也直接导入 `repo`：不需要 agent 逻辑的视图（设置、搜索、会话分页、工作区和定时任务列表）由网关经 `Options.DB` 自己读库（`701ac2a`）。
 - `tools/cron` 导入 `repo`，因为定时任务存在数据库里；`agent` 不导入 `tools/cron`，定时器由宿主启动，到点时调用 `agent.StartScheduledTurn`。
 - `agent/runtime` 导入 `tools/workspace` 只为两个工具名：精简模式常驻的 `read_file` 和 `run_command`。
 
@@ -79,7 +89,7 @@ flowchart TD
 
 客户端用 WebSocket 连到网关（`GET /`）。`Server.ServeHTTP` 依次做：
 
-1. `authorize`：`r.Host` 不在允许名单时回 403；令牌不对时回 401。令牌怎么读见[分片与多用户](/zh/engine/sharding)。
+1. `authorize`：`r.Host` 不在允许名单时回 403；令牌不对时回 401。令牌怎么读见[分片与租约](/zh/engine/sharding#令牌认证)。
 2. `db.EnsureUser(user)`：用户不存在就建 `users`、`settings`、`memory_state` 三行。
 3. `websocket.Accept`，`Origin` 按 `localhost:*`、`127.0.0.1:*`、`[::1]:*` 和 `AllowedOrigins` 校验；单条消息上限 32 MiB（`maxMessageBytes`）。
 4. 新连接记进 `Server.clients[user]`。每个用户只有一条当前连接，新的进来时旧的以 `StatusPolicyViolation` 关闭。
@@ -100,7 +110,7 @@ flowchart TD
 
 ### 进入槽位
 
-`a.call` 执行的函数跑完后，调度循环马上调用 `admit`。它算出空闲槽位数，从数据库读出同样数量的就绪会话，对每个调用 `reconcile`。`reconcile` 先写 `Launch`（`status = 'inProgress'`），再 `launch` 起 goroutine。细节见[执行模型](/zh/engine/execution)。
+`a.call` 执行的函数跑完后，调度循环马上调用 `admit`。它算出空闲槽位数，从数据库读出同样数量的就绪会话，对每个调用 `reconcile`。`reconcile` 先写 `Launch`（`status = 'inProgress'`），再 `launch` 起 goroutine。细节见[执行模型](/zh/engine/execution#调度循环和槽位)。
 
 ### 运行和回到界面
 
@@ -179,6 +189,15 @@ goroutine 里的 `a.run` 读轮次、会话和条目（`RunItems`），构造 `r
 取消 `Start` 的 ctx 后，`a.ctx` 结束，循环退出，每个槽位的 ctx 跟着结束。`afterRun` 投不进循环，所以这些轮次留在 `inProgress`，等下次启动恢复。`Wait` 等所有 goroutine 退出，再释放租约（如果有）。
 
 关闭顺序由宿主保证。桌面端 sidecar 用同一个 ctx 停止所有组件，然后依次等网关、定时器等附属组件、agent，最后关数据库。
+
+## 边界与已知问题
+
+- **`OnEvent` 是同步回调。** 它在调度循环或槽位的 goroutine 上被调用（流式增量来自槽位），所以必须能并发调用、很快返回，也不能回调会进循环的 agent 方法：在循环上调用时，循环正在等它返回，`call` 会一直等下去。`bca8b52` 的 README 写过这条约束，现在的 README 和代码注释里都没有。网关的 `Deliver` 只把消息放进发件箱就返回。
+- **循环里的慢操作拖住整个分片。** 循环里的数据库读写是同步的，一次慢查询会让分片上所有会话的调度一起等。附件读写已经移出循环，其他循环内操作没有单独的超时。
+- **断线期间的事件不补发。** `Deliver` 找不到这个用户的当前连接时直接丢掉事件。重连后网关只重发等待中的审批和提问，其余状态要客户端自己重读会话。
+- **一个用户只有一条当前连接。** 同一用户的新连接会把旧连接以 `StatusPolicyViolation` 关掉，两个客户端不能同时连同一个用户。
+- **读得慢的客户端会被断开。** 发件箱积压超过 16 MiB 时连接直接关闭。
+- **装配错误引擎不检查。** 发布分片地址的时机、失去租约后停掉其他组件、关闭顺序，都只写在注释和文档里，由宿主自己保证，见[分片与租约](/zh/engine/sharding#分片租约)。
 
 ## 代码位置
 

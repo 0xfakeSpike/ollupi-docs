@@ -1,6 +1,16 @@
 # 审批与权限
 
-agent 调用工具之前，`agent/permission` 决定这次调用是直接运行、问用户，还是拒绝。决定基于三样东西：审批策略、规则、这次调用的内容。审批（approval）是这个决定为"问用户"时的等待流程。等待期间这一轮让出槽位，只留在数据库里。
+agent 调用工具之前，`agent/permission` 决定这次调用是直接运行、问用户，还是拒绝。决定基于三样东西：审批策略、规则、这次调用的内容。审批（approval）是这个决定为"问用户"时的等待流程。等待期间这一轮让出槽位，只留在数据库里。权限在整体安全设计里的位置见[安全总览](/zh/engine/security)。
+
+## 为什么这样设计
+
+- **规则先于策略，下层去不掉上层的 deny。** deny 和 ask 规则代表用户本人，三档策略下都先判定。三层设置合并时规则取并集，下层能加规则，去不掉上层的 deny；`faa3b90` 之前，工作区的规则列表会整个替换掉 agent 默认的规则。
+- **按命令的结构匹配，读不懂就不算数。** 规则看的是拆开 `sh -c`、`env` 这类包装之后的每个子命令：deny 命中任一部分就生效，allow 要覆盖全部（`e36dd28`）。解析器只认它确定能理解的语法，其余标为看不清（`28b9033`）。看不清的命令不能被带说明符的 allow 放行，也不会被当作"规则没意见"。
+- **`never` 是"不问"，不是"不许"。** `7b6e720` 之前，`never` 因为没人能批准而一律拒绝提权，结果桌面端"宽松"档里 agent 完全出不了沙箱。现在规则之外的一切都运行，真正不想让它做的事用 deny 规则表达。为了让 deny 规则在这一档真的可靠，规则读不懂、又可能被 deny 命中的命令直接拒绝（`2ac82a0`）。
+- **批准的是冻结的执行内容。** 用户批准的是 `Prepared` 里冻结的命令、目录、环境变量和 diff；执行前再算一遍调用的内容，变了就重新判定。放弃的做法是批准后按冻结内容执行、不再核对。见[设计决策 16](/zh/reference/decisions#_16-审批绑定执行内容)。
+- **等审批不占资源，读不到设置就失败。** 审批写在条目上，等待时这一轮让出槽位，用户隔几小时再回答也只占几行数据库记录，见[设计决策 1](/zh/reference/decisions#_1-池化-runtime)。权限设置读不出来时这一轮失败，不退回默认值，见[设计决策 18](/zh/reference/decisions#_18-出错即暴露)。
+
+代价：写法复杂一点的命令（变量、子 shell、`xargs`）经常看不清，带说明符的规则一多，用户被问的次数就多；`never` 档下能拦住沙箱外命令的只有 deny 规则；"本会话允许"只认完全相同的调用，换个参数就要再问；MCP 工具的规则只能写到工具名。
 
 ## 判定顺序
 
@@ -50,7 +60,7 @@ func (p Policy) requiresApproval(a tools.Annotations, prepared *tools.Prepared) 
 
 `on-request` 的依据是 `Prepared.Sandboxed`：沙箱已经限制了命令能做什么，所以不用问。
 
-`never` 的含义是"不问任何人"，所以规则之外的一切都运行，包括离开沙箱的命令。`7b6e720` 之前它的做法相反：没有人能批准，于是提权一律拒绝。结果是桌面端"宽松"档里 agent 完全出不了沙箱，而 `run_command` 的描述还在承诺"会问用户"。现在的取舍是：选了 `never` 的人要的就是不被打断，真正不想让它做的事用 deny 规则表达。为了让 deny 规则在 `never` 下真的可靠，规则读不懂的命令不会被当作"规则没意见"放行：可能命中 deny 的直接拒绝，错误告诉模型把命令写清楚，或者告诉用户。否则只要把 `rm` 包进 `sh -c "$X"`，`run_command(rm:*)` 这条 deny 就形同虚设，而且这条命令还能申请离开沙箱。三档对普通调用、沙箱内命令、提权命令的结论由 `TestEachPolicyDecidesWhatRunsWithoutAsking` 覆盖，规则在每档先判定由 `TestRulesSpeakAtEveryLevel` 覆盖，`never` 下看不清的命令由 `TestNeverDoesNotRunWhatARuleCannotRead` 覆盖。
+`never` 的含义是"不问任何人"，所以规则之外的一切都运行，包括离开沙箱的命令。`7b6e720` 之前它的做法相反：没有人能批准，于是提权一律拒绝，而 `run_command` 的描述还在承诺"会问用户"。选了 `never` 的人要的就是不被打断，真正不想让它做的事用 deny 规则表达。所以规则读不懂的命令不会被当作"规则没意见"放行：可能命中 deny 的直接拒绝，错误告诉模型把命令写清楚，或者告诉用户（`2ac82a0`）。否则只要把 `rm` 包进 `sh -c "$X"`，`run_command(rm:*)` 这条 deny 就形同虚设，而且这条命令还能申请离开沙箱。三档对普通调用、沙箱内命令、提权命令的结论由 `TestEachPolicyDecidesWhatRunsWithoutAsking` 覆盖，规则在每档先判定由 `TestRulesSpeakAtEveryLevel` 覆盖，`never` 下看不清的命令由 `TestNeverDoesNotRunWhatARuleCannotRead` 覆盖。
 
 ## 规则语法
 
@@ -238,6 +248,15 @@ flowchart LR
 界面收到 `item/tool/requestUserInput`，回 `{answers: {问题 ID: {answers: [...]}}}`。`Request.Check` 校验：每题都有回答，回答不为空，没有多出的题，总长不超过 4000 字符。校验失败返回 `ErrInvalidAnswer`，请求仍在等待。通过后回答成为工具结果，条目 `completed`。
 
 待处理请求按时间排序。`PendingRequests` 列出一个会话及其子 agent 的请求，`AllPendingRequests` 列出用户全部等待中的会话的请求，连接恢复后界面能重新拿到它们。
+
+## 边界与已知问题
+
+- **`never` 档下提权不问。** 规则没有给出结论的调用一律运行，离开沙箱的命令也包括在内，能拦住它们的只有 deny 规则，见[审批策略](#审批策略)。
+- **看不清的命令只在有带说明符的规则时才问。** 工具上没有带说明符的 deny 或 ask 时，看不清的命令落到审批策略：`on-request` 下沙箱内的命令直接运行，这时的限制只有沙箱，见[看不清的命令](#看不清的命令)。
+- **沙箱不生效时 `on-request` 每条命令都问。** 这一档免问的依据是 `Prepared.Sandboxed`。非 macOS 的本机只能用 `full-access`，`Sandboxed` 恒为假，`run_command`、`edit_file`、`write_file` 都会问。
+- **MCP 工具只能整体放行或禁止。** MCP 工具没有 `PermissionContent`，规则不能带说明符；审批依据的 `readOnlyHint`、`openWorldHint` 由服务器自报。见[权限与沙箱](/zh/engine/skills-mcp#权限与沙箱)。
+- **"本会话允许"只认完全相同的调用。** 工具、`Prepared`、内容文本都要相等，同一个命令换个参数要再问一次。
+- **一批调用逐个审批。** 一次回答里有多个要问的调用时，遇到第一个就停，后面的等前一个有了决定才出现。
 
 ## 代码位置
 

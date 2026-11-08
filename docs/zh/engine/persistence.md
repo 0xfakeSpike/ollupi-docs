@@ -1,6 +1,16 @@
 # 持久化与崩溃恢复
 
-Ollupi 的运行状态全部存在 SQLite。一个库是一个分片（shard），分片上的用户共用它的表。每一步在执行之前先写库，所以进程任何时刻退出，重启后都能从库里读出"做到哪了"。调度不依赖内存里的状态，详见[执行模型](/zh/engine/execution)。
+Ollupi 的运行状态全部存在 SQLite。一个库是一个分片（shard），分片上的用户共用它的表。每一步在执行之前先写库，所以进程任何时刻退出，重启后都能从库里读出"做到哪了"，并接着往下走。这一页讲库里有哪些表、写入按什么顺序发生、重启时怎样恢复、表结构怎样升级。调度本身见[执行模型](/zh/engine/execution)。
+
+## 为什么这样设计
+
+- **全部运行状态放一个 SQLite 库，一条连接。** 会话、轮次、条目、审批、记忆、定时任务都在同一个库里，库外没有需要恢复的状态。连接池固定为一条（`SetMaxOpenConns(1)`），进程内的读写全部串行。一条连接从初版（`acfb8e4`）就是这样；为什么选 SQLite 而不是别的存储，仓库里没有记录。见[设计决策 2](/zh/reference/decisions#_2-sqlite-与先落库再执行)。
+- **工具调用分 `pending` 和 `inProgress`。** 调用记下时是 `pending`，校验、准备、等审批都在这个状态里，真正执行之前才写成 `inProgress`。以前调用从模型回答记下起就是 `inProgress`，崩溃后分不清没跑过和跑到一半，恢复时只能猜：把这一轮第一条未结束的调用标成可能已生效。`b52bde4` 拆开了这两个状态，去掉了这个猜测。
+- **恢复不是另一条路径。** 启动时只关掉被中断的条目、把运行中的轮次停放，然后交给平时的 `reconcile` 和 `admit`。正常关闭、崩溃、[租约接管](/zh/engine/sharding#启动和接管)都走这一条路。见[设计决策 3](/zh/reference/decisions#_3-无内存调度状态)。
+- **约束不满足就报错。** 枚举列写入时校验取值；部分索引用 `INDEXED BY` 指定，查询条件和索引对不上时 SQLite 报错，而不是退回全表扫描（`600d071`）；版本比程序新的库拒绝打开。见[设计决策 18](/zh/reference/decisions#_18-出错即暴露)。
+- **表结构按编号 migration 升级。** 以前用 gorm 的 `AutoMigrate`，它只能加表加列，做不到的改动就得清库；`a885647` 换成编号的 SQL 步骤，理由是库里存着用户的会话和记忆。见[设计决策 17](/zh/reference/decisions#_17-编号-migration)。
+
+代价：每一步都要写库，[基准](/zh/benchmarks/)里一轮（三次模型调用、两次工具调用，模拟模型、改动前测得）约 68 次读、15 次写、11.6 KB 磁盘；所有读写排在一条连接上；`inProgress` 的调用不会自动重做，生效与否交给模型和用户判断；migration 只能往前走，表结构有行类型和 SQL 两份，靠测试保持一致。
 
 ## SQLite 配置
 
@@ -16,7 +26,7 @@ Ollupi 的运行状态全部存在 SQLite。一个库是一个分片（shard）�
 | 时间 | `NowFunc` 取 UTC，写入前都转 UTC | gorm 配置 |
 | 日志 | gorm 日志静默 | gorm 配置 |
 
-只有一条连接，所以进程内的数据库访问是串行的。`DB.Tx` 用 gorm 的事务，回调里拿到的是绑定这个事务的 `*DB`，里面的读写都要走它。事务开始时还会检查租约围栏，见[分片与多用户](/zh/engine/sharding)。
+只有一条连接，所以进程内的数据库访问是串行的。`DB.Tx` 用 gorm 的事务，回调里拿到的是绑定这个事务的 `*DB`，里面的读写都要走它。事务开始时还会检查租约围栏，见[分片与租约](/zh/engine/sharding#围栏)。
 
 构建时必须带 `-tags sqlite_fts5`，消息搜索需要 FTS5。`repo/fts5.go` 在没有这个标签时引用一个不存在的符号，让编译直接失败。
 
@@ -210,7 +220,7 @@ flowchart LR
 | `owner` | text | 持有进程的 UUID |
 | `expires_at` | integer | Unix 毫秒 |
 
-协议见[分片与多用户](/zh/engine/sharding)。
+协议见[分片与租约](/zh/engine/sharding#分片租约)。
 
 ### items_search
 
@@ -336,7 +346,7 @@ type = 'userMessage' OR (type = 'toolCall' AND (approval ->> '$.decision' = 'acc
 
 ## 崩溃恢复
 
-上面的写入顺序保证了：进程任何时刻退出，库里都能读出做到了哪一步。`Agent.Start` 在起调度循环前调用 `recover`。这时内存是空的，所有 `inProgress` 的轮次都不在任何槽位上。
+上面的写入顺序保证了：进程任何时刻退出，库里都能读出做到了哪一步。`Agent.Start` 在起调度循环前调用 `recover`（配了租约时在拿到租约之后）。这时内存是空的，所有 `inProgress` 的轮次都不在任何槽位上。
 
 `StrandedThreads` 找出可能走不下去的会话：
 
@@ -350,13 +360,13 @@ UNION SELECT thread_id FROM turns q WHERE q.status = 'queued'
 
 对每个会话：
 
-1. `RecoverItems` 处理当前轮次的 `inProgress` 条目，见下表。
+1. `RecoverItems` 在一个事务里处理当前轮次的 `inProgress` 条目，见下表。
 2. 轮次还是 `inProgress`：`Park`，按未结束的调用改成等待状态或 `ready`。
 3. `reconcile`。
 
-最后 `admit` 把 `ready` 的轮次送进槽位。`ready`、`waitingOnApproval`、`waitingOnUserInput` 的轮次不用特别处理，它们本来就不依赖进程。
+最后 `admit` 把 `ready` 的轮次送进槽位。`ready`、`waitingOnApproval`、`waitingOnUserInput` 的轮次不用特别处理，它们本来就不依赖进程。`StrandedThreads`、`RecoverItems` 或 `Park` 失败时 `Start` 返回错误，进程不会带着没收拾完的状态开始调度。
 
-条目按类型处理：
+`RecoverItems` 按条目类型处理：
 
 | 条目 | 恢复时 |
 |---|---|
@@ -365,17 +375,17 @@ UNION SELECT thread_id FROM turns q WHERE q.status = 'queued'
 | 工具调用 `inProgress`，有 `await` | 不动，继续等 |
 | `agentMessage`、`reasoning`、`contextCompaction` 在 `inProgress` | 标 `failed`，错误文本 `the app stopped before this finished` |
 
-`pending` 和 `inProgress` 的区分就是"先落库再执行"的用途：执行前一定先写 `inProgress`。所以恢复时 `pending` 一定没跑过，可以重做；`inProgress` 可能已经生效，绝不重跑，错误文本交给模型，由它判断要不要先检查再重试。这样工具调用不会被执行两次。
+执行前一定先写 `inProgress`，所以恢复时 `pending` 一定没跑过，照常判定和执行，已做出的审批决定保留；`inProgress` 可能已经生效，绝不重跑，错误文本交给模型，由它判断要不要先检查再重试。所以引擎不会把一个工具调用执行两次。
 
 模型回答没有副作用，所以没写完的回答直接作废，恢复后重新调用模型。流式文本不落库，这部分文本会丢。
 
-一个边界：进程如果在最终回答落库之后、`EndTurn` 之前退出，这一轮恢复后是 `ready`，运行时再调用一次模型，会多出一条回答。
+进程如果在最终回答落库之后、`EndTurn` 之前退出，这一轮恢复后是 `ready`，运行时会再调用一次模型，多出一条回答。
 
-正常关闭和崩溃走同一条恢复路径。取消 ctx 后，`afterRun` 进不了循环，或者走到 `a.ctx.Err() != nil` 分支什么也不写，轮次留在 `inProgress`。
+正常关闭和崩溃走同一条恢复路径。取消 ctx 后，`afterRun` 进不了循环，或者走到 `a.ctx.Err() != nil` 分支什么也不写，轮次留在 `inProgress`，下次启动按上面的流程恢复。租约接管也一样，新持有者拿到租约后调用的是同一个 `recover`，见[分片与租约](/zh/engine/sharding#启动和接管)。
 
 ## Migration 机制
 
-表结构按编号的步骤升级，文件在 `repo/migrations/NNNN_<what>.sql`，用 `go:embed` 打进二进制。以前用 gorm 的 `AutoMigrate`，它只能加表和加列，不能加的改动就得清库，而库里存着用户的会话和记忆。
+表结构按编号的步骤升级，文件在 `repo/migrations/NNNN_<what>.sql`，用 `go:embed` 打进二进制。`repo.Open` 打开库时就执行，宿主拿到 `*repo.DB` 时表结构已是最新。
 
 规则：
 
@@ -412,7 +422,7 @@ flowchart TD
 
 `TestMigrationsMatchTheRows` 比较两个库：一个走完全部 migration，一个由 gorm 根据行类型建出。列、键、检查约束、索引必须一致。行类型改了却没写 migration 时测试失败。
 
-分片目录库（`repo.Catalog`）是单独的文件，只有 `shards` 和 `placements` 两张表，用 `AutoMigrate`，不走这套步骤。见[分片与多用户](/zh/engine/sharding)。
+分片目录库（`repo.Catalog`）是单独的文件，只有 `shards` 和 `placements` 两张表，用 `AutoMigrate`，不走这套步骤。见[分片与租约](/zh/engine/sharding#分片)。
 
 ## 六个 migration
 
@@ -455,6 +465,16 @@ SQLite 不能调整列的顺序，所以新建 `turns_new`、`items_new`，复�
 ### 0006 分片租约
 
 建 `shard_lease` 单行表。
+
+## 边界与已知问题
+
+- **写放大和单连接。** 每一步都写库，所有读写排在一条连接上。基准里 4096 个活跃会话时每轮等连接约 43 ms，解释不了那一档多出的 3.9 s，瓶颈还没找到。数字来自模拟模型，测于多用户和分片改动之前，见[性能基准](/zh/benchmarks/)。
+- **`inProgress` 的调用不自动重做。** 恢复时只标成"可能已生效"。`tools.Annotations` 有 `IdempotentHint` 字段，但运行时不读它，见[设计决策 2](/zh/reference/decisions#_2-sqlite-与先落库再执行)。
+- **可能多出一条回答，没写完的流式文本会丢。** 见[崩溃恢复](#崩溃恢复)。
+- **进程被杀时轮次级用量少记。** 这次运行的用量还没累加到轮次上；各次模型调用的用量仍在各自的条目上，见 [turns](#turns)。
+- **migration 只能往前走。** 没有回滚步骤；新版本升级过的库，旧版本拒绝打开。migration 在 `repo.Open` 里执行，早于拿分片租约，见[分片与租约](/zh/engine/sharding#边界与已知问题)。
+- **重建 `items` 之后要重建搜索索引。** `VACUUM` 或重建 `items` 的 migration 会重新编号 rowid，见 [items_search](#items-search)。
+- **目录库不走编号 migration。** `repo.Catalog` 仍用 `AutoMigrate`。
 
 ## 代码位置
 
