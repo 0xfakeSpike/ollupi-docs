@@ -265,6 +265,14 @@ agent 的回复由 `Streamdown` 解析。流式输出时它先把没闭合的代
 
 单击在文件面板打开，⌘+点击用默认应用打开。
 
+## 搜索
+
+搜索页在侧边栏，⌘K 从任何界面打开（`views/App.tsx` 的 `useSearchShortcut`）。
+
+- 输入停顿 250 ms 才发请求（`PAUSE_MS`），每组最多 20 条（`LIMIT`）；上一个结果保留到新结果到达，列表不会闪空。
+- 结果按会话、消息、任务、记忆分组，只列非空分组并标出条数。点会话打开它，点消息打开会话并定位到那一条，点任务或记忆跳到列出它的页面（`focus` 与 `useFound`）。
+- 记忆页的搜索框用同一个 `search` 方法，把 `workspaceId` 传成当前标签页的范围，返回的记忆再按 scope 过滤。
+
 ## 语言
 
 界面有 `en` 和 `zh-CN` 两份词表，放在 `i18n/messages/` 下，按区域分文件。中文词表类型是 `typeof en`，少一个键编译不过。
@@ -299,6 +307,10 @@ agent 的回复由 `Streamdown` 解析。流式输出时它先把没闭合的代
 | ollupi-desktop `apps/desktop/src/renderer/src/views/common/useStickToBottom.ts` | 贴底滚动 |
 | ollupi-desktop `apps/desktop/src/renderer/src/views/common/Markdown.tsx` | Markdown 和代码高亮 |
 | ollupi-desktop `apps/desktop/src/renderer/src/views/common/Mermaid.tsx` | 图 |
+| ollupi-desktop `apps/desktop/src/renderer/src/domains/search.ts` | `useSearch`、250 ms 停顿、每组 20 条 |
+| ollupi-desktop `apps/desktop/src/renderer/src/views/search/SearchScreen.tsx`、`Highlight.tsx` | 搜索结果分组展示、点击定位、高亮 |
+| ollupi-desktop `apps/desktop/src/renderer/src/views/memory/MemoryScreen.tsx` | 记忆页搜索框 |
+| ollupi-desktop `apps/desktop/src/renderer/src/views/common/found.ts` | 把命中的条目滚进视野并标出 |
 | ollupi-desktop `apps/desktop/src/renderer/src/i18n/` | 词表 |
 | ollupi-desktop `packages/core/src/timeline.ts` | 时间线归并 |
 | ollupi-desktop `packages/core/src/calls.ts` | 工具调用分类 |

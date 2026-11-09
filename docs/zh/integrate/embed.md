@@ -128,6 +128,7 @@ func run() error {
 - [多用户与分片部署](/zh/integrate/deploy)：多进程部署、路由和接管。
 - [容量规划与限流](/zh/integrate/capacity)：槽位和模型并发怎么设。
 - [运维](/zh/integrate/operations)：关闭顺序、备份、升级。
+- [扩展点](/zh/integrate/extend)：每用户的模型密钥、自己的工具、云沙箱、附件存储、认证。
 - [Config 参考](/zh/integrate/config)：`agent.Config` 的全部字段。
 
 ## 启动校验与常见错误

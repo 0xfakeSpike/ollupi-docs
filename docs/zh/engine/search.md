@@ -117,11 +117,7 @@ i.rowid IN (SELECT rowid FROM items_search WHERE text LIKE ?) AND i.text LIKE ? 
 
 ## 桌面端
 
-搜索页在侧边栏，⌘K 从任何界面打开（`views/App.tsx` 的 `useSearchShortcut`）。
-
-- 输入停顿 250 ms 才发请求（`PAUSE_MS`），每组最多 20 条（`LIMIT`）；上一个结果保留到新结果到达，列表不会闪空。
-- 结果按会话、消息、任务、记忆分组，只列非空分组并标出条数。点会话打开它，点消息打开会话并定位到那一条，点任务或记忆跳到列出它的页面（`focus` 与 `useFound`）。
-- 记忆页的搜索框用同一个 `search` 方法，把 `workspaceId` 传成当前标签页的范围，返回的记忆再按 scope 过滤。
+桌面端的搜索页和记忆页搜索框都调这个 `search` 方法，界面怎么发请求、怎么分组和定位见[渲染进程](/zh/desktop/renderer#搜索)。
 
 ## 已知限制
 
@@ -154,7 +150,3 @@ i.rowid IN (SELECT rowid FROM items_search WHERE text LIKE ?) AND i.text LIKE ? 
 | ollupi | `tools/workspace/patterns.go` | `compilePattern`、`.gitignore` 解析 |
 | ollupi | `tools/web/web.go` | `web_fetch`（没有搜索工具） |
 | ollupi | `agent/permission/policy.go` | `requiresApproval`，只读工具不提问 |
-| ollupi-desktop | `apps/desktop/src/renderer/src/domains/search.ts` | `useSearch`、250 ms 停顿、每组 20 条 |
-| ollupi-desktop | `apps/desktop/src/renderer/src/views/search/SearchScreen.tsx`、`Highlight.tsx` | 分组展示、点击定位、渲染端高亮 |
-| ollupi-desktop | `apps/desktop/src/renderer/src/views/memory/MemoryScreen.tsx` | 记忆页搜索框 |
-| ollupi-desktop | `apps/desktop/src/renderer/src/views/common/found.ts` | 把命中的条目滚进视野并标出 |

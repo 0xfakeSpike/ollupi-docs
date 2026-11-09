@@ -13,4 +13,4 @@ The full page covers:
 - The item model
 - Write-before-run ordering
 - Migrations
-- The six migrations
+- The migration list

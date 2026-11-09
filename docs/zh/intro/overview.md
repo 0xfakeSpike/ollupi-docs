@@ -10,17 +10,7 @@ Ollupi 由两个项目组成：一个 Go agent 引擎，和一个基于引擎的
 | 对外接口 | WebSocket 上的 JSON-RPC 2.0 | 桌面界面、飞书机器人 |
 | 仓库 | [0xfakeSpike/ollupi](https://github.com/0xfakeSpike/ollupi) | [0xfakeSpike/ollupi-desktop](https://github.com/0xfakeSpike/ollupi-desktop) |
 
-更完整的动机和代价见[为什么做 Ollupi](/zh/intro/why)。
-
-## 要解决的问题
-
-给每个 agent 开一个虚拟机或容器，隔离简单，但成本跟着会话数走：不活跃的会话要么占着进程，要么冷启动重建；等用户回答时进程挂起，内存还在；重启时进行中的工作中断。
-
-个人 agent 的大部分时间都在等：等用户、等审批、等子 agent、等定时任务到点。Ollupi 的做法是不隔离进程，而是池化 runtime，把运行状态放进数据库：
-
-- 每一步先写库再执行，调度状态不留在内存，所以进程随时可以死，重启后接着跑。
-- 等待中的会话离开执行池，只剩数据库记录，不占内存和算力。
-- 所有可运行的轮次进同一个队列，按槽位调度；模型调用按连接限流，和服务商的账户配额对齐。
+引擎为什么这样设计、付出了什么代价，见[为什么做 Ollupi](/zh/intro/why)。
 
 ![Ollupi 架构](/images/architecture.svg)
 

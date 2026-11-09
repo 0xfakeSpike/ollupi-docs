@@ -424,7 +424,7 @@ flowchart TD
 
 分片目录库（`repo.Catalog`）是单独的文件，只有 `shards` 和 `placements` 两张表，用 `AutoMigrate`，不走这套步骤。见[分片与租约](/zh/engine/sharding#分片)。
 
-## 六个 migration
+## Migration 列表
 
 | 编号 | 文件 | 做什么 |
 |---|---|---|

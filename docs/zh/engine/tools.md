@@ -38,7 +38,7 @@ type Provider interface {
 | 字段 | 作用 |
 | --- | --- |
 | `InputSchema` | JSON Schema，参数校验和发给模型都用它。`tools.InputSchema[T]()` 从 Go 结构体生成，类型可实现 `Constrainer` 补上长度、枚举等约束 |
-| `Annotations` | MCP 同款提示：`ReadOnlyHint`、`DestructiveHint`、`IdempotentHint`、`OpenWorldHint`。审批策略和并行执行都读它。`OpenWorldHint` 未设时当作真 |
+| `Annotations` | MCP 同款提示：`ReadOnlyHint`、`DestructiveHint`、`IdempotentHint`、`OpenWorldHint`。审批策略读 `ReadOnlyHint` 和 `OpenWorldHint`（`agent/permission/policy.go`），并行执行只读 `ReadOnlyHint`（`agent/runtime/calls.go`）；`DestructiveHint`、`IdempotentHint` 引擎不读，只转给客户端显示。`OpenWorldHint` 未设时当作真 |
 | `PermissionContent` | 把参数变成权限规则能匹配的内容。没有它的工具，规则只能按工具名写 |
 | `Local` | 两段式工具：`Prepare` 先冻结，`Run` 再执行。没有它的工具走 `Provider.Invoke` |
 | `Serial` | 即使只读也不并行。桌面端的浏览器工具用它 |

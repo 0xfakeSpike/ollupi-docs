@@ -14,5 +14,6 @@ The full page covers:
 - The timeline
 - Scrolling
 - Markdown
+- Search
 - Languages
 - Local storage

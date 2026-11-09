@@ -11,11 +11,11 @@
 | `Models` | `[]llm.Model`，第一项是默认模型 | 启动失败 |
 | `Connections` | 连接 ID 到 `llm.Client` 的映射 | 启动失败 |
 | `ClientFor` | `func(user, connection string) (llm.Client, error)`：给每个用户自己的客户端，让他的轮次用他自己的密钥和配额；每次应返回同一个客户端 | 所有用户共用 `Connections` |
-| `Settings`、`Tools` | 默认权限层、工具白名单 | 空层；`nil` 表示全部工具可见 |
+| `Settings`、`Tools` | 默认权限层（至少要设审批策略）、工具白名单 | `Settings` 没有设审批策略时启动失败：`approval policy "" must be one of [...]`；`Tools` 为 `nil` 表示全部工具可见 |
 | `Slots`、`UserSlots`、`RunLimit` | 容量参数 | 32、等于 `Slots`、4 小时 |
 | `Providers` | 所有用户共有的工具 provider | 只有引擎内置的 `plan`、`subagent`、`userinput` 等 |
 | `ToolsFor` | `func(user string) (*tools.Set, error)`：某个用户额外的工具，比如他自己的 MCP 服务器 | 只有 `Providers` |
-| `BoxFor` | `func(user string) (sandbox.Box, error)`：用户的文件所在、工作区工具运行的沙箱；云端在这里接入 `sandbox.Remote` | `sandbox.Here()`，本机 |
+| `BoxFor` | `func(user string) (sandbox.Box, error)`：用户的文件所在、工作区工具运行的沙箱；云端在这里接入 `sandbox.Remote`。同一个函数还要填给 `workspace.Options.BoxFor` 和 `mcp.NewUsers`，见[扩展点](/zh/integrate/extend#云沙箱) | `sandbox.Here()`，本机 |
 | `DB` | `repo.DB` | 启动失败 |
 | `OnEvent` | 把事件交给网关和别的客户端 | 事件只进日志 |
 | `Lease` | 分片租约时长 | 不启用租约，进程假定自己是唯一的 |

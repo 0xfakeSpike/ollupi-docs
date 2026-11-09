@@ -351,6 +351,10 @@ var protocol = struct {
 | `providers` | `schema_test.go` | `cron`、`skills`、`memory`，`ItemRow.server` 可取的提供方 id |
 | `$defs` | 从以上类型遍历得到 | 120 个命名类型 |
 
+`builtinTools` 只收界面要专门显示、用户要参与的内置工具：计划、子 agent、提问、命令和五个文件工具。`0ae03bb` 把定时任务的四个工具和 `memory_search` 移出了契约，文件工具由 `9ac61ec`、`74322be` 加入。其余工具调用（定时任务、`memory_search`、技能、`read_tool_output`、MCP 和宿主自己的工具）不进契约：客户端把它们当通用调用显示参数和输出的原始 JSON，不要依赖它们的结构，这些输出是写给模型的，引擎可以随时为模型调整。它们的参数类型仍是发给模型的 input schema 的来源。
+
+`builtinTools` 按工具名作键。生成时检查内置工具的名字不含 `__`（`tools.ProviderSeparator`），而 MCP 工具的名字总是 `服务器__工具`，所以按名字就能区分；提供方另见 `ItemRow.server`。
+
 生成器对协议类型有约束，违反时生成失败：
 
 - 匿名结构体不能进协议，必须有名字并且导出。

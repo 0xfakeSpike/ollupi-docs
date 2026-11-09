@@ -13,4 +13,5 @@ The full page covers:
 - Indexing and consistency
 - File search: grep and glob
 - Two ways into memory search
+- The desktop app
 - Known limits
