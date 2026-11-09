@@ -156,7 +156,7 @@ sequenceDiagram
 | 这一轮的状态 | 插话之后 |
 |---|---|
 | `ready`、`inProgress` | 不改状态，不打断任何东西。运行循环在下一次组装请求时带上它；模型的最终回答写完之后才到的插话，会让这一轮再跑一圈而不是结束。时机见[插话（steer）](/zh/engine/execution#插话-steer) |
-| `waitingOnApproval`、`waitingOnUserInput` | v0.12.1 起，消息代替用户的回答：这一轮还没执行的调用全部以 `declined` 结束，这一轮回到 `ready` 接着跑，模型读到被拒的结果和这条消息 |
+| `waitingOnApproval`、`waitingOnUserInput` | 消息代替用户的回答：这一轮还没执行的调用全部以 `declined` 结束，这一轮回到 `ready` 接着跑，模型读到被拒的结果和这条消息 |
 | `waitingOnAgent` | 消息落库，子 agent 都回报、这一轮重新运行时读到 |
 
 插话代替审批时的通知（对着 v0.12.1 的最小宿主录制，模型要跑 `echo hi`，审批策略是严格）：
@@ -199,6 +199,10 @@ sequenceDiagram
 客户端收到被拒调用的 `item/completed` 时就该关掉对应的审批或提问界面。三种被拒的说明见下文 [toolCall 的生命周期](#toolcall-的生命周期)。
 
 插话会和这一轮的结束赛跑：用户按下发送时这一轮可能刚好结束，这时返回 `-32010` 或 `-32011`。桌面端遇到这两个错误时改用 `turn/start` 把消息作为新的一轮发出去。
+
+::: info 演进
+v0.12.1 之前，插话进等审批或等回答的一轮时只落库，这一轮一直停在等待里，直到用户回答；用户说了"算了"之后再批准，调用会在模型读到这句话之前执行。`c4899f5` 改成由消息代替回答。
+:::
 
 ### 中断
 
@@ -499,15 +503,19 @@ stateDiagram-v2
 | 来源 | `error` |
 |---|---|
 | 用户在审批时选 `decline` | `the user declined this call` |
-| v0.12.1 起，等审批时用户发了消息 | `the user sent a message instead of approving this call, so it did not run` |
-| v0.12.1 起，等回答时用户发了消息 | `the user sent a message instead of answering` |
-| v0.12.1 起，排在被代替的调用后面、还没执行的调用 | `skipped: the user sent a message before this call ran` |
+| 等审批时用户发了消息 | `the user sent a message instead of approving this call, so it did not run` |
+| 等回答时用户发了消息 | `the user sent a message instead of answering` |
+| 排在被代替的调用后面、还没执行的调用 | `skipped: the user sent a message before this call ran` |
 
 显式拒绝会结束这一轮剩下的工具调用；发消息代替不会，模型读到消息后照常继续。
 
 一轮结束时还没结束的调用改成 `failed`，`error` 是 `the turn ended (<状态>) before this item finished`。进程重启时，`inProgress` 的调用不会重跑，而是标成失败、提示核实是否已经生效，见[崩溃恢复](/zh/engine/persistence#崩溃恢复)。
 
 工具调用等审批、审批通过之后的完整条目示例见[审批与提问](/zh/integrate/protocol/approvals)；内置工具的 `arguments` 和 `result.output` 的结构见[模型、工具与 MCP](/zh/integrate/protocol/models-tools)。
+
+::: info 演进
+后三种 `declined` 是 v0.12.1 加入的（`c4899f5`）。在此之前 `declined` 只有用户显式拒绝这一种来源。
+:::
 
 ### UserInput
 

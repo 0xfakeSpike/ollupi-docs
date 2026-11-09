@@ -10,7 +10,7 @@
 | [附件存储](#附件存储) | `Config.Attachments` | 有 `AttachmentsDir` 时存本机目录，都没有时消息不能带附件 |
 | [认证](#认证) | `gateway.Options.Authenticate` | 用 `Token`，只有 `default` 一个用户 |
 
-本页的代码对着引擎 v0.11.3 编译并通过 `go vet`，工具那一节的审批结果用 `permission.New` 和 `Decide` 实际跑过。云沙箱那段没有在真实容器里跑过。
+本页的代码对着引擎 v0.11.3 编译并通过 `go vet`，用到的包到 v0.12.1 只增加了字段（`BoxIn`、`EnvironmentID`），没有删改；按会话选择环境那一段对着 v0.12.0 编译过。工具那一节的审批结果用 `permission.New` 和 `Decide` 实际跑过。云沙箱那段没有在真实容器里跑过。
 
 ## 每用户的模型客户端
 
@@ -284,7 +284,7 @@ func (u *userTools) For(user string) (*tools.Set, error) {
 
 ### 按会话选择环境
 
-v0.12.0 起（`5f64857`），一个用户可以有几个执行环境，会话开始时选一个，之后不变，见[执行环境](/zh/integrate/protocol/workspaces#执行环境的方法)。这时上表的意思变了：`Config.BoxFor` 只是用户在这台机器上的那个 Box，工作区校验和附件读取用它；每次工具调用在哪个 Box 里跑，由 `workspace.Options.BoxIn` 按会话的环境决定。
+一个用户可以有几个执行环境，会话开始时选一个，之后不变，见[执行环境](/zh/integrate/protocol/workspaces#执行环境的方法)。`Config.BoxFor` 是用户在这台机器上的那个 Box，工作区校验和附件读取用它；配了 `workspace.Options.BoxIn` 时，每次工具调用在哪个 Box 里跑，由它按会话的环境决定。
 
 | `BoxIn(caller)` 返回 | 这次调用 |
 | --- | --- |
@@ -292,7 +292,7 @@ v0.12.0 起（`5f64857`），一个用户可以有几个执行环境，会话开
 | `(nil, nil)` | 在 `Options.Box` 里运行。注意不是 `BoxFor` 给的 Box |
 | `(nil, err)` | 失败，错误以 `workspace: the environment of the conversation:` 开头交给模型 |
 
-配了 `BoxIn` 时，`BoxFor` 不再参与工具调用。`caller.EnvironmentID` 是会话的环境 ID，v0.12.0 起新会话总会带上；`caller.UserID` 是用户。按环境找机器：
+配了 `BoxIn` 时，`BoxFor` 不参与工具调用。`caller.EnvironmentID` 是会话的环境 ID，新会话总会带上；`caller.UserID` 是用户。按环境找机器：
 
 ```go
 BoxIn: func(c tools.Caller) (sandbox.Box, error) {
@@ -313,6 +313,10 @@ BoxIn: func(c tools.Caller) (sandbox.Box, error) {
 `machines` 是宿主自己的代码，和上面的 `boxes` 一样要缓存、要在退出时关。环境只是库里的一行名字和种类，引擎不知道它对应哪台机器，这个对应关系由宿主保存。配了 `BoxIn` 时，`run_command` 的描述会多一句：会话在它开始时选的环境里运行，那里的文件夹不一定是这台机器的。
 
 桌面端是 `BoxIn` 的一个实际用法：它只有本机，所以 `local` 环境返回 `(nil, nil)`，`machine` 环境返回错误，让模型告诉用户换到 `This computer` 开会话（`ollupi-desktop/sidecar/internal/host/host.go`）。
+
+::: info 演进
+v0.12.0 之前没有执行环境，每个用户只有一个 Box，`workspace.Options.BoxFor` 同时决定工作区校验、附件和每次工具调用在哪里跑。`5f64857`（v0.12.0）加入执行环境和 `BoxIn`，`Config.BoxFor` 的意思收窄为用户在这台机器上的 Box。没有配 `BoxIn` 的宿主，工具调用照旧走 `BoxFor`，升级后行为不变。
+:::
 
 按用户缓存 Box，并管理它的生命周期：
 
@@ -706,7 +710,7 @@ func sessions(db *sql.DB) func(token string) (string, bool) {
 
 - **用户 ID 稳定、唯一、非空。** 不要用会变的东西（比如邮箱）做 ID：ID 一变，引擎里就是一个没有任何数据的新用户。返回空字符串且 `ok == true` 时，`EnsureUser` 失败，连接收到 500。
 - **快，并且并发安全。** 每个新连接都要等它返回，很多连接会同时调它。
-- **令牌作废要自己处理。** 令牌作废后，已经建立的连接不会断开，v0.11.3 的网关没有按用户断开连接的方法。
+- **令牌作废要自己处理。** 令牌作废后，已经建立的连接不会断开，网关没有按用户断开连接的方法。
 
 ## 代码位置
 

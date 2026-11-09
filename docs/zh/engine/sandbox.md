@@ -6,13 +6,19 @@
 
 ## 为什么这样设计
 
-- **工具只经 `Box` 碰机器。** 命令、文件工具、附件读取和 stdio MCP 服务器都经 `sandbox.Box` 访问（`aecfb63`、`f1ff694`），本机 Seatbelt 和云沙箱是同一个接口的两种实现，一个进程能同时服务两类用户。池化之后用户之间没有进程边界，这是代码守住隔离的方式之一，见[设计决策 1](/zh/reference/decisions#_1-池化-runtime)。
+- **工具只经 `Box` 碰机器。** 命令、文件工具、附件读取和 stdio MCP 服务器都经 `sandbox.Box` 访问，本机 Seatbelt 和云沙箱是同一个接口的两种实现，一个进程能同时服务两类用户。池化之后用户之间没有进程边界，这是代码守住隔离的方式之一，见[设计决策 1](/zh/reference/decisions#_1-池化-runtime)。
 - **用 Seatbelt，不用虚拟机或另开用户账号。** 调研文档列过这两类方案，对虚拟机的评语是隔离最强，但里面是 Linux，用不了 macOS 工具链。基础规则取自 OpenAI Codex，网络代理、拒绝日志和保护名主要参照 Anthropic 的 sandbox-runtime。见[设计决策 20](/zh/reference/decisions#_20-seatbelt-沙箱)。
 - **网络走本地代理。** Seatbelt 不能按域名过滤网络，所以配了域名名单时，内核只放行到本地代理的那个端口，域名由代理判断，连接时再跳过解析到内网的地址。
-- **挡住"之后会被别的程序运行"的文件。** 调研时参考的是 2026 年 7 月一批 agent 沙箱逃逸：多数案例没有攻破沙箱本身，而是写下一个之后会被沙箱外的程序执行的文件，比如钩子配置、git config（`docs/sandbox-sources.md`，`05ef4b0` 的父提交）。所以 `.vscode`、`.envrc`、shell 启动文件这类名字在命令目录的任意层级都不可写。
-- **`.git` 是有意留的例外。** 调研文档记录 Codex 把 `.git` 设为只读，Ollupi 起初也在每个可写根下禁写 `.git/config` 和钩子（`e36dd28`）。结果 `git init`、`git clone` 在沙箱里一定失败，只能提权，而它们是项目目录里最普通的命令。`5d4354d` 放开了整个 `.git`：以 `.git/hooks` 这个已知的口子，换掉一条每次都要审批的常用路径。
+- **挡住"之后会被别的程序运行"的文件。** 调研时参考的是 2026 年 7 月一批 agent 沙箱逃逸：多数案例没有攻破沙箱本身，而是写下一个之后会被沙箱外的程序执行的文件，比如钩子配置、git config。所以 `.vscode`、`.envrc`、shell 启动文件这类名字在命令目录的任意层级都不可写。
+- **`.git` 是有意留的例外。** 整个 `.git` 可写。`git init`、`git clone` 是项目目录里最普通的命令，`.git` 禁写的话它们在沙箱里一定失败，只能每次提权；换来的代价是 `.git/hooks` 这个已知的口子。调研文档记录 Codex 把 `.git` 设为只读。
 
 代价：只有 macOS，Linux 和 Windows 还在路线图上，非 macOS 只能用 `full-access`；读取几乎不设限，靠禁读名单挡凭据；`.git/hooks` 写进去的代码会在用户自己运行 git 时在沙箱外执行；不读代理环境变量的程序在域名名单模式下连不上网。
+
+::: info 演进
+- 所有访问都经 `Box` 来自 `aecfb63`、`f1ff694`。
+- 沙箱逃逸的调研记录在 `docs/sandbox-sources.md`，见 `05ef4b0` 的父提交。
+- Ollupi 起初也在每个可写根下禁写 `.git/config` 和钩子（`e36dd28`），结果 `git init`、`git clone` 在沙箱里一定失败。`5d4354d` 放开了整个 `.git`。
+:::
 
 ## Box 接口
 
@@ -59,9 +65,13 @@ type Box interface {
 | `CheckRead`、`CheckWrite` | 工具自己读写时要过的规则，不经 Seatbelt |
 | `Transport` | 替用户发 HTTP 请求用，比如连 MCP 服务器 |
 
-工具经 `workspace.Options` 拿到 Box。`Box` 用来描述工具，`BoxFor(user)` 给每个用户自己的 Box，这样一个进程能同时服务本机用户和云沙箱用户。v0.12.0 起还有 `BoxIn(caller)`，按会话开始时选的执行环境给 Box，配了它就不再用 `BoxFor`，见[扩展点](/zh/integrate/extend#按会话选择环境)。
+工具经 `workspace.Options` 拿到 Box。`Box` 用来描述工具，`BoxFor(user)` 给每个用户自己的 Box，这样一个进程能同时服务本机用户和云沙箱用户。还有 `BoxIn(caller)`，按会话开始时选的执行环境给 Box，配了它就不再用 `BoxFor`，见[扩展点](/zh/integrate/extend#按会话选择环境)。
 
 `Sandbox` 是本机实现，`sandbox.New(Config)` 创建。
+
+::: info 演进
+`BoxIn` 随 v0.12.0 加入（`5f64857`）。
+:::
 
 ## 三种模式
 
@@ -111,7 +121,11 @@ Seatbelt 模式下，`/`、用户主目录、`~/Library`，以及任何包含它
 
 `node_modules`、`vendor`、`Pods` 里的保护名例外：这些目录是依赖，规则在它们下面重新放开。
 
-仓库自己的 `.git` 不在这张表里，和普通目录一样可写，包括 `.git/config` 和 `.git/hooks`（`5d4354d`）。在此之前，Seatbelt 在每个可写根下禁写 `.git/config`、`.git/hooks` 等路径，`.git` 本身不能删除或改名；文件工具（`CheckWrite`）则拒绝写整个 `.git`。现在 `git init`、`git clone` 不再被沙箱的写规则挡住；克隆远端仓库仍然需要网络，网络关闭时照样失败。`.git/hooks` 和上表一样，是用户自己的命令之后会运行的代码，放开它的取舍见[为什么这样设计](#为什么这样设计)。
+仓库自己的 `.git` 不在这张表里，和普通目录一样可写，包括 `.git/config` 和 `.git/hooks`，所以 `git init`、`git clone` 不会被沙箱的写规则挡住；克隆远端仓库仍然需要网络，网络关闭时照样失败。`.git/hooks` 和上表一样，是用户自己的命令之后会运行的代码，放开它的取舍见[为什么这样设计](#为什么这样设计)。
+
+::: info 演进
+`5d4354d` 之前，Seatbelt 在每个可写根下禁写 `.git/config`、`.git/hooks` 等路径，`.git` 本身不能删除或改名；文件工具（`CheckWrite`）则拒绝写整个 `.git`。
+:::
 
 ### 其他写入规则
 
@@ -254,9 +268,13 @@ Seatbelt 规则后面的覆盖前面的，所以顺序有讲究。
 
 `CanEscalate` 为假时这两个参数根本不出现在工具的 Schema 里。
 
-通过后 `Prepared.Escalated` 为真，`Sandboxed` 为假，进入权限判定：`untrusted` 和 `on-request` 下必须问用户，allow 规则不算数，也不提供"总是允许"，`acceptForSession` 只对完全相同的调用生效；`never` 下没有人可问，命令直接在沙箱外运行（`7b6e720`）。`never` 下拦得住提权的只有 deny 规则。带说明符的 deny 读不懂某条命令时（比如 `sh -c "$X"`），这条命令被拒绝，而不是放行，见[审批与权限](/zh/engine/permissions#看不清的命令)。
+通过后 `Prepared.Escalated` 为真，`Sandboxed` 为假，进入权限判定：`untrusted` 和 `on-request` 下必须问用户，allow 规则不算数，也不提供"总是允许"，`acceptForSession` 只对完全相同的调用生效；`never` 下没有人可问，命令直接在沙箱外运行。`never` 下拦得住提权的只有 deny 规则。带说明符的 deny 读不懂某条命令时（比如 `sh -c "$X"`），这条命令被拒绝，而不是放行，见[审批与权限](/zh/engine/permissions#看不清的命令)。
 
 批准后（`never` 下不经批准，直接这样执行）`Command.Unsandboxed` 为真，`command` 走不加 Seatbelt 的分支，环境变量白名单仍然生效。结果带 `sandbox: "escalated: ran on the host without the sandbox"`。
+
+::: info 演进
+`never` 下提权直接运行来自 `7b6e720`。
+:::
 
 ## 云沙箱接入点
 

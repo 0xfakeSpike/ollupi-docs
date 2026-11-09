@@ -6,7 +6,7 @@
 
 ## 概念与状态
 
-一个会话属于一个用户，可以属于一个工作区（`workspaceId`），也可以不属于任何工作区（界面上叫 general）。v0.12.0 起它还在某个执行环境（`environmentId`）里运行，环境在建会话时定下，之后不变，见[工作区与执行环境](/zh/integrate/protocol/workspaces)。
+一个会话属于一个用户，可以属于一个工作区（`workspaceId`），也可以不属于任何工作区（界面上叫 general）。它还在某个执行环境（`environmentId`）里运行，环境在建会话时定下，之后不变，见[工作区与执行环境](/zh/integrate/protocol/workspaces)。
 
 会话分两种：
 
@@ -101,7 +101,7 @@
 | 参数 | 类型 | 说明 |
 |---|---|---|
 | `workspaceId?` | string | 所属工作区。省略时不属于任何工作区 |
-| `environmentId?` | string | v0.12.0 起。会话运行的执行环境，必须是这个用户的。省略时用他在这台机器上的环境 |
+| `environmentId?` | string | 会话运行的执行环境，必须是这个用户的。省略时用他在这台机器上的环境 |
 | `title?` | string | 标题。去掉首尾空白后最多 120 个字符，可以为空 |
 | `approvalPolicy?` | `ApprovalPolicy` | 会话这一层的审批策略 |
 | `permissions` | `PermissionRules` | 会话这一层的规则。契约标为必填，网关不检查，省略时按空规则处理 |
@@ -115,6 +115,10 @@
 | `-32602` | 标题超过 120 字符；权限设置不合法（未知的策略、写错的规则，或和上层合并后不成立） |
 | `-32004` | 工作区或执行环境不存在，或属于别的用户 |
 | `-32014` | 工作区已归档 |
+
+::: info 演进
+执行环境是 v0.12.0 加入的（`5f64857`），`environmentId` 参数从那时起才有。
+:::
 
 ### thread/read 和 thread/resume
 
@@ -294,7 +298,7 @@
 |---|---|---|
 | `id` | string | 会话 ID |
 | `workspaceId?` | string | 所属工作区。不出现时，会话不属于任何工作区 |
-| `environmentId?` | string | v0.12.0 起：会话运行的执行环境，建会话时选定，之后不变。migration 0007 给旧会话都补上了这台机器上的环境，新会话也总会写上，所以实际上总会出现 |
+| `environmentId?` | string | 会话运行的执行环境，建会话时选定，之后不变。每个会话都有，所以实际上总会出现 |
 | `title` | string | 标题，可以是空字符串。子 agent 会话取任务描述 |
 | `settings` | `PermissionSettings` | 会话这一层的权限设置，见[权限](/zh/integrate/protocol/permissions) |
 | `parentThreadId?` | string | 子 agent 会话的父会话。顶层会话没有这个字段 |
@@ -304,6 +308,10 @@
 | `archivedAt?` | string \| null | 归档时间。不出现表示未归档 |
 
 用户 ID 不在行里：会话总属于连接所认出的那个用户。
+
+::: info 演进
+v0.12.0 之前会话没有执行环境。升级时 migration 0007 把已有会话都放在用户这台机器上的环境里，新会话建时也总会写上，所以升级上来的旧会话同样带 `environmentId`。
+:::
 
 ### ThreadSummary
 

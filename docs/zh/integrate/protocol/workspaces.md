@@ -10,7 +10,7 @@
 - 工作区只能归档，没有删除。归档后不能在里面开新会话，顶层会话也不能开始新的一轮；数据都留着，取消归档或重新添加同一个文件夹就恢复。
 - 会话、记忆、定时任务记的是工作区 ID，不是路径，所以 `workspace/move` 搬文件夹时只改根目录这一列。
 
-**执行环境**（v0.12.0 起，`5f64857`）是一行名字和种类，没有地址、没有凭据，它对应哪台机器由宿主（host）决定：
+**执行环境**是一行名字和种类，没有地址、没有凭据，它对应哪台机器由宿主（host）决定：
 
 | `kind` | 是什么 | 数量 | 能否删除 |
 |---|---|---|---|
@@ -27,6 +27,10 @@
 子 agent 会话的工作区和执行环境都跟父会话相同。`thread/start` 的其余参数见[会话](/zh/integrate/protocol/threads)。
 
 引擎不检查宿主能不能服务一个 `machine` 环境：在没有接入任何云沙箱的宿主上，`thread/start` 带一个 `machine` 环境也会成功，命令最后在哪里跑取决于宿主的 `BoxIn`，见[扩展点](/zh/integrate/extend#按会话选择环境)。
+
+::: info 演进
+执行环境是 v0.12.0 加入的（`5f64857`）。在此之前，命令在哪里跑是整个分片的属性，由宿主的 `BoxFor` 按用户决定；现在是每个会话开始时选一次。
+:::
 
 ## 典型流程
 
@@ -105,7 +109,7 @@
 | `workspaceId` | string | 空白时 `-32602` `workspaceId is required` |
 | `path` | string | 目标文件夹，必须已经存在且为空；空白时 `-32602` `path is required` |
 
-结果是 `workspace`，`rootPath` 换成新位置。`d63435b`（v0.11.0）起有这个方法。
+结果是 `workspace`，`rootPath` 换成新位置。
 
 引擎按这个顺序处理，任何一步不满足就停下：
 
@@ -121,6 +125,10 @@
 | 把库里的根目录改成新位置 | 引擎把文件夹搬回原处，返回 `-32000`；搬回也失败时，服务端日志里的错误同时写明文件夹现在在哪、工作区还指着哪 |
 
 最后两行的错误不在错误码表里，客户端只收到 `-32000` `the request could not be completed`，详情只在服务端日志里，见[错误码](/zh/integrate/protocol#错误码)。
+
+::: info 演进
+`workspace/move` 是 v0.11.0 加入的（`d63435b`）。在此之前根目录是工作区唯一改不了的列，用户在访达里挪了文件夹，所有会话就都指向一个不存在的路径。
+:::
 
 ### workspace/archive
 
@@ -235,12 +243,16 @@
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `id` | string | `environment/add` 建的是 UUID。migration 0007 补出来的 `local` 环境是 32 位十六进制，比如 `59b227cda042c7293222bc102ebcaa0b`；新库里的 `default` 用户也是这样，因为它在 migration 里就建好了（实测）。客户端不要假设 ID 的格式 |
+| `id` | string | 格式不固定：多数是 UUID，有些 `local` 环境是 32 位十六进制，比如 `59b227cda042c7293222bc102ebcaa0b`，新库里 `default` 用户的就是（实测）。客户端不要假设 ID 的格式 |
 | `name` | string | 1 到 120 字符，同一用户内不区分大小写地唯一。`local` 环境默认叫 `This computer` |
 | `kind` | `EnvironmentKind` | `local` 或 `machine`，见[概念与状态](#概念与状态) |
-| `createdAt`、`updatedAt` | string | migration 建出的 `local` 环境时间只到毫秒（`2026-11-09T05:29:47.957Z`），其余到纳秒 |
+| `createdAt`、`updatedAt` | string | 精度不固定：32 位十六进制 ID 的那些 `local` 环境只到毫秒（`2026-11-09T05:29:47.957Z`），其余到纳秒 |
 
 `EnvironmentRow` 不带地址或凭据。宿主要自己保存"哪个环境对应哪台机器"。
+
+::: info 演进
+ID 和时间精度不一，是因为升级到 v0.12.0 时 migration 0007 在 SQL 里给已有用户各补了一个 `local` 环境：ID 用 `lower(hex(randomblob(16)))`，时间用 `strftime` 写到毫秒。新库里的 `default` 用户在这一步之前就已建好，所以也是这样。之后建出的用户和 `environment/add` 建的环境由 Go 代码生成 UUID，时间到纳秒。
+:::
 
 ### EnvironmentKind
 

@@ -31,7 +31,11 @@ cd sidecar && GOWORK=off CGO_ENABLED=1 MACOSX_DEPLOYMENT_TARGET=12.0 GOARCH=arm6
   -o ../apps/desktop/resources/bin/arm64/ollupid ./cmd/ollupid
 ```
 
-`GOWORK=off` 有来历。`sidecar` 旁边的 `go.work`（不进仓库）指向本地的 ollupi 检出，发布构建曾经用了它，0.7.8 因此带上了一个未发布的 ollupi，协议和界面生成时用的不一致。之后发布构建忽略 `go.work`，只按 `go.mod` 钉住的版本。
+`GOWORK=off` 让发布构建忽略 `sidecar` 旁边的 `go.work`（不进仓库，指向本地的 ollupi 检出），只按 `go.mod` 钉住的引擎版本构建。界面的协议类型也是从这个钉住的版本生成的，两边因此一致。
+
+::: info 演进
+发布构建曾经用了 `go.work`，0.7.8 因此带上了一个未发布的 ollupi，和界面生成类型时用的协议不一致。之后发布构建加上 `GOWORK=off`。
+:::
 
 ### electron-builder
 
@@ -56,9 +60,13 @@ cd sidecar && GOWORK=off CGO_ENABLED=1 MACOSX_DEPLOYMENT_TARGET=12.0 GOARCH=arm6
 
 ## 只有 arm64
 
-0.7.14 是最后一个带 Intel 构建的版本。提交 `0cd622f`（Ship releases for Apple silicon only）之后，`pnpm release` 只构建 arm64，仍然是 dmg 加 zip，因为更新器从 zip 安装。
+`pnpm release` 只构建 arm64，产物仍然是 dmg 加 zip，因为更新器从 zip 安装。
 
-更新器按 `process.arch` 在 `latest-mac.yml` 里找 `-<arch>.zip`。Intel 机器上的 0.7.14 找不到 x64 的 zip，检查更新会失败。发布说明让 Intel 用户继续用 0.7.14。
+更新器按 `process.arch` 在 `latest-mac.yml` 里找 `-<arch>.zip`。发布里没有 x64 的 zip，所以 Intel 机器上检查更新会失败。
+
+::: info 演进
+0.7.14 是最后一个带 Intel 构建的版本，`0cd622f`（Ship releases for Apple silicon only）之后只构建 arm64。Intel 机器上的 0.7.14 找不到 x64 的 zip，检查更新会失败，发布说明让 Intel 用户继续用 0.7.14。
+:::
 
 ## 发布产物
 
@@ -139,6 +147,7 @@ fi
 
 规则：默认升 patch。只有发布必须清除数据库迁移搬不走的数据时才升 minor。版本号在 `apps/desktop/package.json`，发布提交的标题是 `Release Ollupi <版本>`。
 
+::: info 演进
 Git 和发布记录能确认的是这样：
 
 | 版本 | 日期 | ollupi | 记录 |
@@ -153,6 +162,7 @@ Git 和发布记录能确认的是这样：
 0.7.0 之前每次发布都升 minor，这几次的说明都不要求清数据（0.3.0 除外），也就是说这条规则是从 0.7.x 开始执行的。0.7.3 的说明写明后端数据库改为按版本号逐步升级，表结构变化时带着数据走，不再需要清空。0.7.12 的数据库升级之后不能再用旧版本打开，版本号仍然是 patch。
 
 `v0.7.10` 有发布提交，没有 tag 和 GitHub Release，0.7.11 的说明写的是从 0.7.9 升级。
+:::
 
 ## 签名和公证
 

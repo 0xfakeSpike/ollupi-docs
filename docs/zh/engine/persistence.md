@@ -4,13 +4,20 @@ Ollupi 的运行状态全部存在 SQLite。一个库是一个分片（shard）�
 
 ## 为什么这样设计
 
-- **全部运行状态放一个 SQLite 库，一条连接。** 会话、轮次、条目、审批、记忆、定时任务都在同一个库里，库外没有需要恢复的状态。连接池固定为一条（`SetMaxOpenConns(1)`），进程内的读写全部串行。一条连接从初版（`acfb8e4`）就是这样；为什么选 SQLite 而不是别的存储，仓库里没有记录。见[设计决策 2](/zh/reference/decisions#_2-sqlite-与先落库再执行)。
-- **工具调用分 `pending` 和 `inProgress`。** 调用记下时是 `pending`，校验、准备、等审批都在这个状态里，真正执行之前才写成 `inProgress`。以前调用从模型回答记下起就是 `inProgress`，崩溃后分不清没跑过和跑到一半，恢复时只能猜：把这一轮第一条未结束的调用标成可能已生效。`b52bde4` 拆开了这两个状态，去掉了这个猜测。
+- **全部运行状态放一个 SQLite 库，一条连接。** 会话、轮次、条目、审批、记忆、定时任务都在同一个库里，库外没有需要恢复的状态。连接池固定为一条（`SetMaxOpenConns(1)`），进程内的读写全部串行。为什么选 SQLite 而不是别的存储，仓库里没有记录。见[设计决策 2](/zh/reference/decisions#_2-sqlite-与先落库再执行)。
+- **工具调用分 `pending` 和 `inProgress`。** 调用记下时是 `pending`，校验、准备、等审批都在这个状态里，真正执行之前才写成 `inProgress`。所以崩溃后分得清没跑过和跑到一半：前者照常执行，后者标成可能已生效。
 - **恢复不是另一条路径。** 启动时只关掉被中断的条目、把运行中的轮次停放，然后交给平时的 `reconcile` 和 `admit`。正常关闭、崩溃、[租约接管](/zh/engine/sharding#启动和接管)都走这一条路。见[设计决策 3](/zh/reference/decisions#_3-无内存调度状态)。
-- **约束不满足就报错。** 枚举列写入时校验取值；部分索引用 `INDEXED BY` 指定，查询条件和索引对不上时 SQLite 报错，而不是退回全表扫描（`600d071`）；版本比程序新的库拒绝打开。见[设计决策 18](/zh/reference/decisions#_18-出错即暴露)。
-- **表结构按编号 migration 升级。** 以前用 gorm 的 `AutoMigrate`，它只能加表加列，做不到的改动就得清库；`a885647` 换成编号的 SQL 步骤，理由是库里存着用户的会话和记忆。见[设计决策 17](/zh/reference/decisions#_17-编号-migration)。
+- **约束不满足就报错。** 枚举列写入时校验取值；部分索引用 `INDEXED BY` 指定，查询条件和索引对不上时 SQLite 报错，而不是退回全表扫描；版本比程序新的库拒绝打开。见[设计决策 18](/zh/reference/decisions#_18-出错即暴露)。
+- **表结构按编号 migration 升级。** 每一步是一段 SQL，能改列、重建表、迁移数据，不用清库，因为库里存着用户的会话和记忆。见[设计决策 17](/zh/reference/decisions#_17-编号-migration)。
 
 代价：每一步都要写库，[基准](/zh/benchmarks/)里一轮（三次模型调用、两次工具调用，模拟模型、改动前测得）约 68 次读、15 次写、11.6 KB 磁盘；所有读写排在一条连接上；`inProgress` 的调用不会自动重做，生效与否交给模型和用户判断；migration 只能往前走，表结构有行类型和 SQL 两份，靠测试保持一致。
+
+::: info 演进
+- 一条连接从初版（`acfb8e4`）就是这样。
+- 以前调用从模型回答记下起就是 `inProgress`，崩溃后分不清没跑过和跑到一半，恢复时只能猜：把这一轮第一条未结束的调用标成可能已生效。`b52bde4` 拆成 `pending` 和 `inProgress`，去掉了这个猜测。
+- `INDEXED BY` 指定部分索引来自 `600d071`。
+- 以前用 gorm 的 `AutoMigrate`，它只能加表加列，做不到的改动就得清库；`a885647` 换成编号的 SQL 步骤。
+:::
 
 ## SQLite 配置
 
@@ -82,7 +89,7 @@ flowchart LR
 
 ### environments
 
-执行环境（environment）：会话的命令和文件工具在哪里运行。v0.12.0 新增（`5f64857`），协议方法见[网关协议](/zh/integrate/protocol/workspaces#执行环境的方法)。
+执行环境（environment）：会话的命令和文件工具在哪里运行。协议方法见[网关协议](/zh/integrate/protocol/workspaces#执行环境的方法)。
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
@@ -93,6 +100,10 @@ flowchart LR
 | `created_at`、`updated_at` | datetime | 列表按 `created_at, id` 排序 |
 
 每个用户至少有一行 `local`，默认名字 `This computer`（`repo.LocalEnvironmentName`）。`local` 的那一行不能删；`machine` 的行只要还有会话指向它也删不掉，`threads.environment_id` 的外键是 `ON DELETE RESTRICT`，`EnvironmentInUse` 让引擎在删之前就报错。
+
+::: info 演进
+v0.12.0 加入（`5f64857`），见 [0007](#_0007-执行环境)。
+:::
 
 ### threads
 
@@ -486,9 +497,13 @@ SQLite 不能调整列的顺序，所以新建 `turns_new`、`items_new`，复�
 
 ### 0007 执行环境
 
-v0.12.0 加入。建 `environments` 和唯一索引 `(user_id, name)`；给每个已有用户插入一行 `local` 环境，名字 `This computer`；`threads` 加 `environment_id` 列和索引 `threads_environment`，已有会话都指向它用户的 `local` 环境，所以升级前的会话照旧在这台机器上运行。
+建 `environments` 和唯一索引 `(user_id, name)`；给每个已有用户插入一行 `local` 环境，名字 `This computer`；`threads` 加 `environment_id` 列和索引 `threads_environment`，已有会话都指向它用户的 `local` 环境，所以升级前的会话照旧在这台机器上运行。
 
 `environments` 用 `CREATE TABLE IF NOT EXISTS`，因为 migration 之前由 gorm 建的库已经有这张表。`threads` 的列可以直接 `ADD COLUMN`：那种库的 `threads` 在 0005 被重建过，重建出的表没有这一列。
+
+::: info 演进
+随 v0.12.0 加入（`5f64857`）。
+:::
 
 ## 边界与已知问题
 
@@ -506,7 +521,7 @@ v0.12.0 加入。建 `environments` 和唯一索引 `(user_id, name)`；给每�
 |---|---|---|
 | ollupi | `repo/db.go` | 打开库、事务、行类型列表 |
 | ollupi | `repo/migrate.go` | migration 执行 |
-| ollupi | `repo/migrations/` | 编号的 migration，到 v0.12.0 共七个 |
+| ollupi | `repo/migrations/` | 编号的 migration，共七个 |
 | ollupi | `repo/environments.go` | `environments` 表、`LocalEnvironment`、`EnvironmentInUse` |
 | ollupi | `repo/threads.go` | `threads` 表、`ThreadState` |
 | ollupi | `repo/turns.go` | `turns` 表、`SubmitTurn`、`EndTurn`、`RunItems` |

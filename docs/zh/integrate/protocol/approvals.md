@@ -147,7 +147,7 @@ Do not call tools. Write the final answer to the user now, in their language: re
 
 ### 用一条消息代替回答
 
-v0.12.1 起（`c4899f5`），这一轮在等审批或提问时，用户直接发消息（`turn/steer`），这条消息就代替了回答。实测，等审批时插话：
+这一轮在等审批或提问时，用户直接发消息（`turn/steer`），这条消息就代替了回答。实测，等审批时插话：
 
 ```mermaid
 sequenceDiagram
@@ -191,7 +191,9 @@ sequenceDiagram
 
 和显式拒绝不同，这里不会出现"工具调用已停止"的 `error` 条目：模型读到被拒的结果和新消息，可以接着用工具。客户端收到这些 `item/completed` 时就该关掉对应的审批或提问界面；之后再回复那条请求，只会收到 `error` 通知，不会重发。机制见[插话](/zh/engine/execution#插话-steer)。
 
-在 v0.12.1 之前，插话只落库，这一轮一直停在等待里。
+::: info 演进
+v0.12.1 之前，插话只落库，这一轮一直停在等待里，直到用户回答；用户说了"算了"之后再批准，调用会在模型读到这句话之前执行。`c4899f5` 改成由消息代替回答。
+:::
 
 ## 请求
 

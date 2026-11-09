@@ -6,13 +6,19 @@
 
 ## 为什么这样设计
 
-- **工作区是 Box 里的路径，不是本机路径。** 加工作区时用的是这个用户自己的 Box 来校验路径，工具每次调用也在用户自己的 Box 里解析目录（`aecfb63`）。云沙箱用户的工作区是他那台机器里的路径，本机根本没有这个目录。这样一个进程能同时服务本机用户和云沙箱用户，见[设计决策 1](/zh/reference/decisions#_1-池化-runtime)。
-- **数据挂在工作区 ID 上，路径可以换。** 会话、记忆、定时任务都记的是工作区 ID，不是路径。所以 `workspace/move` 搬文件夹时只改工作区自己的 `root_path` 一列，别的数据不用改写（`d63435b`）。在此之前，根目录是唯一改不了的列，用户在访达里挪了文件夹，所有会话就都指向一个不存在的路径。
+- **工作区是 Box 里的路径，不是本机路径。** 加工作区时用的是这个用户自己的 Box 来校验路径，工具每次调用也在用户自己的 Box 里解析目录。云沙箱用户的工作区是他那台机器里的路径，本机根本没有这个目录。这样一个进程能同时服务本机用户和云沙箱用户，见[设计决策 1](/zh/reference/decisions#_1-池化-runtime)。
+- **数据挂在工作区 ID 上，路径可以换。** 会话、记忆、定时任务都记的是工作区 ID，不是路径。所以 `workspace/move` 搬文件夹时只改工作区自己的 `root_path` 一列，别的数据不用改写。
 - **只归档，不删除。** 引擎没有删除工作区的操作，只能归档；指向 `workspaces` 的外键是 `ON DELETE RESTRICT`，库也不允许删掉还有会话的工作区。归档只是让它不能再开新会话和新的一轮，数据都留着。
-- **不在工作区的会话不在 agent 目录里跑。** 没配 `workspace_dirs` 时，命令在 `<agent home>/scratch` 里运行，而不是 agent 目录本身，因为那里有数据库（`701ac2a`，此前由桌面端自己建这个目录）。
+- **不在工作区的会话不在 agent 目录里跑。** 没配 `workspace_dirs` 时，命令在 `<agent home>/scratch` 里运行，而不是 agent 目录本身，因为那里有数据库。
 - **权限多一层，按项目区分。** 用户为一个项目批准的"总是允许"写进这个工作区的设置，只对这个项目的会话生效，不影响别的项目，见[审批与权限](/zh/engine/permissions#三层叠加)。
 
 代价：每次工具调用都要在用户的 Box 里重新解析一次工作区目录，云沙箱用户的每次调用因此多一次到机器的往返；文件夹在引擎之外被挪走或换成链接后，工作区就用不了了，只能重新添加或者用 `workspace/move`；工作区限制的是写入和命令目录，不限制读取，见[边界与已知问题](#边界与已知问题)。
+
+::: info 演进
+- 在用户自己的 Box 里校验和解析工作区路径来自 `aecfb63`。
+- `workspace/move` 来自 `d63435b`。在此之前根目录是唯一改不了的列，用户在访达里挪了文件夹，所有会话就都指向一个不存在的路径。
+- scratch 目录由引擎创建来自 `701ac2a`，此前由桌面端自己建这个目录。
+:::
 
 ## 机制
 
@@ -43,7 +49,7 @@
 
 一轮开始运行时，`runTurn` 读出会话的工作区，交给运行时三样东西：
 
-- **调用者。** `tools.Caller` 的 `WorkspaceID`、`Root`（工作区的 `root_path`）和 `EnvironmentID`（会话的执行环境，v0.12.0 起），工具用 `tools.CallerOf(ctx)` 读到。
+- **调用者。** `tools.Caller` 的 `WorkspaceID`、`Root`（工作区的 `root_path`）和 `EnvironmentID`（会话的执行环境），工具用 `tools.CallerOf(ctx)` 读到。
 - **系统提示词。** 有 `Root` 时，系统提示词里多一节 `# PROJECT`，告诉模型这个会话在哪个项目里、命令默认在那里运行；通用规则里还有一条"有项目目录时留在项目目录里"。
 - **权限层。** 工作区设置是三层里的中间一层，见下文[权限](#权限)。
 
@@ -95,7 +101,7 @@ flowchart TD
 | --- | --- | --- |
 | `Box` | 描述工具用的 Box：工具描述里写的目录和沙箱规则从它来；也服务 `BoxFor` 没给的用户 | 用 `Config` 在本机建一个 Seatbelt 沙箱 |
 | `BoxFor` | 每次调用用这个用户自己的 Box。Box 的生命周期归宿主，这个包只关 `Box` | 所有用户都用 `Box` |
-| `BoxIn` | v0.12.0 起。按会话的执行环境（`caller.EnvironmentID`）给 Box，配了它就不再用 `BoxFor`；返回 `nil` 而不报错时用 `Box`。配了它时 `run_command` 的描述会说明命令在会话选的环境里运行 | 用 `BoxFor` |
+| `BoxIn` | 按会话的执行环境（`caller.EnvironmentID`）给 Box，配了它就不再用 `BoxFor`；返回 `nil` 而不报错时用 `Box`。配了它时 `run_command` 的描述会说明命令在会话选的环境里运行 | 用 `BoxFor` |
 | `Agent.Home` | agent 目录：`workspace_dirs` 的相对路径基于它，`<home>/data` 禁读，`<home>/scratch` 是默认命令目录 | `workspace_dirs` 必须配 |
 | `Agent.SkillsDir` | 技能目录，命令和文件工具对它只读 | 不加这条规则 |
 
@@ -109,6 +115,10 @@ flowchart TD
 | `command_blacklist` | 空 | 命中就在 `Prepare` 阶段拒绝，见[命令黑名单](/zh/engine/permissions#命令黑名单) |
 
 `Provider` 还给沙箱追加了一组保护名：`AGENTS.md`、`.agents`、`.codex`、`.claude`、`CLAUDE.md`、`.cursor`、`.mcp.json`。这些是别的 agent 工具之后会读的配置，在命令目录的任意层级都不可写，见[保护名](/zh/engine/sandbox#保护名)。
+
+::: info 演进
+执行环境是 v0.12.0 加入的（`5f64857`）：`tools.Caller` 多了 `EnvironmentID`，`Options` 多了 `BoxIn`。在此之前每次调用只看 `BoxFor`，一个用户的所有会话都在同一个 Box 里运行。
+:::
 
 ### 权限
 
@@ -141,7 +151,7 @@ flowchart TD
 - **同一个文件夹的判定依赖 Box。** 本机按文件身份判断，云沙箱的 `Same` 只比较路径字符串，同一台机器里经过链接到达的同一个文件夹会被当成两个。
 - **工具描述按描述用的 Box 写。** `run_command` 和文件工具的描述里写的目录和沙箱规则来自 `Options.Box`，不是每个用户自己的 Box。用户的 Box 根目录和它不同时，模型看到的描述和实际规则对不上。
 - **没有删除。** 工作区只能归档，归档后的行一直留在库里。
-- **工作区属于这台机器上的环境。** v0.12.0 起会话可以在别的执行环境里运行，但 `workspace/add` 和 `workspace/move` 仍经 `Config.BoxFor` 校验路径，也就是用户在这台机器上的 Box。会话在云沙箱环境里时，它的工作区路径要在那台机器上也解析到它自己，否则每次调用都按上面的流程报错。执行环境见[网关协议](/zh/integrate/protocol/workspaces#执行环境的方法)。
+- **工作区属于这台机器上的环境。** 会话可以在别的执行环境里运行，但 `workspace/add` 和 `workspace/move` 仍经 `Config.BoxFor` 校验路径，也就是用户在这台机器上的 Box。会话在云沙箱环境里时，它的工作区路径要在那台机器上也解析到它自己，否则每次调用都按上面的流程报错。执行环境见[网关协议](/zh/integrate/protocol/workspaces#执行环境的方法)。
 
 ## 代码位置
 

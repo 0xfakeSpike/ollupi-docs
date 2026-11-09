@@ -13,13 +13,20 @@ type Client interface {
 
 ## 为什么这样设计
 
-- **原生接口，而不是只走 OpenAI 兼容层。** 初版只有 Chat Completions 客户端。Anthropic 和 Gemini 的思考内容带签名，要按服务商自己的格式原样送回，兼容层表达不了，所以加了 `NewAnthropic` 和 `NewGemini`，每次回答另存一份服务商格式的原始消息（`9ac61ec`）。见[设计决策 12](/zh/reference/decisions#_12-原生-anthropic-与-gemini-接口)。
-- **上限由连接声明，引擎不猜。** 早期内置过一张常见模型的上限表，按模型名查；`cd0efe2` 删掉了它，没声明上限的模型直接报错，不再按名字猜。见[设计决策 18](/zh/reference/decisions#_18-出错即暴露)。
-- **并发名额按连接算，不按步骤算。** 早期 4 个 worker 按整个步骤计数，4 个跑长工具的步骤就能卡住所有会话。现在只有模型调用占名额，工具执行不占（`64f8593`）。见[设计决策 4](/zh/reference/decisions#_4-两层并发)。
-- **三个客户端统一重试 8 次。** 之前 OpenAI 和 Anthropic 的 SDK 在约 1.5 秒内只重试两次，Gemini 的 SDK 不重试，服务商短暂缺配额就让工具已经跑完的轮次失败（`a7bf0b2`）。模拟模型下 5% 请求返回 500 的负载，加重试前 326 个轮次失败，加重试后 0 个，见[性能基准](/zh/benchmarks/#故障与长尾)。
+- **原生接口，而不是只走 OpenAI 兼容层。** Anthropic 和 Gemini 的思考内容带签名，要按服务商自己的格式原样送回，兼容层表达不了，所以它们各有原生客户端 `NewAnthropic`、`NewGemini`，每次回答另存一份服务商格式的原始消息。见[设计决策 12](/zh/reference/decisions#_12-原生-anthropic-与-gemini-接口)。
+- **上限由连接声明，引擎不猜。** 没声明上限的模型直接报错，引擎不按模型名猜。见[设计决策 18](/zh/reference/decisions#_18-出错即暴露)。
+- **并发名额按连接算，不按步骤算。** 只有模型调用占名额，工具执行不占，跑长工具的轮次不会挡住别人调用模型。见[设计决策 4](/zh/reference/decisions#_4-两层并发)。
+- **三个客户端统一重试 8 次。** 服务商短暂缺配额时，一轮变慢而不是失败。模拟模型下 5% 请求返回 500 的负载里没有轮次失败，见[性能基准](/zh/benchmarks/#故障与长尾)。
 - **错误只留状态码。** 服务商的错误响应正文可能复述提示词，`safeRequestError` 只保留 HTTP 状态码，不把正文带进返回的错误。
 
 代价：三个客户端在思考、缓存、回答上限、结束原因上的行为要各自对齐和测试；原始消息存在 `items.native` 列，体积大；用户必须自己填每个模型的上限；重试期间调用一直占着名额和槽位，最多约 40 秒。
+
+::: info 演进
+- 初版只有 Chat Completions 客户端，`9ac61ec` 加了 `NewAnthropic` 和 `NewGemini`，以及每次回答的原始消息。
+- 早期内置过一张常见模型的上限表，按模型名查；`cd0efe2` 删掉了它。
+- 早期 4 个 worker 按整个步骤计数，4 个跑长工具的步骤就能卡住所有会话；`64f8593` 改成只有模型调用占名额。
+- 以前 OpenAI 和 Anthropic 的 SDK 在约 1.5 秒内只重试两次，Gemini 的 SDK 不重试，服务商短暂缺配额就让工具已经跑完的轮次失败。`a7bf0b2` 统一成 8 次；同一负载下加重试前 326 个轮次失败，加重试后 0 个。
+:::
 
 ## 三种客户端
 
@@ -88,9 +95,13 @@ flowchart LR
 | Anthropic | 同上 | 同上 | 同上 |
 | Gemini | `HTTPRetryOptions{Attempts: 9, InitialDelay: 0.5, MaxDelay: 8}` | 连接错误、408、429、500、502、503、504 | 0.5 秒翻倍到 8 秒，带抖动 |
 
-Gemini 的 SDK 默认只发一次，不配 `RetryOptions` 就没有重试。这是提交 `a7bf0b2` 补上的，当时目标是让服务商短暂缺配额时一轮变慢而不是失败。
+Gemini 的 SDK 默认只发一次，不配 `RetryOptions` 就没有重试，所以 Gemini 客户端显式配了它。
 
 重试只发生在拿到响应之前。流已经开始之后断开，`Chat` 返回错误，运行时不重发，这一轮失败，已经落库的条目保留。
+
+::: info 演进
+来自 `a7bf0b2`：Gemini 的 `RetryOptions` 由这个提交补上，目标是服务商短暂缺配额时一轮变慢而不是失败。
+:::
 
 ## 思考内容和签名回放
 
@@ -207,11 +218,15 @@ type Store interface {
 
 类型按内容判断：取前 512 字节，调用方给了 MIME 类型就用给的，否则嗅探。PNG、JPEG、GIF、WebP 算图片。其余文件前 512 字节含 NUL、整体不是 UTF-8 或含 NUL，都拒绝。
 
-文件经用户的沙箱读取（`Box.Stat`、`sandbox.ReadFile`），路径必须是绝对路径。`describe` 量出大小后，`copyAttachment` 只复制这么多字节，读到的长度不等就拒绝（"the file changed while it was being attached"）。这一步在消息进入事件循环之前做，带超时，慢的沙箱或存储不会卡住同一分片（shard）上的其他会话（`fb3e2d1`，见[引擎架构](/zh/engine/architecture)）。
+文件经用户的沙箱读取（`Box.Stat`、`sandbox.ReadFile`），路径必须是绝对路径。`describe` 量出大小后，`copyAttachment` 只复制这么多字节，读到的长度不等就拒绝（"the file changed while it was being attached"）。这一步在消息进入事件循环之前做，带超时，慢的沙箱或存储不会卡住同一分片（shard）上的其他会话，见[引擎架构](/zh/engine/architecture)。
 
 Token 估算：图片按长边缩到 1568 后每 750 像素 1 个 token，最少 85，读不出尺寸时算 1600；文本文件按 `EstimateTokens` 加文件名再加 8。
 
 发送时运行时从存储读出内容：图片放进 `Data`，文本加上 `--- file: <名字> ---` 头放进 `Text`，脱敏打开时一起脱敏。模型 `Images` 为假时，消息带图片或会话里已有图片都拒绝，不丢弃内容（`this conversation shows the model images`）。
+
+::: info 演进
+来自 `fb3e2d1`：附件的读写挪到进事件循环之前并加超时，一个用户的慢沙箱或存储不再拖住同一分片上的其他会话。
+:::
 
 ## 边界与已知问题
 

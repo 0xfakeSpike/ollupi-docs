@@ -106,7 +106,7 @@ SELECT th.user_id, sum(t.input_tokens), sum(t.cached_input_tokens), sum(t.output
 FROM turns t JOIN threads th ON th.id = t.thread_id GROUP BY th.user_id;
 ```
 
-这些查询在 v0.11.3 的库上跑过。表结构见[持久化](/zh/engine/persistence)，表名和列名会随 migration 变。哪个容量上限在卡，见[容量规划与限流](/zh/integrate/capacity#判断哪个上限在卡)。
+这些查询在 v0.12.1 建的库上跑过（表结构第 7 步）。表结构见[持久化](/zh/engine/persistence)，表名和列名会随 migration 变。哪个容量上限在卡，见[容量规划与限流](/zh/integrate/capacity#判断哪个上限在卡)。
 
 ## 故障排查
 

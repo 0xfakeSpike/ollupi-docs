@@ -106,7 +106,7 @@ agent: invalid message: connection "nope" is unavailable; restore it in Settings
 
 ## 内置工具的参数和输出
 
-契约的 `builtinTools` 段给 9 个内置工具的参数（`arguments`，对应条目里 `arguments` 文本解析之后的对象）和输出（`output`，对应条目的 `result.output`）。只收界面要专门显示、用户要参与的工具：计划、子 agent、提问、命令和五个文件工具。`0ae03bb` 把定时任务的四个工具和 `memory_search` 移出了契约，文件工具由 `9ac61ec`、`74322be` 加入。
+契约的 `builtinTools` 段给 9 个内置工具的参数（`arguments`，对应条目里 `arguments` 文本解析之后的对象）和输出（`output`，对应条目的 `result.output`）。只收界面要专门显示、用户要参与的工具：计划、子 agent、提问、命令和五个文件工具。
 
 其余工具调用，包括定时任务、`memory_search`、技能、`read_tool_output`、`web_fetch`、MCP 和宿主自己的工具，不进契约：客户端把它们当通用调用，显示参数和输出的原始 JSON，不要依赖它们的结构。这些输出是写给模型的，引擎可以随时为模型调整。它们的参数类型仍然是发给模型的 `input_schema` 的来源。
 
@@ -135,6 +135,10 @@ agent: invalid message: connection "nope" is unavailable; restore it in Settings
 {"tool":"run_command","arguments":"{\"program\":\"echo\",\"args\":[\"hello from the command\"],\"sandbox_permissions\":\"require_escalated\",\"justification\":\"Demonstrate a command that needs approval\"}",
  "result":{"output":{"stdout":"hello from the command\n","stderr":"","exit_code":0,"work_dir":"/private/var/folders/…/workspace","sandbox":"escalated: ran on the host without the sandbox"}}}
 ```
+
+::: info 演进
+契约里的工具清单变过：定时任务的四个工具和 `memory_search` 曾经在契约里，`0ae03bb` 把它们移出去，改成通用调用，因为它们的输出是写给模型的；文件工具由 `9ac61ec`、`74322be` 加入。
+:::
 
 ### Plan 和 PlanStep
 
@@ -315,7 +319,11 @@ MCP 工具的注解是服务器自报的，引擎无法验证。注解怎样决�
 
 这些名字来自各提供方的 `Name()` 和录制的会话。宿主不一定装配全部提供方，比如不配 `workspace.New` 就没有 `workspace`，客户端要按 `tool/list` 实际返回的来。
 
-契约里另有一个 `providers` 段，只有 `cron`、`skills`、`memory` 三个（`db21f76` 加入 `memory`）。生成它的代码注释说它是"`ItemRow.server` 取到的 ollupi 自带提供方 id"，但它不全：上表里的 `workspace`、`plan`、`web` 等都不在里面。客户端不要拿它判断一个 `server` 合不合法。桌面端生成了这个常量，但没有用到它。
+契约里另有一个 `providers` 段，只有 `cron`、`skills`、`memory` 三个。生成它的代码注释说它是"`ItemRow.server` 取到的 ollupi 自带提供方 id"，但它不全：上表里的 `workspace`、`plan`、`web` 等都不在里面。客户端不要拿它判断一个 `server` 合不合法。桌面端生成了这个常量，但没有用到它。
+
+::: info 演进
+`providers` 段原来只有 `cron` 和 `skills`，`db21f76` 加入 `memory`。
+:::
 
 ## 错误与边界
 
