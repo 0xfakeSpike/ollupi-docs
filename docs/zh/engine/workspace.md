@@ -2,7 +2,7 @@
 
 工作区（workspace）是用户沙箱（`sandbox.Box`）里的一个项目文件夹，会话挂在它上面。一次工具调用在哪个目录运行、能写到哪里、经过哪一层权限设置，都由会话所在的工作区决定。
 
-工作区的表结构见[持久化](/zh/engine/persistence#workspaces)，协议方法见[网关协议](/zh/integrate/protocol#工作区)，工具各自的参数见[工具](/zh/engine/tools#内置工具)，沙箱规则见[沙箱](/zh/engine/sandbox)。本页讲这些部分怎样通过工作区连起来。
+工作区的表结构见[持久化](/zh/engine/persistence#workspaces)，协议方法见[网关协议](/zh/integrate/protocol/workspaces#工作区的方法)，工具各自的参数见[工具](/zh/engine/tools#内置工具)，沙箱规则见[沙箱](/zh/engine/sandbox)。本页讲这些部分怎样通过工作区连起来。
 
 ## 为什么这样设计
 
@@ -122,7 +122,7 @@ flowchart TD
 
 归档的工作区里，不能再开新会话（`StartThread` 返回 `ErrWorkspaceArchived`），顶层会话也不能再开始新的一轮（`-32014`）。数据都还在，取消归档或重新添加同一个文件夹就恢复。
 
-`workspace/move` 经用户的 `Box.Move` 把文件夹搬到一个已存在的空文件夹，再改 `root_path`。工作区里还有没结束的轮次时拒绝，因为那些轮次的调用里写着旧路径。拒绝的条件和失败后的回滚见[网关协议](/zh/integrate/protocol#工作区)。
+`workspace/move` 经用户的 `Box.Move` 把文件夹搬到一个已存在的空文件夹，再改 `root_path`。工作区里还有没结束的轮次时拒绝，因为那些轮次的调用里写着旧路径。拒绝的条件和失败后的回滚见[网关协议](/zh/integrate/protocol/workspaces#工作区的方法)。
 
 ### 别处怎样用工作区
 
@@ -130,7 +130,7 @@ flowchart TD
 | --- | --- | --- |
 | 记忆 | 范围分 `global`、`general`、`workspace`，`workspace` 范围的记忆只进这个工作区的会话 | [记忆](/zh/engine/memory#类型与范围) |
 | 搜索 | `search` 可以带 `workspaceId` 只搜一个工作区 | [搜索](/zh/engine/search) |
-| 会话列表 | `thread/list` 按 `workspaceId` 过滤，空字符串只列 general | [网关协议](/zh/integrate/protocol#会话) |
+| 会话列表 | `thread/list` 按 `workspaceId` 过滤，空字符串只列 general | [网关协议](/zh/integrate/protocol/threads) |
 | 附件 | 源文件从用户自己的 Box（`Config.BoxFor`）里读，宿主应当给它和工作区工具同一个函数 | [扩展点](/zh/integrate/extend#云沙箱) |
 
 ## 边界与已知问题
@@ -141,7 +141,7 @@ flowchart TD
 - **同一个文件夹的判定依赖 Box。** 本机按文件身份判断，云沙箱的 `Same` 只比较路径字符串，同一台机器里经过链接到达的同一个文件夹会被当成两个。
 - **工具描述按描述用的 Box 写。** `run_command` 和文件工具的描述里写的目录和沙箱规则来自 `Options.Box`，不是每个用户自己的 Box。用户的 Box 根目录和它不同时，模型看到的描述和实际规则对不上。
 - **没有删除。** 工作区只能归档，归档后的行一直留在库里。
-- **工作区属于这台机器上的环境。** v0.12.0 起会话可以在别的执行环境里运行，但 `workspace/add` 和 `workspace/move` 仍经 `Config.BoxFor` 校验路径，也就是用户在这台机器上的 Box。会话在云沙箱环境里时，它的工作区路径要在那台机器上也解析到它自己，否则每次调用都按上面的流程报错。执行环境见[网关协议](/zh/integrate/protocol#执行环境)。
+- **工作区属于这台机器上的环境。** v0.12.0 起会话可以在别的执行环境里运行，但 `workspace/add` 和 `workspace/move` 仍经 `Config.BoxFor` 校验路径，也就是用户在这台机器上的 Box。会话在云沙箱环境里时，它的工作区路径要在那台机器上也解析到它自己，否则每次调用都按上面的流程报错。执行环境见[网关协议](/zh/integrate/protocol/workspaces#执行环境的方法)。
 
 ## 代码位置
 

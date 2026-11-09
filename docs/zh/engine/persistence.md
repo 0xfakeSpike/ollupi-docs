@@ -82,7 +82,7 @@ flowchart LR
 
 ### environments
 
-执行环境（environment）：会话的命令和文件工具在哪里运行。v0.12.0 新增（`5f64857`），协议方法见[网关协议](/zh/integrate/protocol#执行环境)。
+执行环境（environment）：会话的命令和文件工具在哪里运行。v0.12.0 新增（`5f64857`），协议方法见[网关协议](/zh/integrate/protocol/workspaces#执行环境的方法)。
 
 | 字段 | 类型 | 说明 |
 |---|---|---|

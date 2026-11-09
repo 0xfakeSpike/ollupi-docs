@@ -208,7 +208,7 @@ Hello, world.
 
 ### 分页和 seq
 
-`thread/read` 和 `thread/resume` 按条目的 `seq` 分页：`seq` 在一个会话内唯一递增（`items` 表的唯一索引 `(thread_id, seq)`），每页取最新的若干条、按 `seq` 升序返回，`beforeSeq` 取更早的一页。`turns` 不分页，每次都是全部。限额见[会话](/zh/integrate/protocol#会话)。
+`thread/read` 和 `thread/resume` 按条目的 `seq` 分页：`seq` 在一个会话内唯一递增（`items` 表的唯一索引 `(thread_id, seq)`），每页取最新的若干条、按 `seq` 升序返回，`beforeSeq` 取更早的一页。`turns` 不分页，每次都是全部。限额见[会话](/zh/integrate/protocol/threads)。
 
 本地合并的三种情况，桌面端各有一个函数：
 
@@ -230,7 +230,7 @@ Hello, world.
 
 ## 审批和提问
 
-审批（`item/toolCall/requestApproval`）和提问（`item/tool/requestUserInput`）是服务端发来的 JSON-RPC 请求，客户端用 `result` 回复。参数和可选决定见[服务端请求](/zh/integrate/protocol#服务端请求)。
+审批（`item/toolCall/requestApproval`）和提问（`item/tool/requestUserInput`）是服务端发来的 JSON-RPC 请求，客户端用 `result` 回复。参数和可选决定见[服务端请求](/zh/integrate/protocol/approvals)。
 
 **`id` 原样带回。** 服务端请求的 `id` 是 JSON 数字，每条连接从 1 开始。网关按 `id` 的原始 JSON 文本找对应的请求，回复里写成字符串 `"3"` 对不上 `3`。实测这样回复后网关只记一条 `response to unknown request`，这个请求在这条连接上一直算"已经问过"，`thread/resume` 也不会再发，只有重连才会重新问。
 
@@ -264,7 +264,7 @@ Hello, world.
 
 `expectedTurnId` 和 `turnId` 取本地状态里"当前进行中的那一轮"：状态不是 `queued`、`completed`、`interrupted`、`failed` 的那一轮，一个会话最多一个（桌面端的 `activeTurn`）。
 
-附件用 `{type: "file", path}`：`path` 是用户沙箱里的绝对路径，引擎从那里读文件并复制一份。协议里没有上传文件内容的方法，所以客户端和用户的沙箱不在同一台机器时，文件要先用别的途径放进沙箱。附件的数量和大小上限见[一轮](/zh/integrate/protocol#一轮)，读回用 `attachment/read`。
+附件用 `{type: "file", path}`：`path` 是用户沙箱里的绝对路径，引擎从那里读文件并复制一份。协议里没有上传文件内容的方法，所以客户端和用户的沙箱不在同一台机器时，文件要先用别的途径放进沙箱。附件的数量和大小上限见[一轮](/zh/integrate/protocol/turns#turn-start)，读回用 `attachment/read`。
 
 新建会话时 `environmentId` 选在哪个执行环境里运行，省略时是用户本机的那个，之后不能改；子 agent 会话跟随父会话。可选的环境用 `environment/list` 列出。
 

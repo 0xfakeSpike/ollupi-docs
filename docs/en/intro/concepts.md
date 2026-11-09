@@ -17,7 +17,7 @@ A project folder in the user's sandbox (`Box`): a local folder on the desktop ap
 
 ## Environment
 
-Where a session's commands and file tools run. Every user has this machine as one environment, and can add cloud sandboxes of their own. A session chooses its environment when it starts and keeps it, and its subagents follow it; a session that chooses none runs on this machine. Which machine an environment stands for is the host's to decide. See the [gateway protocol](/zh/integrate/protocol#执行环境) (in Chinese).
+Where a session's commands and file tools run. Every user has this machine as one environment, and can add cloud sandboxes of their own. A session chooses its environment when it starts and keeps it, and its subagents follow it; a session that chooses none runs on this machine. Which machine an environment stands for is the host's to decide. See the [gateway protocol](/zh/integrate/protocol/workspaces#执行环境的方法) (in Chinese).
 
 ## Session (thread)
 

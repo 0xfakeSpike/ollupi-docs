@@ -4,7 +4,7 @@
 
 协议由 `gateway/protocol.go` 里的一张表定义。这张表同时做请求分发，也是 `gateway/protocol.schema.json` 的生成来源，所以文档、类型和实际行为不会各走各的。下文的数字和名称对应引擎 v0.12.1（契约和 v0.12.0 相同）：38 个方法、16 种通知、2 种服务端请求、1 种客户端通知、15 个错误码。
 
-本页讲线上的约定：传输、认证、握手、每个方法和通知、错误码、契约怎样生成。每个类型的字段见[协议数据类型](/zh/integrate/protocol-types)，怎样写一个能正确重连、跟上状态的客户端见[写一个客户端](/zh/integrate/client)。
+本页讲所有功能共用的约定：传输、认证、连接模型、握手、版本校验、消息的通用约定、错误码，以及契约怎样生成和测试。每个功能的方法、通知、类型和流程按模块分页，见下面的[模块](#模块)；怎样写一个能正确重连、跟上状态的客户端见[写一个客户端](/zh/integrate/client)。
 
 ## 传输
 
@@ -76,241 +76,35 @@ Go 客户端如果用 `coder/websocket`，默认读上限是 32768 字节，`too
 
 网关不做校验，也不拒绝不一致的客户端。怎么处理由客户端决定。桌面端的做法：`packages/protocol` 生成时把摘要写进常量 `PROTOCOL_SHA256`，连接后比较；不一致时显示一条提示横幅，连接继续工作。
 
-## 一次完整对话
+## 模块
 
-下图来自实际流量：新建会话，发一条消息，模型调用一个需要审批的工具，然后回答。
-
-```mermaid
-sequenceDiagram
-    participant C as 客户端
-    participant G as 网关
-    C->>G: WebSocket 升级，带 Bearer 令牌
-    G-->>C: 101
-    C->>G: initialize
-    G-->>C: 回复 serverInfo 和 protocolSha256
-    C-)G: initialized
-    C->>G: thread/start
-    G-)C: thread/started
-    G-->>C: 回复 thread
-    C->>G: turn/start
-    G-)C: turn/started，status 为 ready
-    G-)C: item/started 和 item/completed，userMessage
-    G-)C: thread/status/changed，active
-    G-->>C: 回复 turn
-    G-)C: item/started 和 item/completed，memoryContext
-    G-)C: item/started，toolCall，pending
-    G-)C: item/updated，toolCall，pending
-    G->>C: item/toolCall/requestApproval
-    G-)C: thread/status/changed，waitingOnApproval
-    C-->>G: 回复 decision 为 accept
-    G-)C: item/updated，toolCall，pending
-    G-)C: thread/status/changed，active
-    G-)C: item/updated，toolCall，inProgress
-    G-)C: item/completed，toolCall，completed
-    G-)C: item/started，agentMessage，inProgress
-    loop 模型流式输出
-        G-)C: item/agentMessage/delta
-    end
-    G-)C: item/completed，agentMessage，completed
-    G-)C: turn/completed，status 为 completed
-    G-)C: thread/status/changed，idle
-```
-
-有几处细节：
-
-- `turn/started` 表示这一轮成为会话的当前一轮，此时状态是 `ready`，还没有占到槽位（slot）。进入槽位不单独发通知，`inProgress` 只存在于 `thread/read` 读到的 `turn.status` 里。状态机见 [执行模型](/zh/engine/execution)。
-- `memoryContext` 条目只在配置了长期记忆时出现。
-- 带推理输出的模型会多出 `reasoning` 条目和 `item/reasoning/textDelta`。
-- 审批请求先于 `thread/status/changed` 到达。
-- 会话已有进行中的一轮时，`turn/start` 发出的是 `turn/queued`，等前一轮结束后才发 `turn/started`。
-- 增量只走事件。`item/agentMessage/delta` 和 `item/reasoning/textDelta` 不补发，完整文本在 `item/completed` 的 `item.text` 里。
-
-## 客户端方法
-
-参数全部用严格解码：多余字段返回 `-32602`。`params` 省略时按 `{}` 处理。`?` 表示可选。契约里标为必填的字段，网关解码时并不检查它是否出现（Go 的 JSON 解码不强制必填），缺了按零值处理，例如 `thread/start` 省略 `permissions` 也能成功；客户端仍应按契约发送。
-
-### 握手和目录
-
-| 方法 | 参数要点 | 结果要点 | 说明 |
+| 模块 | 方法 | 通知 | 服务端请求 |
 |---|---|---|---|
-| `initialize` | `clientInfo` | `serverInfo`、`protocolSha256` | 只能调一次 |
-| `model/list` | 无 | `data: Model[]`、`default` | `default` 是第一个模型的 `connection` |
-| `tool/list` | 无 | `data: ToolDescriptor[]` | 当前用户的工具，第一次调用可能等待 MCP 连接 |
-| `mcpServer/list` | 无 | `data: ServerStatus[]` | 未配置 `Options.MCP` 时返回空数组 |
+| [会话](/zh/integrate/protocol/threads) | `thread/start`、`thread/read`、`thread/resume`、`thread/list`、`thread/rename`、`thread/archive`、`thread/delete`、`thread/updatePermissions` | `thread/started`、`thread/changed`、`thread/status/changed` | |
+| [一轮与条目](/zh/integrate/protocol/turns) | `turn/start`、`turn/steer`、`turn/interrupt`、`attachment/read` | `turn/queued`、`turn/started`、`turn/completed`、`item/started`、`item/updated`、`item/completed`、`item/agentMessage/delta`、`item/reasoning/textDelta`、`error` | |
+| [审批与提问](/zh/integrate/protocol/approvals) | | | `item/toolCall/requestApproval`、`item/tool/requestUserInput` |
+| [权限](/zh/integrate/protocol/permissions) | `thread/updatePermissions`、`workspace/updatePermissions` 的权限部分，`thread/start` 的 `permissions` | | |
+| [工作区与执行环境](/zh/integrate/protocol/workspaces) | `workspace/list`、`workspace/add`、`workspace/rename`、`workspace/move`、`workspace/archive`、`workspace/updatePermissions`、`environment/list`、`environment/add`、`environment/rename`、`environment/delete` | `workspace/changed`、`environment/changed` | |
+| [模型、工具与 MCP](/zh/integrate/protocol/models-tools) | `model/list`、`tool/list`、`mcpServer/list` | | |
+| [定时任务](/zh/integrate/protocol/cron) | `cron/list`、`cron/create`、`cron/pause`、`cron/delete` | `cron/changed` | |
+| [记忆](/zh/integrate/protocol/memory) | `memory/list`、`memory/status`、`memory/update`、`memory/move`、`memory/forget` | | |
+| [搜索](/zh/integrate/protocol/search) | `search` | | |
+| [设置](/zh/integrate/protocol/settings) | `settings/read`、`settings/update` | `settings/changed` | |
 
-### 会话
+`initialize` 和客户端通知 `initialized` 在上面的[握手](#握手)里。按类型名查它在哪个模块，见[类型索引](/zh/integrate/protocol-types)。
 
-| 方法 | 参数要点 | 结果要点 | 说明 |
-|---|---|---|---|
-| `thread/start` | `workspaceId?`、`environmentId?`、`title?`、`approvalPolicy?`、`permissions` | `thread` | 标题最多 120 字符，可空。`environmentId` 省略时在这台机器上运行，见[执行环境](#执行环境)。发 `thread/started` |
-| `thread/read` | `threadId`、`beforeSeq?`、`limit?` | `thread`、`turns`、`items`、`hasMore` | 只读一页 |
-| `thread/resume` | 同 `thread/read` | 同 `thread/read` | 回复后重发该会话及其等待中子 agent 的待回答请求，这条连接上已经问过、还没回答的不再重发 |
-| `thread/list` | `workspaceId?`、`archived?`、`after?`、`limit?` | `data: ThreadSummary[]`、`hasMore` | 只列顶层会话，见下 |
-| `thread/updatePermissions` | `threadId`、`approvalPolicy?`、`permissions` | `thread` | 整体替换会话设置。发 `thread/changed` |
-| `thread/rename` | `threadId`、`title` | `thread` | 标题 1 到 120 字符 |
-| `thread/archive` | `threadId`、`archived` | `thread` | `archived` 必填。归档要求会话空闲，否则 `-32016`。同时为会话的定时任务发 `cron/changed` |
-| `thread/delete` | `threadId` | `{}` | 要求会话空闲，否则 `-32016`。发 `thread/changed`（`thread` 为 `null`），并删除附件 |
+## 通用约定
 
-分页规则：
+**请求。** 参数全部用严格解码：多余字段返回 `-32602`。`params` 省略时按 `{}` 处理。契约里标为必填的字段，网关解码时并不检查它是否出现（Go 的 JSON 解码不强制必填），缺了按零值处理，例如 `thread/start` 省略 `permissions` 也能成功；客户端仍应按契约发送。各模块的参数表里 `?` 表示可选。
 
-- `thread/read` 的 `limit` 默认 100，最大 500。`items` 从新到旧取，按 `seq` 升序返回；`beforeSeq` 只取更早的条目。`turns` 不分页，总是全部返回。
-- 页内条目累计超过 4 MiB（`pageBytes`）时从旧的一端截断，至少保留最新一条，并把 `hasMore` 置为 `true`。
-- `thread/list` 的 `limit` 默认 20，最大 100。排序是 `updatedAt`、`createdAt`、`id` 倒序，`after` 传上一页最后一项的这三个字段。
-- `workspaceId` 省略时不过滤，传空字符串只列不属于任何工作区的会话。`archived` 为 `true` 时只列已归档。
+**字段。**
 
-`thread/updatePermissions`、`thread/rename`、`thread/archive`、`thread/delete` 对子 agent 会话返回 `-32013`。
+- 可选字段在 Go 端用 `omitempty`：空字符串、`0`、`false`、空数组都不发，客户端要把"缺"当成零值。
+- 时间都是 RFC 3339 的 UTC 字符串，带纳秒，如 `2026-11-08T11:44:56.877645Z`。
+- ID 是字符串，通常是 UUID。例外是 migration 0007 给已有用户补的本机执行环境，它的 ID 是 32 位十六进制（`lower(hex(randomblob(16)))`）。客户端不要假设 ID 的格式。
+- 多数字段是 camelCase。直接给模型看的类型（工具描述、内置工具的参数和输出）用 snake_case，如 `input_schema`、`exit_code`、`work_dir`，这是模型那一侧的命名。
 
-### 一轮
-
-| 方法 | 参数要点 | 结果要点 | 说明 |
-|---|---|---|---|
-| `turn/start` | `threadId`、`input`、`connection?` | `turn` | 有进行中的一轮时排队，发 `turn/queued` |
-| `turn/steer` | `threadId`、`input`、`expectedTurnId` | `turnId` | 把消息写入进行中的这一轮。这一轮在等审批或提问时，消息代替回答：还没执行的调用以 `declined` 结束并发 `item/completed`，这一轮回到 `ready` 接着跑（v0.12.1 起），见[插话](/zh/engine/execution#插话-steer) |
-| `turn/interrupt` | `threadId`、`turnId` | `{}` | 返回不代表已结束，结束时发 `turn/completed`，状态 `interrupted` |
-| `attachment/read` | `threadId`、`attachmentId` | `attachment`、`data` | `data` 是 base64 |
-
-`input` 是 `UserInput` 数组：
-
-| `type` | 字段 | 行为 |
-|---|---|---|
-| `text` | `text` | 多段文本用换行连接，合计最多 4000 字符 |
-| `file` | `path`、`name?`、`mimeType?` | `path` 必须是绝对路径，从用户的沙箱读取并在发送时复制一份 |
-
-其他 `type` 返回 `-32602`。文本和文件都为空时也返回 `-32602`。附件最多 10 个，图片（PNG、JPEG、GIF、WebP）最大 20 MiB，文本文件最大 256 KiB。未配置 `Attachments` 或 `AttachmentsDir` 的引擎不收附件。
-
-`connection` 选模型。省略时沿用该会话上一轮的模型，新会话用第一个模型。连接不存在、或模型不收图片而消息带图片时返回 `-32602`。
-
-`turn/start` 还可能返回 `-32013`（子 agent 会话不接受输入）、`-32014`（工作区已归档）、`-32015`（会话已归档）。`turn/steer` 在没有进行中的一轮时返回 `-32010`，`expectedTurnId` 不匹配时返回 `-32011`。`turn/interrupt` 同样如此；排队中的一轮不算进行中。
-
-### 工作区
-
-| 方法 | 参数要点 | 结果要点 | 说明 |
-|---|---|---|---|
-| `workspace/list` | 无 | `data: WorkspaceRow[]` | |
-| `workspace/add` | `path`、`name?` | `workspace` | `path` 由用户沙箱校验，无效时 `-32602`。`name` 默认取目录名。同一路径已归档时恢复 |
-| `workspace/rename` | `workspaceId`、`name` | `workspace` | |
-| `workspace/move` | `workspaceId`、`path` | `workspace` | 把工作区的文件夹搬到 `path`，见下 |
-| `workspace/archive` | `workspaceId`、`archived` | `workspace` | `archived` 必填 |
-| `workspace/updatePermissions` | `workspaceId`、`approvalPolicy?`、`permissions` | `workspace` | `workspaceId` 必填 |
-
-以上写操作都发 `workspace/changed`。权限字段的语义见 [权限](/zh/engine/permissions)。
-
-`workspace/move`（`d63435b`，v0.11.0 起）经用户自己的 `Box.Move` 搬文件夹，本机是 `os.Rename`，云沙箱是机器里的 `mv`，然后把工作区指向新路径。会话、记忆和定时任务都挂在工作区 ID 上，所以别的数据不用改写。`path` 必须是已经存在的空文件夹；搬到原处时直接返回，不做任何事。下列情况拒绝：
-
-| 情况 | 错误 |
-|---|---|
-| `path` 不存在、不是文件夹或不为空 | `-32602` |
-| `path` 在工作区自己里面 | `-32602` |
-| `path` 已是另一个工作区的文件夹 | `-32602` |
-| 工作区里有会话的一轮还没结束（进行中、排队或在等待） | `-32016`，这些轮次的调用里写着旧路径 |
-
-文件夹搬过去了、数据库却没改成功时，引擎把文件夹搬回原处；搬回也失败时，错误里同时写明文件夹现在在哪、工作区还指着哪。这类错误和 `Box.Move` 自己的失败都不在错误码表里，客户端只收到 `-32000` `the request could not be completed`，详情只在服务端日志里。
-
-### 执行环境
-
-v0.12.0 起（`5f64857`），会话在 `thread/start` 时选定在哪个执行环境（environment）里运行，命令和文件工具都在那里执行，之后不再改变；子 agent 会话跟随父会话。每个用户总有一个 `local` 环境，就是运行引擎的这台机器：`repo.EnsureUser` 建用户时建它，默认名字是 `This computer`，migration 0007 给已有用户补上，并把已有会话都放在它上面。用户还可以登记 `machine` 环境，即宿主经 `sandbox.Machine` 接入的云沙箱。环境本身只是一行名字和种类，它怎样变成工具调用用的沙箱由宿主决定，见[扩展点](/zh/integrate/extend#云沙箱)。
-
-| 方法 | 参数要点 | 结果要点 | 说明 |
-|---|---|---|---|
-| `environment/list` | 无 | `data: EnvironmentRow[]` | 按创建时间排序，第一个是建用户时就有的 `local` 环境 |
-| `environment/add` | `name`、`kind?` | `environment` | `kind` 只能是 `machine`，省略时也是 `machine`；传 `local` 返回 `-32602`。名字去掉首尾空白后 1 到 120 字符。和已有环境同名（不分大小写）时不新建，返回已有的那个 |
-| `environment/rename` | `environmentId`、`name` | `environment` | 和别的环境同名（不分大小写）时 `-32602` |
-| `environment/delete` | `environmentId` | `environment`，即删掉的那个 | `local` 环境不能删；有会话在这个环境里（包括已归档的会话）时也不能删。两种都返回 `-32602` |
-
-以上写操作都发 `environment/changed`，`environment/add` 返回已有环境时也发。环境不存在或属于别的用户时返回 `-32004`，`thread/start` 的 `environmentId` 指向这样的环境时也一样。
-
-### 定时任务
-
-未配置 `Options.Jobs` 时，写方法返回 `-32000` `scheduled tasks are unavailable`。
-
-| 方法 | 参数要点 | 结果要点 | 说明 |
-|---|---|---|---|
-| `cron/list` | `threadId?` | `data: CronJobView[]` | |
-| `cron/create` | `threadId`、`name`、`spec`、`prompt`、`times?` | `CronJobRow` | 非法任务 `-32602`，规则见 [定时任务](/zh/engine/cron) |
-| `cron/pause` | `threadId`、`name`、`paused` | `CronJobRow` | `paused` 必填 |
-| `cron/delete` | `threadId`、`name` | `{}` | |
-
-### 记忆、搜索和设置
-
-未配置 `Options.Memory` 时，`memory/*` 返回 `-32000` `long-term memory is unavailable`。
-
-| 方法 | 参数要点 | 结果要点 | 说明 |
-|---|---|---|---|
-| `memory/list` | `scope`、`workspaceId?` | `data: MemoryRow[]` | `scope` 是 `global`、`general`、`workspace`；`workspaceId` 只在 `workspace` 时给 |
-| `memory/status` | 无 | `MemoryStatus` | 提取状态和最近一次结果 |
-| `memory/update` | `id`、`text` | `memory` | 文本 1 到 4000 字符 |
-| `memory/move` | `id` | `memory` | 在全局和来源范围之间切换 |
-| `memory/forget` | `id` | `{}` | 清空文本，标记为 `forgotten` |
-| `search` | `query`、`workspaceId?`、`limit?` | `threads`、`messages`、`tasks`、`memories` | `query` 按空白切词，全空时 `-32602`。`limit` 默认 20，最大 100。未配置记忆时 `memories` 为空数组 |
-| `settings/read` | 无 | `redaction` | 按用户保存，默认开启 |
-| `settings/update` | `redaction` | `redaction` | `redaction` 必填。回复后发 `settings/changed` |
-
-机制见 [记忆](/zh/engine/memory)、[搜索](/zh/engine/search)、[脱敏](/zh/engine/redaction)。
-
-## 服务端通知
-
-| 通知 | 载荷 | 何时发 |
-|---|---|---|
-| `thread/started` | `thread` | 会话创建，包括子 agent 会话 |
-| `thread/changed` | `threadId`、`thread` | 改名、权限、归档；`thread` 为 `null` 表示已删除 |
-| `thread/status/changed` | `threadId`、`status` | 顶层会话状态变化；子 agent 的变化算到父会话上 |
-| `turn/queued` | `threadId`、`thread`、`turn` | 一轮进入排队 |
-| `turn/started` | 同上 | 一轮成为会话的当前一轮 |
-| `turn/completed` | 同上 | 一轮结束，`turn.status` 是 `completed`、`failed` 或 `interrupted` |
-| `item/started` | `threadId`、`turnId`、`item` | 新条目 |
-| `item/updated` | 同上 | 条目还在 `pending` 或 `inProgress` 时记录有变化 |
-| `item/completed` | 同上 | 条目结束 |
-| `item/agentMessage/delta` | `threadId`、`turnId`、`itemId`、`delta` | 回答的增量 |
-| `item/reasoning/textDelta` | 同上 | 推理的增量 |
-| `workspace/changed` | `workspace` | 工作区变化 |
-| `environment/changed` | `environmentId`、`environment` | 执行环境添加、改名或删除；`environment` 为 `null` 表示已删除 |
-| `cron/changed` | `id`、`threadId`、`job` | 定时任务变化；`job` 为 `null` 表示已删除 |
-| `settings/changed` | `redaction` | 设置变化 |
-| `error` | `threadId?`、`turnId?`、`itemId?`、`message` | agent 内部故障，或客户端的回答没有生效 |
-
-`turn` 和 `item` 通知带的是发出时的完整行，客户端可以直接替换本地状态。子 agent 的条目和轮次也走这些通知，靠 `thread.parentThreadId` 区分。
-
-## 服务端请求
-
-服务端请求的 `id` 从 1 开始，每条连接单独计数，客户端回复时原样带回，类型也要保持是数字：把 `id` 改成字符串回复，网关对不上这条请求，这条连接上也不会再重发它，`thread/resume` 也不会，只有重连后才会重发。同一条目在一条连接上同时只问一次（`asked`）。
-
-| 请求 | 参数要点 | 回复 |
-|---|---|---|
-| `item/toolCall/requestApproval` | `threadId`、`turnId`、`itemId`、`approvalId`、`server`、`tool`、`arguments`、`preparedExecution?`、`reason?`、`content?`、`suggestedRules?`、`availableDecisions` | `{decision}` |
-| `item/tool/requestUserInput` | `threadId`、`turnId`、`itemId`、`questions` | `{answers: {<问题 id>: {answers: [...]}}}` |
-
-`availableDecisions` 决定客户端能给哪些按钮：
-
-| 情况 | 可选决定 |
-|---|---|
-| 规则要求询问（`Approval.Rule` 非空） | `accept`、`decline` |
-| 没有建议规则 | `accept`、`acceptForSession`、`decline` |
-| 有建议规则 | `accept`、`acceptForSession`、`acceptAlways`、`decline` |
-
-`acceptAlways` 把 `suggestedRules` 写进工作区设置，没有工作区时写进会话设置，随后发 `workspace/changed` 或 `thread/changed`。
-
-客户端的回答可能有几种结果：
-
-| 客户端回复 | 网关行为 |
-|---|---|
-| 合法结果 | 写入条目，发 `item/updated` 或 `item/completed` 和 `thread/status/changed` |
-| 结果无法解析，或决定、答案不合法 | 发 `error`（带 `itemId`），用新 `id` 重发同一请求 |
-| 请求已失效（`ErrNoSuchRequest`） | 发 `error`，不再重发 |
-| JSON-RPC 错误回复 | 只记日志。这一轮继续等待，下次 `thread/resume` 或重连时重发 |
-| 连接断开 | 请求留在数据库。新连接 `initialize` 后重发 |
-
-等待中的一轮不占槽位，也不依赖连接存活。客户端断开一周后回来，请求还在。
-
-## 枚举
-
-| 类型 | 取值 |
-|---|---|
-| `TurnStatus` | `queued`、`ready`、`inProgress`、`waitingOnApproval`、`waitingOnUserInput`、`waitingOnAgent`、`completed`、`interrupted`、`failed` |
-| `ThreadStatus` | `idle`、`active`、`waitingOnApproval`、`waitingOnUserInput` |
-| `ItemType` | `userMessage`、`agentMessage`、`reasoning`、`toolCall`、`contextCompaction`、`memoryContext`、`error` |
-| `ItemStatus` | `pending`、`inProgress`、`completed`、`failed`、`declined` |
-| `Decision` | `accept`、`acceptForSession`、`acceptAlways`、`decline` |
-| `ApprovalPolicy` | `untrusted`、`on-request`、`never` |
+**通知。** `thread`、`turn`、`item` 通知带的是发出那一刻库里的完整行，客户端按 `id` 整行替换，不用做字段合并。`*/changed` 通知里对象为 `null` 表示它已被删除。
 
 ## 错误码
 
@@ -364,12 +158,10 @@ var protocol = struct {
 | `clientNotifications` | `protocol.clientNotifications` | `initialized` |
 | `errors` | `protocol.errors` | 错误码到名称 |
 | `builtinTools` | `schema_test.go` | 9 个内置工具的参数和输出 |
-| `providers` | `schema_test.go` | `cron`、`skills`、`memory`：引擎自带、工具又不在 `builtinTools` 里的提供方 id，界面按通用调用显示它们。这不是 `ItemRow.server` 的全部取值，录制的会话里还有 `workspace`、`plan`、`subagents`、`user_input` 和 MCP 服务器名 |
+| `providers` | `schema_test.go` | `cron`、`skills`、`memory`。代码注释说它是 `ItemRow.server` 可取的引擎自带提供方 id，但并不完整，实际取值见[提供方](/zh/integrate/protocol/models-tools#提供方) |
 | `$defs` | 从以上类型遍历得到 | 129 个命名类型，字段见[协议数据类型](/zh/integrate/protocol-types) |
 
-`builtinTools` 只收界面要专门显示、用户要参与的内置工具：计划、子 agent、提问、命令和五个文件工具。`0ae03bb` 把定时任务的四个工具和 `memory_search` 移出了契约，文件工具由 `9ac61ec`、`74322be` 加入。其余工具调用（定时任务、`memory_search`、技能、`read_tool_output`、MCP 和宿主自己的工具）不进契约：客户端把它们当通用调用显示参数和输出的原始 JSON，不要依赖它们的结构，这些输出是写给模型的，引擎可以随时为模型调整。它们的参数类型仍是发给模型的 input schema 的来源。
-
-`builtinTools` 按工具名作键。生成时检查内置工具的名字不含 `__`（`tools.ProviderSeparator`），而 MCP 工具的名字总是 `服务器__工具`，所以按名字就能区分；提供方另见 `ItemRow.server`。
+`builtinTools` 收哪些工具、其余工具调用怎样显示、工具名的规则，见[模型、工具与 MCP](/zh/integrate/protocol/models-tools)。
 
 生成器对协议类型有约束，违反时生成失败：
 

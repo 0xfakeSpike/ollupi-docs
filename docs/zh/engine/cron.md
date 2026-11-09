@@ -128,7 +128,7 @@ if counted {
 
 ## 协议与界面
 
-`cron/list`、`cron/create`、`cron/pause`、`cron/delete` 四个方法和 `cron/changed` 一个通知，参数、返回值、错误码见[协议](/zh/integrate/protocol#定时任务)，此处不重复。未配置 `Options.Jobs` 时写方法返回 `-32000 scheduled tasks are unavailable`。
+`cron/list`、`cron/create`、`cron/pause`、`cron/delete` 四个方法和 `cron/changed` 一个通知，参数、返回值、错误码见[协议](/zh/integrate/protocol/cron)，此处不重复。未配置 `Options.Jobs` 时写方法返回 `-32000 scheduled tasks are unavailable`。
 
 `cron/create` 和 `cron/pause` 返回的是 `repo.CronJobRow`，没有视图字段；桌面端不拿返回值更新列表，而是等 `cron/changed`。发通知有两条路径：
 

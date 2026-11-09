@@ -98,7 +98,7 @@
 
 | 途径 | 读到什么 |
 |---|---|
-| `thread/read`、`thread/resume` | 会话行、全部轮次、一页条目和 `hasMore`。条目从新到旧取，按 `seq` 升序返回，`limit` 默认 100、最大 500，用 `beforeSeq` 往前翻；一页超过 4 MiB 时从旧的一端截断。不带 `native`。参数见[协议](/zh/integrate/protocol#会话) |
+| `thread/read`、`thread/resume` | 会话行、全部轮次、一页条目和 `hasMore`。条目从新到旧取，按 `seq` 升序返回，`limit` 默认 100、最大 500，用 `beforeSeq` 往前翻；一页超过 4 MiB 时从旧的一端截断。不带 `native`。参数见[协议](/zh/integrate/protocol/threads) |
 | `item/*` 通知 | 每次写库后的那一行条目，加上增量文本。事件不缓存，断线期间的要重读 |
 | 桌面端导出 | 会话页可以导出 Markdown 或 JSON。导出前先用 `thread/read` 每页 100 条读完整个会话。JSON 是读到的会话、轮次和全部条目原样序列化；Markdown 只留用户消息、回答和每个工具调用一行，不含推理（`domains/export.ts`、`domains/threadMarkdown.ts`） |
 | `read_tool_output` | 模型用的工具。上下文里被截短的工具输出，按条目 ID 和字符偏移读回库里的完整结果，只能读本会话的，见[工具系统](/zh/engine/tools#输出截断) |

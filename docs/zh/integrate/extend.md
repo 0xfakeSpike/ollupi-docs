@@ -284,7 +284,7 @@ func (u *userTools) For(user string) (*tools.Set, error) {
 
 ### 按会话选择环境
 
-v0.12.0 起（`5f64857`），一个用户可以有几个执行环境，会话开始时选一个，之后不变，见[执行环境](/zh/integrate/protocol#执行环境)。这时上表的意思变了：`Config.BoxFor` 只是用户在这台机器上的那个 Box，工作区校验和附件读取用它；每次工具调用在哪个 Box 里跑，由 `workspace.Options.BoxIn` 按会话的环境决定。
+v0.12.0 起（`5f64857`），一个用户可以有几个执行环境，会话开始时选一个，之后不变，见[执行环境](/zh/integrate/protocol/workspaces#执行环境的方法)。这时上表的意思变了：`Config.BoxFor` 只是用户在这台机器上的那个 Box，工作区校验和附件读取用它；每次工具调用在哪个 Box 里跑，由 `workspace.Options.BoxIn` 按会话的环境决定。
 
 | `BoxIn(caller)` 返回 | 这次调用 |
 | --- | --- |
