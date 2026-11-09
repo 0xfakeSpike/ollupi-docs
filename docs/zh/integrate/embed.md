@@ -147,7 +147,7 @@ ctx, cancel := context.WithCancel(context.Background())
 if err := a.Start(ctx); err != nil {
 	return err
 }
-_, err = a.StartThread(repo.DefaultUser, "", "", permission.Settings{})
+_, err = a.StartThread(repo.DefaultUser, "", "", "", permission.Settings{}) // 用户、工作区、执行环境、标题
 cancel()
 a.Wait()
 return err

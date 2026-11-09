@@ -138,7 +138,7 @@ goroutine 里的 `a.run` 读轮次、会话和条目（`RunItems`），构造 `r
 | `thread_status_changed` | 通知 `thread/status/changed` |
 | `approval_requested` | 服务端请求 `item/toolCall/requestApproval` |
 | `user_input_requested` | 服务端请求 `item/tool/requestUserInput` |
-| `workspace_changed`、`cron_job_changed` | 通知 `workspace/changed`、`cron/changed` |
+| `workspace_changed`、`environment_changed`、`cron_job_changed` | 通知 `workspace/changed`、`environment/changed`、`cron/changed` |
 | `error` | 通知 `error` |
 
 事件只发给本人：没有用户的事件不发给任何人，只进日志。完整协议见[协议](/zh/integrate/protocol)。

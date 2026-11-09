@@ -250,7 +250,9 @@ new WebSocket(url, ["ollupi.token", token])
 |---|---|---|
 | `ClientFor(user, connection)` | 这个用户调用这条连接时用的模型客户端 | 共用 `Connections` |
 | `ToolsFor(user)` | 这个用户多出的工具，比如 MCP 服务器 | 只有 `Providers` |
-| `BoxFor(user)` | 这个用户的沙箱 | `sandbox.Here()` |
+| `BoxFor(user)` | 这个用户在这台机器上的沙箱 | `sandbox.Here()` |
+
+工具调用另有 `workspace.Options.BoxIn`，按会话的执行环境给沙箱（v0.12.0 起），见[扩展点](/zh/integrate/extend#按会话选择环境)。
 
 ### 模型客户端
 

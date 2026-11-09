@@ -41,6 +41,8 @@ flowchart LR
   users --> memories["memories"]
   users --> memory_state["memory_state"]
   users --> settings["settings"]
+  users --> environments["environments"]
+  environments --> threads
   workspaces --> threads
   threads --> threads
   threads --> turns["turns"]
@@ -49,7 +51,7 @@ flowchart LR
   items --> items_search["items_search"]
 ```
 
-外键：指向 `users` 和 `workspaces` 的是 `ON DELETE RESTRICT`；`turns`、`items`、`cron_jobs` 指向 `threads`，`items` 指向 `turns`，`threads.parent_thread_id` 指向 `threads`，都是 `ON DELETE CASCADE`。所以删除一个会话会带走它的轮次、条目、定时任务和子 agent 会话。工作区只归档，没有删除操作。
+外键：指向 `users`、`workspaces` 和 `environments` 的是 `ON DELETE RESTRICT`；`turns`、`items`、`cron_jobs` 指向 `threads`，`items` 指向 `turns`，`threads.parent_thread_id` 指向 `threads`，都是 `ON DELETE CASCADE`。所以删除一个会话会带走它的轮次、条目、定时任务和子 agent 会话。工作区只归档，没有删除操作；执行环境只有在没有会话用它时才能删。
 
 `shard_lease` 单独一张，不和其他表关联。
 
@@ -62,7 +64,7 @@ flowchart LR
 | `id` | text，主键 | 用户 ID；`repo.DefaultUser` 是 `default` |
 | `created_at` | datetime | 创建时间 |
 
-`EnsureUser` 在一个事务里建 `users`、`memory_state`、`settings` 三行，用户已存在时不变。`Open` 总会确保 `default` 用户存在。
+`EnsureUser` 在一个事务里建 `users`、`memory_state`、`settings` 三行，以及这个用户在这台机器上的执行环境（`environments` 里 `kind = 'local'` 的一行），用户已存在时不变。`Open` 总会确保 `default` 用户存在。
 
 ### workspaces
 
@@ -78,6 +80,20 @@ flowchart LR
 | `created_at`、`updated_at` | datetime | |
 | `archived_at` | datetime，可空 | 非空表示已归档 |
 
+### environments
+
+执行环境（environment）：会话的命令和文件工具在哪里运行。v0.12.0 新增（`5f64857`），协议方法见[网关协议](/zh/integrate/protocol#执行环境)。
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `id` | text，主键 | |
+| `user_id` | text，外键 | 所属用户 |
+| `name` | text | 名称，`CHECK length(trim(name)) > 0`，`(user_id, name)` 唯一；引擎另外按不分大小写查重 |
+| `kind` | text | `local`（这台机器）或 `machine`（宿主接入的云沙箱），`CHECK` 限定这两种 |
+| `created_at`、`updated_at` | datetime | 列表按 `created_at, id` 排序 |
+
+每个用户至少有一行 `local`，默认名字 `This computer`（`repo.LocalEnvironmentName`）。`local` 的那一行不能删；`machine` 的行只要还有会话指向它也删不掉，`threads.environment_id` 的外键是 `ON DELETE RESTRICT`，`EnvironmentInUse` 让引擎在删之前就报错。
+
 ### threads
 
 | 字段 | 类型 | 说明 |
@@ -85,6 +101,7 @@ flowchart LR
 | `id` | text，主键 | |
 | `user_id` | text，外键 | 所属用户 |
 | `workspace_id` | text，外键，可空 | 空表示不属于任何工作区（general） |
+| `environment_id` | text，外键，可空 | 会话运行的执行环境，`thread/start` 时定下，之后不变；子 agent 会话取父会话的。新会话总会写上；空表示这台机器上的环境 |
 | `title` | text | 只由 `thread/start`、`thread/rename` 写；子 agent 取任务描述 |
 | `settings` | text，JSON | 会话级权限 |
 | `parent_thread_id` | text，外键，可空 | 非空表示子 agent 会话 |
@@ -413,7 +430,7 @@ flowchart TD
 
 要点：
 
-- 版本 0 且已有 `workspaces` 表的库是 migration 之前由 gorm 建的。它用 `AutoMigrate` 补齐并标为版本 1，保留数据。`AutoMigrate` 用的是当前的全部行类型，所以 0005 和 0006 用 `CREATE TABLE IF NOT EXISTS` 建表，0002 用 `DROP INDEX IF EXISTS`。
+- 版本 0 且已有 `workspaces` 表的库是 migration 之前由 gorm 建的。它用 `AutoMigrate` 补齐并标为版本 1，保留数据。`AutoMigrate` 用的是当前的全部行类型，所以 0005、0006、0007 用 `CREATE TABLE IF NOT EXISTS` 建表，0002 用 `DROP INDEX IF EXISTS`。
 - 步骤运行时外键关闭，这样可以重建被其他表引用的表而不触发级联删除。
 - 每步提交前运行 `PRAGMA foreign_key_check`，有悬空引用就让这一步失败并回滚：`N rows of T refer to rows that do not exist`。
 - `user_version` 和步骤本身在同一事务里，所以一步要么完整生效要么没发生。
@@ -434,6 +451,7 @@ flowchart TD
 | 0004 | `0004_search_messages.sql` | 新增 FTS5 表 `items_search` 和三个触发器 |
 | 0005 | `0005_users.sql` | 引入多用户：`users` 表，`workspaces`、`threads`、`memories` 加 `user_id`，`settings` 和 `memory_state` 改成每用户一行 |
 | 0006 | `0006_shard_lease.sql` | 新增 `shard_lease` |
+| 0007 | `0007_environments.sql` | 新增 `environments`，`threads` 加 `environment_id` |
 
 ### 0002 等待状态
 
@@ -466,6 +484,12 @@ SQLite 不能调整列的顺序，所以新建 `turns_new`、`items_new`，复�
 
 建 `shard_lease` 单行表。
 
+### 0007 执行环境
+
+v0.12.0 加入。建 `environments` 和唯一索引 `(user_id, name)`；给每个已有用户插入一行 `local` 环境，名字 `This computer`；`threads` 加 `environment_id` 列和索引 `threads_environment`，已有会话都指向它用户的 `local` 环境，所以升级前的会话照旧在这台机器上运行。
+
+`environments` 用 `CREATE TABLE IF NOT EXISTS`，因为 migration 之前由 gorm 建的库已经有这张表。`threads` 的列可以直接 `ADD COLUMN`：那种库的 `threads` 在 0005 被重建过，重建出的表没有这一列。
+
 ## 边界与已知问题
 
 - **写放大和单连接。** 每一步都写库，所有读写排在一条连接上。基准里 4096 个活跃会话时每轮等连接约 43 ms，解释不了那一档多出的 3.9 s，瓶颈还没找到。数字来自模拟模型，测于多用户和分片改动之前，见[性能基准](/zh/benchmarks/)。
@@ -482,7 +506,8 @@ SQLite 不能调整列的顺序，所以新建 `turns_new`、`items_new`，复�
 |---|---|---|
 | ollupi | `repo/db.go` | 打开库、事务、行类型列表 |
 | ollupi | `repo/migrate.go` | migration 执行 |
-| ollupi | `repo/migrations/` | 六个 migration |
+| ollupi | `repo/migrations/` | 编号的 migration，到 v0.12.0 共七个 |
+| ollupi | `repo/environments.go` | `environments` 表、`LocalEnvironment`、`EnvironmentInUse` |
 | ollupi | `repo/threads.go` | `threads` 表、`ThreadState` |
 | ollupi | `repo/turns.go` | `turns` 表、`SubmitTurn`、`EndTurn`、`RunItems` |
 | ollupi | `repo/items.go` | `items` 表、`RecordItem`、`RecoverItems` |

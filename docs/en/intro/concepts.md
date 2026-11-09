@@ -15,6 +15,10 @@ flowchart LR
 
 A project folder in the user's sandbox (`Box`): a local folder on the desktop app, a path on the user's own sandbox machine in the cloud. Tools read and write files and run commands here, and permission rules can be set per workspace. A session may belong to a workspace or to none (general).
 
+## Environment
+
+Where a session's commands and file tools run. Every user has this machine as one environment, and can add cloud sandboxes of their own. A session chooses its environment when it starts and keeps it, and its subagents follow it; a session that chooses none runs on this machine. Which machine an environment stands for is the host's to decide. See the [gateway protocol](/zh/integrate/protocol#执行环境) (in Chinese).
+
 ## Session (thread)
 
 One continuous conversation. Subagents and scheduled tasks use ordinary sessions too; the engine has no special way of running them.

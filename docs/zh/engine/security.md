@@ -69,7 +69,7 @@ flowchart LR
 |---|---|---|
 | 数据 | 每张表经 `user_id` 归属用户，入口按调用方检查，别人的东西一律当作不存在 | [多用户隔离](/zh/engine/sharding#多用户隔离) |
 | 连接和事件 | 令牌换成用户，一个用户一条连接，事件只投给所属用户 | [令牌认证](/zh/engine/sharding#令牌认证) |
-| 执行环境 | `BoxFor(user)` 给每个用户自己的沙箱，`ToolsFor(user)` 给每个用户自己的 MCP 服务器，`ClientFor` 给每个用户自己的模型客户端 | [每用户资源](/zh/engine/sharding#每用户资源) |
+| 执行环境 | `BoxFor(user)` 给每个用户自己的沙箱，`BoxIn` 按会话的执行环境给沙箱，`ToolsFor(user)` 给每个用户自己的 MCP 服务器，`ClientFor` 给每个用户自己的模型客户端 | [每用户资源](/zh/engine/sharding#每用户资源) |
 | 故障 | 附件在进入事件循环之前读写并设超时；panic 只让这一轮失败；MCP 调用有超时；一轮最多占槽位 `RunLimit`；`UserSlots` 限制一个用户的槽位数（`fb3e2d1`、`585809f`） | [单用户槽位限额](/zh/engine/sharding#单用户槽位限额) |
 
 脱敏密钥也是每用户一个，同一个值在不同用户下得到不同的占位符。

@@ -64,6 +64,7 @@
 
 ## 存储与部署
 
+- **执行环境**（environment）—— 会话运行命令和文件工具的地方：这台机器（`local`），或宿主接入的云沙箱（`machine`）。会话开始时选定，之后不变。代码：`environments` 表、`repo.EnvironmentRow`、`workspace.Options.BoxIn`。见 [网关协议](/zh/integrate/protocol#执行环境)
 - **工作区**（workspace）—— agent 工作的一个目录，权限规则可以按它设置。代码：`workspaces` 表、`repo.WorkspaceRow`。见 [核心概念](/zh/intro/concepts)
 - **记忆**（memory）—— 后台从已结束轮次提炼、跨会话使用的笔记。代码：`memories` 表、`memory.Manager`。见 [记忆](/zh/engine/memory)
 - **记忆范围**（scope）—— 一条记忆对哪些会话可见：`global`、`general`、`workspace`。代码：`repo.MemoryScope`。见 [记忆](/zh/engine/memory)

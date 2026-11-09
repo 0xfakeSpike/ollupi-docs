@@ -273,12 +273,25 @@ func (c connection) acquire(ctx context.Context) (context.Context, func(), error
 
 `turn/steer` 必须带 `expectedTurnId`，和当前轮次对不上时返回 `turnMismatch`，没有当前轮次时返回 `noActiveTurn`。
 
-实现只有一步：把用户消息作为条目写进当前轮次（`RecordItem`），不改状态，不打断任何东西。它靠运行循环发现：
+`repo.Steer` 在一个事务里把用户消息作为条目写进当前轮次。轮次在运行或 `ready` 时，这一步不改状态，不打断任何东西，新消息靠运行循环发现：
 
 - `respond` 之后的 `Reload` 重读这一轮全部条目，新消息从此进入 `rt.Items`，下一次组装提示词时带上。提示词是在模型调用之前组装的，所以模型调用进行中写入的插话，在下一次模型调用时看到；工具执行期间写入的插话，要等下一次 `Reload` 之后。
 - 模型这时没有要工具也不算结束。循环比较 `seq`，有比本次调用之前更新的用户消息就继续下一圈。
 - 模型的最终回答写完、`afterRun` 还没执行时才写入的插话，由 `InputAfterAnswer` 接住：它查最后一条完成的 `agentMessage` 之后有没有用户消息。有的话这一轮不结束，`Park` 回 `ready`，重新运行。
-- 轮次在等待状态时，插话落库但不唤醒它。等待解决后运行时读到。
+
+轮次在等审批（`waitingOnApproval`）或等回答（`waitingOnUserInput`）时，这条消息代替用户的回答（v0.12.1 起，`c4899f5`）。同一个事务里，这一轮还没执行的调用全部以 `declined` 结束，`error` 写明原因：
+
+| 调用 | `error` |
+|---|---|
+| 等审批的那条 | `the user sent a message instead of approving this call, so it did not run` |
+| 等回答的那条 | `the user sent a message instead of answering` |
+| 排在后面、还是 `pending` 的 | `skipped: the user sent a message before this call ran` |
+
+然后 `settleStatus` 把轮次重算成 `ready`，`admit` 送它回槽位。下一次运行把这些被拒的结果和新消息一起发给模型，工具调用照常继续，不像用户显式拒绝那样结束这一轮的工具调用。被拒的条目以 `item/completed` 发出，客户端据此关掉审批或提问的对话框；之后再回答那条请求会得到 `noSuchRequest`。
+
+在此之前，插话只落库，轮次一直停着，看起来像卡住了；用户说了"算了"之后再批准，调用会在模型读到这句话之前执行。
+
+等子 agent（`waitingOnAgent`）的轮次不变：插话落库，子 agent 回报、这一轮重新运行时读到。
 
 ### 中断
 
@@ -293,7 +306,7 @@ func (c connection) acquire(ctx context.Context) (context.Context, func(), error
 
 ## 审批和提问的恢复
 
-用户的回答经 `resolveApproval` 或 `answerUserInput` 进入 `respond`（`agent/turns.go`）：
+用户的回答经 `resolveApproval` 或 `answerUserInput` 进入 `respond`（`agent/turns.go`）。用户也可以不回答，直接发一条消息代替，见[插话](#插话-steer)。回答的处理：
 
 1. 会话占着槽位时返回 `ErrNoSuchRequest`。
 2. 在 `PendingRequests` 里找匹配的请求，找不到也返回 `ErrNoSuchRequest`。
@@ -308,7 +321,7 @@ func (c connection) acquire(ctx context.Context) (context.Context, func(), error
 
 `Agent` 工具只返回 `Await{By: "agent"}`。父轮次被 `Park` 成 `waitingOnAgent`，`afterRun` 接着调用 `reconcile`，`settle` 处理每个等待调用：
 
-1. `call.Await.ThreadID` 为空：`createThread` 建子会话（`parent_thread_id`、`parent_item_id` 指回父会话和调用条目，工作区相同，标题取任务描述），把子会话 ID 写回调用条目。
+1. `call.Await.ThreadID` 为空：`createThread` 建子会话（`parent_thread_id`、`parent_item_id` 指回父会话和调用条目，工作区和执行环境与父会话相同，标题取任务描述），把子会话 ID 写回调用条目。
 2. 子会话还没有轮次：用父轮次的模型提交一个轮次，内容是 `prompt`，再 `reconcile` 子会话。
 3. 子会话的轮次还没结束：什么也不做。
 4. 结束了：`report` 把结果写进父调用条目。`completed` 取最后一条完成的 `agentMessage` 作为输出；`interrupted`、`failed` 把调用标 `failed` 并写明原因。

@@ -43,7 +43,7 @@
 
 一轮开始运行时，`runTurn` 读出会话的工作区，交给运行时三样东西：
 
-- **调用者。** `tools.Caller` 的 `WorkspaceID` 和 `Root`（工作区的 `root_path`），工具用 `tools.CallerOf(ctx)` 读到。
+- **调用者。** `tools.Caller` 的 `WorkspaceID`、`Root`（工作区的 `root_path`）和 `EnvironmentID`（会话的执行环境，v0.12.0 起），工具用 `tools.CallerOf(ctx)` 读到。
 - **系统提示词。** 有 `Root` 时，系统提示词里多一节 `# PROJECT`，告诉模型这个会话在哪个项目里、命令默认在那里运行；通用规则里还有一条"有项目目录时留在项目目录里"。
 - **权限层。** 工作区设置是三层里的中间一层，见下文[权限](#权限)。
 
@@ -53,10 +53,13 @@
 
 ```mermaid
 flowchart TD
-  A["CallerOf(ctx)"] --> B{"配了 BoxFor？"}
+  A["CallerOf(ctx)"] --> Q{"配了 BoxIn？"}
+  Q -- "是" --> R["BoxIn(caller)，返回 nil 时用 Options.Box"]
+  Q -- "否" --> B{"配了 BoxFor？"}
   B -- "是" --> C["BoxFor(用户)"]
   B -- "否" --> D["Options.Box"]
-  C --> E{"Root 为空？"}
+  R --> E{"Root 为空？"}
+  C --> E
   D --> E
   E -- "是（general）" --> F["根目录 = Box.Roots()"]
   E -- "否" --> G["Box.Directory(Root)"]
@@ -92,6 +95,7 @@ flowchart TD
 | --- | --- | --- |
 | `Box` | 描述工具用的 Box：工具描述里写的目录和沙箱规则从它来；也服务 `BoxFor` 没给的用户 | 用 `Config` 在本机建一个 Seatbelt 沙箱 |
 | `BoxFor` | 每次调用用这个用户自己的 Box。Box 的生命周期归宿主，这个包只关 `Box` | 所有用户都用 `Box` |
+| `BoxIn` | v0.12.0 起。按会话的执行环境（`caller.EnvironmentID`）给 Box，配了它就不再用 `BoxFor`；返回 `nil` 而不报错时用 `Box`。配了它时 `run_command` 的描述会说明命令在会话选的环境里运行 | 用 `BoxFor` |
 | `Agent.Home` | agent 目录：`workspace_dirs` 的相对路径基于它，`<home>/data` 禁读，`<home>/scratch` 是默认命令目录 | `workspace_dirs` 必须配 |
 | `Agent.SkillsDir` | 技能目录，命令和文件工具对它只读 | 不加这条规则 |
 
@@ -137,7 +141,7 @@ flowchart TD
 - **同一个文件夹的判定依赖 Box。** 本机按文件身份判断，云沙箱的 `Same` 只比较路径字符串，同一台机器里经过链接到达的同一个文件夹会被当成两个。
 - **工具描述按描述用的 Box 写。** `run_command` 和文件工具的描述里写的目录和沙箱规则来自 `Options.Box`，不是每个用户自己的 Box。用户的 Box 根目录和它不同时，模型看到的描述和实际规则对不上。
 - **没有删除。** 工作区只能归档，归档后的行一直留在库里。
-- v0.12.0 起会话可以选择在哪个执行环境里运行，本页还没有按 v0.12.0 核对。
+- **工作区属于这台机器上的环境。** v0.12.0 起会话可以在别的执行环境里运行，但 `workspace/add` 和 `workspace/move` 仍经 `Config.BoxFor` 校验路径，也就是用户在这台机器上的 Box。会话在云沙箱环境里时，它的工作区路径要在那台机器上也解析到它自己，否则每次调用都按上面的流程报错。执行环境见[网关协议](/zh/integrate/protocol#执行环境)。
 
 ## 代码位置
 
@@ -146,7 +150,7 @@ flowchart TD
 | ollupi `agent/workspaces.go` | `AddWorkspace`、`RenameWorkspace`、`MoveWorkspace`、`ArchiveWorkspace`、`UpdateWorkspaceSettings` |
 | ollupi `agent/scope.go` | 读会话的工作区、按工作区组装权限层 |
 | ollupi `agent/run.go` | 把工作区根目录放进 `tools.Caller` |
-| ollupi `agent/subagents.go` | 子 agent 继承父会话的工作区 |
+| ollupi `agent/subagents.go` | 子 agent 继承父会话的工作区和执行环境 |
 | ollupi `agent/systemprompt/systemprompt.go` | `# PROJECT` 一节 |
 | ollupi `tools/workspace/tool.go` | `Options`、`New`、`Provider`、`run_command` 的描述 |
 | ollupi `tools/workspace/dirs.go` | 每次调用的 Box 和根目录、路径解析、`SettingsDigest` |

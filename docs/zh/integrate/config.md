@@ -15,7 +15,7 @@
 | `Slots`、`UserSlots`、`RunLimit` | 容量参数 | 32、等于 `Slots`、4 小时 |
 | `Providers` | 所有用户共有的工具 provider | 只有引擎内置的 `plan`、`subagent`、`userinput` 等 |
 | `ToolsFor` | `func(user string) (*tools.Set, error)`：某个用户额外的工具，比如他自己的 MCP 服务器 | 只有 `Providers` |
-| `BoxFor` | `func(user string) (sandbox.Box, error)`：用户的文件所在、工作区工具运行的沙箱；云端在这里接入 `sandbox.Remote`。同一个函数还要填给 `workspace.Options.BoxFor` 和 `mcp.NewUsers`，见[扩展点](/zh/integrate/extend#云沙箱) | `sandbox.Here()`，本机 |
+| `BoxFor` | `func(user string) (sandbox.Box, error)`：用户在这台机器上的沙箱，工作区校验和附件读取经它访问；云端在这里接入 `sandbox.Remote`。同一个函数还要填给 `workspace.Options.BoxFor`（或由 `BoxIn` 按会话的执行环境选）和 `mcp.NewUsers`，见[扩展点](/zh/integrate/extend#云沙箱) | `sandbox.Here()`，本机 |
 | `DB` | `repo.DB` | 启动失败 |
 | `OnEvent` | 把事件交给网关和别的客户端 | 事件只进日志 |
 | `Lease` | 分片租约时长 | 不启用租约，进程假定自己是唯一的 |

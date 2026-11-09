@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | [每用户的模型客户端](#每用户的模型客户端) | `Config.ClientFor`，记忆提炼另有 `memory.Options.ClientFor` | 所有用户共用 `Connections` 里的客户端和配额 |
 | [自己的工具](#自己的工具) | `Config.Providers`（所有用户）、`Config.ToolsFor`（每个用户） | 只有引擎内置的工具 |
-| [云沙箱](#云沙箱) | `Config.BoxFor`、`workspace.Options.BoxFor`、`mcp.NewUsers` 的 `boxFor` | 本机 `sandbox.Here()` |
+| [云沙箱](#云沙箱) | `Config.BoxFor`、`workspace.Options.BoxFor` 或 `BoxIn`、`mcp.NewUsers` 的 `boxFor` | 本机 `sandbox.Here()` |
 | [附件存储](#附件存储) | `Config.Attachments` | 有 `AttachmentsDir` 时存本机目录，都没有时消息不能带附件 |
 | [认证](#认证) | `gateway.Options.Authenticate` | 用 `Token`，只有 `default` 一个用户 |
 
@@ -281,6 +281,38 @@ func (u *userTools) For(user string) (*tools.Set, error) {
 | `mcp.NewUsers` 的第四个参数 | 启动这个用户的 stdio MCP 服务器 | 必须传 |
 
 只填了第一个时，工作区添加在用户的机器里，工具却在本机运行，两边对不上。
+
+### 按会话选择环境
+
+v0.12.0 起（`5f64857`），一个用户可以有几个执行环境，会话开始时选一个，之后不变，见[执行环境](/zh/integrate/protocol#执行环境)。这时上表的意思变了：`Config.BoxFor` 只是用户在这台机器上的那个 Box，工作区校验和附件读取用它；每次工具调用在哪个 Box 里跑，由 `workspace.Options.BoxIn` 按会话的环境决定。
+
+| `BoxIn(caller)` 返回 | 这次调用 |
+| --- | --- |
+| `(box, nil)` | 在这个 Box 里运行 |
+| `(nil, nil)` | 在 `Options.Box` 里运行。注意不是 `BoxFor` 给的 Box |
+| `(nil, err)` | 失败，错误以 `workspace: the environment of the conversation:` 开头交给模型 |
+
+配了 `BoxIn` 时，`BoxFor` 不再参与工具调用。`caller.EnvironmentID` 是会话的环境 ID，v0.12.0 起新会话总会带上；`caller.UserID` 是用户。按环境找机器：
+
+```go
+BoxIn: func(c tools.Caller) (sandbox.Box, error) {
+	if c.EnvironmentID == "" {
+		return b.For(c.UserID) // 没有环境的调用，按用户在这台机器上的 Box 处理
+	}
+	env, err := db.EnvironmentOf(c.UserID, c.EnvironmentID)
+	if err != nil {
+		return nil, err
+	}
+	if env.Kind == repo.EnvironmentLocal {
+		return b.For(c.UserID) // 和 Config.BoxFor 同一个
+	}
+	return machines.For(c.UserID, env.ID) // 宿主自己的：按环境找到或唤醒那台云沙箱
+},
+```
+
+`machines` 是宿主自己的代码，和上面的 `boxes` 一样要缓存、要在退出时关。环境只是库里的一行名字和种类，引擎不知道它对应哪台机器，这个对应关系由宿主保存。配了 `BoxIn` 时，`run_command` 的描述会多一句：会话在它开始时选的环境里运行，那里的文件夹不一定是这台机器的。
+
+桌面端是 `BoxIn` 的一个实际用法：它只有本机，所以 `local` 环境返回 `(nil, nil)`，`machine` 环境返回错误，让模型告诉用户换到 `This computer` 开会话（`ollupi-desktop/sidecar/internal/host/host.go`）。
 
 按用户缓存 Box，并管理它的生命周期：
 
@@ -688,7 +720,8 @@ func sessions(db *sql.DB) func(token string) (string, bool) {
 | ollupi | `pkg/llm/chat.go`、`connection.go` | `Client` 接口、并发名额、重试 |
 | ollupi | `tools/provider.go`、`spec.go`、`registry.go`、`schema.go` | `Provider`、`Spec`、`Set`、注册表、`InputSchema`、`DecodeArguments` |
 | ollupi | `agent/permission/policy.go`、`permission.go`、`rules.go` | 标注怎样决定审批、`__` 的处理、规则匹配 |
-| ollupi | `tools/workspace/tool.go`、`dirs.go` | `workspace.Options` 的 `Box` 与 `BoxFor` |
+| ollupi | `tools/workspace/tool.go`、`dirs.go` | `workspace.Options` 的 `Box`、`BoxFor`、`BoxIn` |
+| ollupi | `agent/environments.go`、`repo/environments.go` | 执行环境，`EnvironmentOf` |
 | ollupi | `tools/mcp/servers.go` | `NewUsers`、`Users.Tools`、MCP 工具名规则 |
 | ollupi | `pkg/sandbox/box.go` | `Box`、`Machine`、`Remote` 及各方法的约定 |
 | ollupi | `pkg/blobs/blobs.go` | `Store`、`Dir` |

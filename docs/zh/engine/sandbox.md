@@ -59,7 +59,7 @@ type Box interface {
 | `CheckRead`、`CheckWrite` | 工具自己读写时要过的规则，不经 Seatbelt |
 | `Transport` | 替用户发 HTTP 请求用，比如连 MCP 服务器 |
 
-工具经 `workspace.Options` 拿到 Box。`Box` 用来描述工具，`BoxFor(user)` 给每个用户自己的 Box，这样一个进程能同时服务本机用户和云沙箱用户。
+工具经 `workspace.Options` 拿到 Box。`Box` 用来描述工具，`BoxFor(user)` 给每个用户自己的 Box，这样一个进程能同时服务本机用户和云沙箱用户。v0.12.0 起还有 `BoxIn(caller)`，按会话开始时选的执行环境给 Box，配了它就不再用 `BoxFor`，见[扩展点](/zh/integrate/extend#按会话选择环境)。
 
 `Sandbox` 是本机实现，`sandbox.New(Config)` 创建。
 
@@ -288,7 +288,7 @@ type Machine interface {
 | `Executable` | 裸名字交给机器自己的 `PATH` |
 | `Transport` | `PublicTransport`，请求从引擎进程发出，这个进程的内网不是用户的 |
 
-`machine` 传 `nil` 时只用来描述工具：工具描述里的目录和规则从这个 Box 来，实际运行由 `BoxFor` 给的 Box 完成。
+`machine` 传 `nil` 时只用来描述工具：工具描述里的目录和规则从这个 Box 来，实际运行由 `BoxFor` 或 `BoxIn` 给的 Box 完成。
 
 命令、文件工具、附件读取、stdio MCP 服务器都经 Box，所以换成云沙箱后这些都在用户的机器里发生。
 

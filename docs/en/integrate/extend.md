@@ -10,6 +10,6 @@ The full page covers:
 
 - Per-user model clients
 - Your own tools: naming, annotations and approval, what the engine and the host each guarantee
-- Cloud sandboxes: the three places `BoxFor` goes, an example `sandbox.Machine`
+- Cloud sandboxes: the three places `BoxFor` goes, choosing a box per conversation with `BoxIn`, an example `sandbox.Machine`
 - Attachment storage
 - Authentication

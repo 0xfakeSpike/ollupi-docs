@@ -51,6 +51,8 @@ const sections: Record<string, Group[]> = {
         { en: 'Extension points', zh: '扩展点', link: 'integrate/extend' },
         { en: 'Operations', zh: '运维', link: 'integrate/operations' },
         { en: 'Gateway protocol', zh: '网关协议', link: 'integrate/protocol' },
+        { en: 'Protocol data types', zh: '协议数据类型', link: 'integrate/protocol-types' },
+        { en: 'Writing a client', zh: '写一个客户端', link: 'integrate/client' },
         { en: 'Config reference', zh: 'Config 参考', link: 'integrate/config' },
       ],
     },

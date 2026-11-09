@@ -2,7 +2,9 @@
 
 网关（gateway）是引擎对外的唯一接口：WebSocket 上的 JSON-RPC 2.0。客户端用它管理会话（thread）、发起一轮（turn）、接收条目（item）的增量，并回答审批和提问。方法名对齐 Codex app-server。
 
-协议由 `gateway/protocol.go` 里的一张表定义。这张表同时做请求分发，也是 `gateway/protocol.schema.json` 的生成来源，所以文档、类型和实际行为不会各走各的。下文的数字和名称对应引擎 v0.11.3：34 个方法、15 种通知、2 种服务端请求、1 种客户端通知、15 个错误码。
+协议由 `gateway/protocol.go` 里的一张表定义。这张表同时做请求分发，也是 `gateway/protocol.schema.json` 的生成来源，所以文档、类型和实际行为不会各走各的。下文的数字和名称对应引擎 v0.12.1（契约和 v0.12.0 相同）：38 个方法、16 种通知、2 种服务端请求、1 种客户端通知、15 个错误码。
+
+本页讲线上的约定：传输、认证、握手、每个方法和通知、错误码、契约怎样生成。每个类型的字段见[协议数据类型](/zh/integrate/protocol-types)，怎样写一个能正确重连、跟上状态的客户端见[写一个客户端](/zh/integrate/client)。
 
 ## 传输
 
@@ -125,7 +127,7 @@ sequenceDiagram
 
 ## 客户端方法
 
-参数全部用严格解码：多余字段返回 `-32602`。`params` 省略时按 `{}` 处理。`?` 表示可选。
+参数全部用严格解码：多余字段返回 `-32602`。`params` 省略时按 `{}` 处理。`?` 表示可选。契约里标为必填的字段，网关解码时并不检查它是否出现（Go 的 JSON 解码不强制必填），缺了按零值处理，例如 `thread/start` 省略 `permissions` 也能成功；客户端仍应按契约发送。
 
 ### 握手和目录
 
@@ -140,9 +142,9 @@ sequenceDiagram
 
 | 方法 | 参数要点 | 结果要点 | 说明 |
 |---|---|---|---|
-| `thread/start` | `workspaceId?`、`title?`、`approvalPolicy?`、`permissions` | `thread` | 标题最多 120 字符，可空。发 `thread/started` |
+| `thread/start` | `workspaceId?`、`environmentId?`、`title?`、`approvalPolicy?`、`permissions` | `thread` | 标题最多 120 字符，可空。`environmentId` 省略时在这台机器上运行，见[执行环境](#执行环境)。发 `thread/started` |
 | `thread/read` | `threadId`、`beforeSeq?`、`limit?` | `thread`、`turns`、`items`、`hasMore` | 只读一页 |
-| `thread/resume` | 同 `thread/read` | 同 `thread/read` | 回复后重发该会话及其等待中子 agent 的待回答请求 |
+| `thread/resume` | 同 `thread/read` | 同 `thread/read` | 回复后重发该会话及其等待中子 agent 的待回答请求，这条连接上已经问过、还没回答的不再重发 |
 | `thread/list` | `workspaceId?`、`archived?`、`after?`、`limit?` | `data: ThreadSummary[]`、`hasMore` | 只列顶层会话，见下 |
 | `thread/updatePermissions` | `threadId`、`approvalPolicy?`、`permissions` | `thread` | 整体替换会话设置。发 `thread/changed` |
 | `thread/rename` | `threadId`、`title` | `thread` | 标题 1 到 120 字符 |
@@ -163,7 +165,7 @@ sequenceDiagram
 | 方法 | 参数要点 | 结果要点 | 说明 |
 |---|---|---|---|
 | `turn/start` | `threadId`、`input`、`connection?` | `turn` | 有进行中的一轮时排队，发 `turn/queued` |
-| `turn/steer` | `threadId`、`input`、`expectedTurnId` | `turnId` | 把消息写入进行中的这一轮 |
+| `turn/steer` | `threadId`、`input`、`expectedTurnId` | `turnId` | 把消息写入进行中的这一轮。这一轮在等审批或提问时，消息代替回答：还没执行的调用以 `declined` 结束并发 `item/completed`，这一轮回到 `ready` 接着跑（v0.12.1 起），见[插话](/zh/engine/execution#插话-steer) |
 | `turn/interrupt` | `threadId`、`turnId` | `{}` | 返回不代表已结束，结束时发 `turn/completed`，状态 `interrupted` |
 | `attachment/read` | `threadId`、`attachmentId` | `attachment`、`data` | `data` 是 base64 |
 
@@ -203,6 +205,19 @@ sequenceDiagram
 | 工作区里有会话的一轮还没结束（进行中、排队或在等待） | `-32016`，这些轮次的调用里写着旧路径 |
 
 文件夹搬过去了、数据库却没改成功时，引擎把文件夹搬回原处；搬回也失败时，错误里同时写明文件夹现在在哪、工作区还指着哪。这类错误和 `Box.Move` 自己的失败都不在错误码表里，客户端只收到 `-32000` `the request could not be completed`，详情只在服务端日志里。
+
+### 执行环境
+
+v0.12.0 起（`5f64857`），会话在 `thread/start` 时选定在哪个执行环境（environment）里运行，命令和文件工具都在那里执行，之后不再改变；子 agent 会话跟随父会话。每个用户总有一个 `local` 环境，就是运行引擎的这台机器：`repo.EnsureUser` 建用户时建它，默认名字是 `This computer`，migration 0007 给已有用户补上，并把已有会话都放在它上面。用户还可以登记 `machine` 环境，即宿主经 `sandbox.Machine` 接入的云沙箱。环境本身只是一行名字和种类，它怎样变成工具调用用的沙箱由宿主决定，见[扩展点](/zh/integrate/extend#云沙箱)。
+
+| 方法 | 参数要点 | 结果要点 | 说明 |
+|---|---|---|---|
+| `environment/list` | 无 | `data: EnvironmentRow[]` | 按创建时间排序，第一个是建用户时就有的 `local` 环境 |
+| `environment/add` | `name`、`kind?` | `environment` | `kind` 只能是 `machine`，省略时也是 `machine`；传 `local` 返回 `-32602`。名字去掉首尾空白后 1 到 120 字符。和已有环境同名（不分大小写）时不新建，返回已有的那个 |
+| `environment/rename` | `environmentId`、`name` | `environment` | 和别的环境同名（不分大小写）时 `-32602` |
+| `environment/delete` | `environmentId` | `environment`，即删掉的那个 | `local` 环境不能删；有会话在这个环境里（包括已归档的会话）时也不能删。两种都返回 `-32602` |
+
+以上写操作都发 `environment/changed`，`environment/add` 返回已有环境时也发。环境不存在或属于别的用户时返回 `-32004`，`thread/start` 的 `environmentId` 指向这样的环境时也一样。
 
 ### 定时任务
 
@@ -248,6 +263,7 @@ sequenceDiagram
 | `item/agentMessage/delta` | `threadId`、`turnId`、`itemId`、`delta` | 回答的增量 |
 | `item/reasoning/textDelta` | 同上 | 推理的增量 |
 | `workspace/changed` | `workspace` | 工作区变化 |
+| `environment/changed` | `environmentId`、`environment` | 执行环境添加、改名或删除；`environment` 为 `null` 表示已删除 |
 | `cron/changed` | `id`、`threadId`、`job` | 定时任务变化；`job` 为 `null` 表示已删除 |
 | `settings/changed` | `redaction` | 设置变化 |
 | `error` | `threadId?`、`turnId?`、`itemId?`、`message` | agent 内部故障，或客户端的回答没有生效 |
@@ -256,7 +272,7 @@ sequenceDiagram
 
 ## 服务端请求
 
-服务端请求的 `id` 从 1 开始，每条连接单独计数，客户端回复时原样带回。同一条目在一条连接上同时只问一次（`asked`）。
+服务端请求的 `id` 从 1 开始，每条连接单独计数，客户端回复时原样带回，类型也要保持是数字：把 `id` 改成字符串回复，网关对不上这条请求，这条连接上也不会再重发它，`thread/resume` 也不会，只有重连后才会重发。同一条目在一条连接上同时只问一次（`asked`）。
 
 | 请求 | 参数要点 | 回复 |
 |---|---|---|
@@ -303,7 +319,7 @@ sequenceDiagram
 | `-32700` | `parseError` | 消息不是合法 JSON |
 | `-32600` | `invalidRequest` | 非文本帧、版本不对、不是请求也不是响应、重复初始化 |
 | `-32601` | `methodNotFound` | 方法不存在 |
-| `-32602` | `invalidParams` | 参数解码失败、`ErrInvalidMessage`、`ErrInvalidAnswer`、`ErrInvalidDecision`、`ErrInvalidName`、`ErrInvalidPath`、`permission.ErrInvalidSettings`、`memory.ErrInvalidChange`、`tools.ErrUnknownTool`、`tools.ErrInvalidArguments`、`cron.ErrInvalidJob` |
+| `-32602` | `invalidParams` | 参数解码失败、`ErrInvalidMessage`、`ErrInvalidAnswer`、`ErrInvalidDecision`、`ErrInvalidName`、`ErrInvalidPath`、`ErrEnvironmentInUse`、`permission.ErrInvalidSettings`、`memory.ErrInvalidChange`、`tools.ErrUnknownTool`、`tools.ErrInvalidArguments`、`cron.ErrInvalidJob` |
 | `-32603` | `internalError` | 结果无法编码 |
 | `-32000` | `serverError` | 其余所有错误 |
 | `-32002` | `notInitialized` | 未初始化 |
@@ -342,14 +358,14 @@ var protocol = struct {
 
 | 契约段 | 来源 | 内容 |
 |---|---|---|
-| `methods` | `protocol.methods` | 34 个方法的 `params`、`result` |
-| `notifications` | `protocol.notifications` | 15 种通知的载荷 |
+| `methods` | `protocol.methods` | 38 个方法的 `params`、`result` |
+| `notifications` | `protocol.notifications` | 16 种通知的载荷 |
 | `serverRequests` | `protocol.serverRequests` | 2 种服务端请求 |
 | `clientNotifications` | `protocol.clientNotifications` | `initialized` |
 | `errors` | `protocol.errors` | 错误码到名称 |
 | `builtinTools` | `schema_test.go` | 9 个内置工具的参数和输出 |
-| `providers` | `schema_test.go` | `cron`、`skills`、`memory`，`ItemRow.server` 可取的提供方 id |
-| `$defs` | 从以上类型遍历得到 | 120 个命名类型 |
+| `providers` | `schema_test.go` | `cron`、`skills`、`memory`：引擎自带、工具又不在 `builtinTools` 里的提供方 id，界面按通用调用显示它们。这不是 `ItemRow.server` 的全部取值，录制的会话里还有 `workspace`、`plan`、`subagents`、`user_input` 和 MCP 服务器名 |
+| `$defs` | 从以上类型遍历得到 | 129 个命名类型，字段见[协议数据类型](/zh/integrate/protocol-types) |
 
 `builtinTools` 只收界面要专门显示、用户要参与的内置工具：计划、子 agent、提问、命令和五个文件工具。`0ae03bb` 把定时任务的四个工具和 `memory_search` 移出了契约，文件工具由 `9ac61ec`、`74322be` 加入。其余工具调用（定时任务、`memory_search`、技能、`read_tool_output`、MCP 和宿主自己的工具）不进契约：客户端把它们当通用调用显示参数和输出的原始 JSON，不要依赖它们的结构，这些输出是写给模型的，引擎可以随时为模型调整。它们的参数类型仍是发给模型的 input schema 的来源。
 
@@ -414,9 +430,10 @@ GOFLAGS=-tags=sqlite_fts5 go generate ./gateway
 | ollupi | `gateway/server.go` | 连接、事件到通知的映射、服务端请求、错误映射 |
 | ollupi | `gateway/serve.go` | `Options`、`NewServer`、`Serve`、Host 和令牌检查 |
 | ollupi | `gateway/router.go` | `Router`、`OnShard`、令牌读取 |
-| ollupi | `gateway/threads.go`、`workspaces.go`、`cron.go`、`memory.go`、`search.go`、`settings.go` | 各组方法的处理函数 |
+| ollupi | `gateway/threads.go`、`workspaces.go`、`environments.go`、`cron.go`、`memory.go`、`search.go`、`settings.go` | 各组方法的处理函数 |
 | ollupi | `gateway/schema_test.go` | schema 生成器和枚举检查 |
 | ollupi | `gateway/traffic_test.go` | 真实流量契约测试 |
+| ollupi | `agent/environments.go`、`repo/environments.go` | 执行环境的增删改和校验 |
 | ollupi | `pkg/jsonrpc/jsonrpc.go` | JSON-RPC 编解码、读循环、出站队列 |
 | ollupi-desktop | `packages/protocol/scripts/generate.mjs` | 从契约生成 TypeScript 和校验器 |
 | ollupi-desktop | `packages/protocol/scripts/record-session.mjs` | 录制真实会话 |
