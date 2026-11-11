@@ -54,7 +54,7 @@ Ollupi 是一步一步公开做出来的。这一页写清楚哪些已经完成�
 
 ## 桌面端
 
-桌面端有自己的待办，从它的仓库同步过来：[桌面端待办](/zh/reference/backlog)。简单说：先做编辑消息、分叉和回滚，然后是 Apple 公证、Linux 和 Windows、远程访问。
+桌面端有自己的待办：[桌面端待办](/zh/reference/backlog)。简单说：先做编辑消息、分叉和回滚，然后是 Apple 公证、Linux 和 Windows、远程访问。
 
 ## 写作
 

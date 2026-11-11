@@ -54,7 +54,7 @@ Done when: one command starts it, and the multi-shard benchmark runs against it.
 
 ## Desktop app
 
-The desktop app keeps its own backlog, synced from its repository: [desktop backlog](/zh/reference/backlog) (Chinese). In short: editing, forking and rolling back messages (next), then Apple notarization, Linux and Windows, and remote access.
+The desktop app keeps its own backlog: [desktop backlog](/zh/reference/backlog) (Chinese). In short: editing, forking and rolling back messages (next), then Apple notarization, Linux and Windows, and remote access.
 
 ## Writing
 

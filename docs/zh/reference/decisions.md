@@ -270,7 +270,7 @@ WebSocket 上的 JSON-RPC 2.0，方法名按 `thread/*`、`turn/*`、`item/*` �
 
 **决定**
 
-删掉 `tool/call`、`Agent.CallTool` 和 `Registry.Call`。界面要做的事走明确的方法，比如 `cron/list`、`cron/create`，返回类型化的行。契约只给用户参与、界面专门显示的工具定类型（`0ae03bb`、`docs/ollupi-tool-contract.md`），其余工具调用按通用样式显示，它们的输出可以随时为模型调整。
+删掉 `tool/call`、`Agent.CallTool` 和 `Registry.Call`。界面要做的事走明确的方法，比如 `cron/list`、`cron/create`，返回类型化的行。契约只给用户参与、界面专门显示的工具定类型（`0ae03bb`，范围见[模型、工具与 MCP](/zh/integrate/protocol/models-tools)），其余工具调用按通用样式显示，它们的输出可以随时为模型调整。
 
 **放弃的方案**
 
@@ -283,7 +283,7 @@ WebSocket 上的 JSON-RPC 2.0，方法名按 `thread/*`、`turn/*`、`item/*` �
 
 **依据**
 
-`38c5a1c`、`f21b104`、`0ae03bb`，`desktop@f6bd358`，`docs/ollupi-tool-contract.md`。
+`38c5a1c`、`f21b104`、`0ae03bb`，`desktop@f6bd358`。
 
 ## 10. 单库即分片与租约
 
@@ -653,4 +653,4 @@ Squirrel.Mac（`desktop@63813b7` 写明不可用）。
 | ollupi-desktop | `sidecar/internal/host/host.go` | 组件装配 |
 | ollupi-desktop | `apps/desktop/src/main/backend/` | 托管后端、配置和技能的校验写入 |
 | ollupi-desktop | `apps/desktop/src/main/update.ts` | 自建更新器 |
-| ollupi-desktop | `docs/roadmap.md`、`docs/ollupi-tool-contract.md` | 分层原则、工具类型范围 |
+| ollupi-docs | `docs/zh/reference/backlog.md` | 分层原则 |

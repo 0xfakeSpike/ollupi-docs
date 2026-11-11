@@ -3,10 +3,7 @@ node_modules
 .DS_Store
 docs/.vitepress/dist
 docs/.vitepress/cache
-# Written by scripts/sync.mjs from the code repositories.
+# Written by scripts/sync.mjs from the engine repository.
 docs/public/images
 docs/public/logo
-docs/zh/reference/features.md
-docs/zh/reference/backlog.md
-docs/zh/app/feishu.md
 docs/.vitepress/drift.json

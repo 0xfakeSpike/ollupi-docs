@@ -5,11 +5,11 @@ The website and documentation for [ollupi](https://github.com/0xfakeSpike/ollupi
 ## Where things live
 
 - Long-form documentation and the site are in this repository, under `docs/`.
-- `features.md`, `roadmap.md` and `feishu.md` stay in `ollupi-desktop/docs`, and the figures and logos stay in `ollupi/docs`. `scripts/sync.mjs` copies them in at build time; the copies are not committed.
+- The figures and logos stay in `ollupi/docs`. `scripts/sync.mjs` copies them in at build time; the copies are not committed.
 
 ## Develop
 
-Keep this repository next to the `ollupi` and `ollupi-desktop` checkouts.
+Keep this repository next to the `ollupi` checkout.
 
 ```bash
 pnpm install

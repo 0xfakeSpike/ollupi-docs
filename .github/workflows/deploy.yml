@@ -35,12 +35,6 @@ jobs:
             docs
             gateway
 
-      - uses: actions/checkout@v7
-        with:
-          repository: 0xfakeSpike/ollupi-desktop
-          path: .sources/ollupi-desktop
-          sparse-checkout: docs
-
       - uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v7

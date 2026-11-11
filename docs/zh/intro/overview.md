@@ -38,4 +38,4 @@ Ollupi 由两个项目组成：一个 Go agent 引擎，和一个基于引擎的
 
 ## 文档的来源
 
-[功能清单](/zh/reference/features)、[桌面端待办](/zh/reference/backlog) 和[飞书机器人设置](/zh/app/feishu)维护在 `ollupi-desktop/docs`，图片和 logo 维护在 `ollupi/docs`，构建时同步到这里。其余页面维护在 [ollupi-docs](https://github.com/0xfakeSpike/ollupi-docs) 仓库。
+页面都维护在 [ollupi-docs](https://github.com/0xfakeSpike/ollupi-docs) 仓库。图片和 logo 维护在 `ollupi/docs`，构建时同步到这里。

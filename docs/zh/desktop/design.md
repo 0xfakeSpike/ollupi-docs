@@ -1,6 +1,6 @@
 # 设计
 
-桌面端的界面是长时间使用的工具，一个人对着它看 agent 干活。设计的目标是让它不抢注意力，只在需要用户的时候才显眼。所有组件只用 `packages/ui/src/theme.css` 定义的语义 token，这页是那份规则的提炼，完整准则在仓库的 `docs/design-guidelines.md`。
+桌面端的界面是长时间使用的工具，一个人对着它看 agent 干活。设计的目标是让它不抢注意力，只在需要用户的时候才显眼。所有组件只用 `packages/ui/src/theme.css` 定义的语义 token，这页是那份规则的提炼，完整准则在仓库的 `packages/ui/DESIGN.md`。
 
 ## 四个关键词
 
@@ -183,8 +183,7 @@
 
 | 位置 | 职责 |
 |---|---|
-| ollupi-desktop `docs/design-guidelines.md` | 完整设计准则 |
-| ollupi-desktop `docs/design-brief.md` | 设计需求 |
+| ollupi-desktop `packages/ui/DESIGN.md` | 完整设计准则 |
 | ollupi-desktop `packages/ui/src/theme.css` | token、配色、字体 |
 | ollupi-desktop `packages/ui/src/theme.ts` | 配色 id 列表 |
 | ollupi-desktop `packages/ui/src/` | 按钮、表单、浮层、对话流组件 |
