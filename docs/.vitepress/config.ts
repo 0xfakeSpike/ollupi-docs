@@ -144,6 +144,7 @@ const sections: Record<string, Group[]> = {
       zh: '文章',
       items: [
         { en: 'All articles', zh: '全部文章', link: 'articles/' },
+        { en: 'AI Knows You. Who Gets Paid?', zh: '你的用户画像会被谁赚走', link: 'articles/user-profile' },
         { en: 'Head in the Cloud, Hands at Home', zh: '水在青天云在瓶', link: 'articles/head-in-the-cloud' },
       ],
     },

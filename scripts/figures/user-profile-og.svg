@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+<style>text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #1e1b4b; } .t { font-size: 68px; font-weight: 800; } .m { font-size: 34px; font-weight: 700; } .s { font-size: 30px; fill: #64748b; }</style>
+<rect width="1200" height="630" fill="#ffffff"/>
+<text class="t" x="80.0" y="130.0" text-anchor="start">AI knows you</text>
+<text class="t" x="80.0" y="216.0" text-anchor="start">better than ever.</text>
+<text class="t" x="80.0" y="302.0" text-anchor="start">Who gets paid for it?</text>
+<rect x="198" y="430" width="104" height="66" rx="6" fill="#0d9488"/>
+<path d="M188,430 L200,390 H300 L312,430 Z" fill="#0d9488"/>
+<rect x="234" y="458" width="32" height="38" rx="4" fill="#ffffff"/>
+<text class="m" x="250.0" y="560.0" text-anchor="middle">Platforms</text>
+<rect x="538" y="392" width="124" height="84" rx="22" fill="#4f46e5"/>
+<path d="M570,474 L560,502 L596,474 Z" fill="#4f46e5"/>
+<circle cx="570" cy="434" r="8" fill="#ffffff"/>
+<circle cx="600" cy="434" r="8" fill="#ffffff"/>
+<circle cx="630" cy="434" r="8" fill="#ffffff"/>
+<text class="m" x="600.0" y="560.0" text-anchor="middle">AI companies</text>
+<rect x="912" y="378" width="76" height="124" rx="16" fill="#ec4899"/>
+<rect x="922" y="392" width="56" height="88" rx="6" fill="#ffffff"/>
+<circle cx="950" cy="422" r="11" fill="#ec4899"/>
+<path d="M932,462 Q950,438 968,462 Z" fill="#ec4899"/>
+<text class="m" x="950.0" y="560.0" text-anchor="middle">Personal agent</text>
+</svg>

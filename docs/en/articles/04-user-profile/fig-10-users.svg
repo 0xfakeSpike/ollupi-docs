@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+<defs><marker id="aS" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#64748b"/></marker><marker id="aI" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#4f46e5"/></marker><marker id="aR" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#f43f5e"/></marker><marker id="aT" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#0d9488"/></marker><marker id="aP" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#ec4899"/></marker></defs>
+<style>text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #1e1b4b; } .t { font-size: 56px; font-weight: 800; } .k { font-size: 44px; font-weight: 800; } .n { font-size: 88px; font-weight: 800; } .m { font-size: 34px; font-weight: 700; } .b { font-size: 30px; fill: #334155; } .s { font-size: 26px; fill: #64748b; } .f { font-size: 22px; fill: #94a3b8; }</style>
+<rect width="1600" height="900" fill="#ffffff"/>
+<text class="t" x="80" y="118" style="font-size:56.0px">AI helps you choose; you still pay elsewhere</text>
+<text class="f" x="80" y="864">Fig. 10 · Attentive survey, August 2026, 3,054 US adults</text>
+<text class="f" x="1520" y="864" text-anchor="end">AI Knows You Better Than Ever. Who Gets Paid for It?</text>
+<text class="n" x="80.0" y="380.0" text-anchor="start" style="fill:#4f46e5">62%</text>
+<text class="b" x="80.0" y="440.0" text-anchor="start">of people who shopped with AI</text>
+<text class="b" x="80.0" y="484.0" text-anchor="start">bought something other than</text>
+<text class="b" x="80.0" y="528.0" text-anchor="start">their usual pick because of it</text>
+<text class="m" x="700.0" y="214.0" text-anchor="start" style="font-size:33.7px">Where they paid, last AI-assisted purchase</text>
+<text class="b" x="700.0" y="300.0" text-anchor="start">A retailer or marketplace</text>
+<rect x="700.0" y="320.0" width="640.0" height="64.0" rx="10" fill="#0d9488" stroke="none" stroke-width="0"/>
+<text class="k" x="1360.0" y="370.0" text-anchor="start">59%</text>
+<text class="b" x="700.0" y="460.0" text-anchor="start">The brand’s own site</text>
+<rect x="700.0" y="480.0" width="336.3" height="64.0" rx="10" fill="#64748b" stroke="none" stroke-width="0"/>
+<text class="k" x="1056.3" y="530.0" text-anchor="start">31%</text>
+<text class="b" x="700.0" y="620.0" text-anchor="start">Inside the chatbot</text>
+<rect x="700.0" y="640.0" width="108.5" height="64.0" rx="10" fill="#4f46e5" stroke="none" stroke-width="0"/>
+<text class="k" x="828.5" y="690.0" text-anchor="start">10%</text>
+</svg>

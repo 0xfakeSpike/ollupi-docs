@@ -6,6 +6,7 @@ Each article stands on its own and links to the manual for details.
 
 ## Published
 
+- **[AI Knows You Better Than Ever. Who Gets Paid for It?](/articles/user-profile)** · November 11, 2026. For twenty years, platforms made all the money from your user profile. Now there are three copies: platforms, AI companies and your own personal agent each hold one. How platforms and AI companies make money from it, and why how much you keep depends on whether platforms let outside AI in and how cheap AI gets.
 - **[Head in the Cloud, Hands at Home: Where AI Agents Actually Run](/articles/head-in-the-cloud)** · November 8, 2026. Why an agent's access layer, runtime and execution environment end up in different places: nine topologies, seven forces, the engineering problems at each boundary, and which topology fits which job. Includes a section on mainland China, where the same software often ships in a different shape.
 
 ## Planned

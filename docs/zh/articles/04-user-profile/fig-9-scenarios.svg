@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+<defs><marker id="aS" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#64748b"/></marker><marker id="aI" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#4f46e5"/></marker><marker id="aR" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#f43f5e"/></marker><marker id="aT" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#0d9488"/></marker><marker id="aP" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#ec4899"/></marker></defs>
+<style>text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #1e1b4b; } .t { font-size: 56px; font-weight: 800; } .k { font-size: 44px; font-weight: 800; } .n { font-size: 88px; font-weight: 800; } .m { font-size: 34px; font-weight: 700; } .b { font-size: 30px; fill: #334155; } .s { font-size: 26px; fill: #64748b; } .f { font-size: 22px; fill: #94a3b8; }</style>
+<rect width="1600" height="900" fill="#ffffff"/>
+<text class="t" x="80" y="118" style="font-size:56.0px">平台开不开放权限、AI 贵不贵，决定了三种结局</text>
+<text class="f" x="80" y="864">图 9 · 推断；三种结局会在不同行业和地区同时出现</text>
+<text class="f" x="1520" y="864" text-anchor="end">AI 时代到来，你的用户画像的价值会被谁赚走？</text>
+<rect x="230.0" y="180.0" width="630.0" height="250.0" rx="16" fill="#eef2ff" stroke="#4f46e5" stroke-width="3"/>
+<text class="k" x="270.0" y="256.0" text-anchor="start">不想看广告，就得付钱</text>
+<text class="b" x="270.0" y="324.0" text-anchor="start" style="font-size:28.9px">免费的有广告，推荐还可能偏向给钱的商家</text>
+<rect x="884.0" y="180.0" width="630.0" height="250.0" rx="16" fill="#fdf2f8" stroke="#ec4899" stroke-width="3"/>
+<text class="k" x="924.0" y="256.0" text-anchor="start">个人 agent 替你货比各家</text>
+<text class="b" x="924.0" y="324.0" text-anchor="start">能进各家平台，你的画像也能带走</text>
+<rect x="230.0" y="454.0" width="630.0" height="250.0" rx="16" fill="#f0fdfa" stroke="#0d9488" stroke-width="3"/>
+<text class="k" x="270.0" y="530.0" text-anchor="start">每家平台只认自家的 AI</text>
+<text class="b" x="270.0" y="598.0" text-anchor="start">外面的 AI 进不来，你只能在一家买</text>
+<rect x="884.0" y="454.0" width="630.0" height="250.0" rx="16" fill="#ffffff" stroke="#64748b" stroke-width="3" stroke-dasharray="12 9"/>
+<text class="k" x="924.0" y="530.0" text-anchor="start" style="fill:#64748b">平台开放了，但 AI 太贵</text>
+<text class="b" x="924.0" y="598.0" text-anchor="start">只有少数人用得起，多半只是过渡</text>
+<circle cx="242" cy="763" r="12" fill="#f43f5e"/>
+<text class="s" x="266.0" y="772.0" text-anchor="start" style="fill:#f43f5e">国内现在更靠近左下角</text>
+<path d="M230,728 H1514" fill="none" stroke="#64748b" stroke-width="4" stroke-linecap="round" marker-end="url(#aS)"/>
+<text class="s" x="1514.0" y="772.0" text-anchor="end">平台越向外部 AI 开放权限</text>
+<path d="M200,704 V180" fill="none" stroke="#64748b" stroke-width="4" stroke-linecap="round" marker-end="url(#aS)"/>
+<text class="s" x="180.0" y="442.0" text-anchor="middle" transform="rotate(-90 180 442.0)">AI 用起来越便宜</text>
+</svg>

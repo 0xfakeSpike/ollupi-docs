@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+<defs><marker id="aS" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#64748b"/></marker><marker id="aI" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#4f46e5"/></marker><marker id="aR" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#f43f5e"/></marker><marker id="aT" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#0d9488"/></marker><marker id="aP" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#ec4899"/></marker></defs>
+<style>text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #1e1b4b; } .t { font-size: 56px; font-weight: 800; } .k { font-size: 44px; font-weight: 800; } .n { font-size: 88px; font-weight: 800; } .m { font-size: 34px; font-weight: 700; } .b { font-size: 30px; fill: #334155; } .s { font-size: 26px; fill: #64748b; } .f { font-size: 22px; fill: #94a3b8; }</style>
+<rect width="1600" height="900" fill="#ffffff"/>
+<text class="t" x="80" y="118" style="font-size:44.3px">ChatGPT ads convert at a third of the rate of search ads</text>
+<text class="f" x="80" y="864">Fig. 6 · Kaiser &amp; Schulze working paper (under review) · US paid clicks · 2026</text>
+<text class="f" x="1520" y="864" text-anchor="end">AI Knows You Better Than Ever. Who Gets Paid for It?</text>
+<text class="m" x="80.0" y="270.0" text-anchor="start">ChatGPT ads</text>
+<rect x="80.0" y="296.0" width="177.1" height="96.0" rx="10" fill="#4f46e5" stroke="none" stroke-width="3"/>
+<text class="n" x="281.1" y="380.0" text-anchor="start">0.37%</text>
+<text class="m" x="80.0" y="500.0" text-anchor="start">Google search ads</text>
+<rect x="80.0" y="526.0" width="560.0" height="96.0" rx="10" fill="#0d9488" stroke="none" stroke-width="3"/>
+<text class="n" x="664.0" y="610.0" text-anchor="start">1.17%</text>
+<text class="s" x="80.0" y="730.0" text-anchor="start">Share of ad visitors who bought</text>
+<rect x="1040.0" y="250.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1088.0" y="250.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1136.0" y="250.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1184.0" y="250.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1232.0" y="250.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1280.0" y="250.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1328.0" y="250.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1376.0" y="250.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1424.0" y="250.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1472.0" y="250.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1040.0" y="298.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1088.0" y="298.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1136.0" y="298.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1184.0" y="298.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1232.0" y="298.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1280.0" y="298.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1328.0" y="298.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1376.0" y="298.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1424.0" y="298.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1472.0" y="298.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1040.0" y="346.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1088.0" y="346.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1136.0" y="346.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1184.0" y="346.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1232.0" y="346.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1280.0" y="346.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1328.0" y="346.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1376.0" y="346.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1424.0" y="346.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1472.0" y="346.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1040.0" y="394.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1088.0" y="394.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1136.0" y="394.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1184.0" y="394.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1232.0" y="394.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1280.0" y="394.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1328.0" y="394.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1376.0" y="394.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1424.0" y="394.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1472.0" y="394.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1040.0" y="442.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1088.0" y="442.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1136.0" y="442.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1184.0" y="442.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1232.0" y="442.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1280.0" y="442.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1328.0" y="442.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1376.0" y="442.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1424.0" y="442.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1472.0" y="442.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1040.0" y="490.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1088.0" y="490.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1136.0" y="490.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1184.0" y="490.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1232.0" y="490.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1280.0" y="490.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1328.0" y="490.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1376.0" y="490.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1424.0" y="490.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1472.0" y="490.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1040.0" y="538.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1088.0" y="538.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1136.0" y="538.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1184.0" y="538.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1232.0" y="538.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1280.0" y="538.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1328.0" y="538.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1376.0" y="538.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1424.0" y="538.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1472.0" y="538.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1040.0" y="586.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1088.0" y="586.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1136.0" y="586.0" width="40.0" height="40.0" rx="8" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="1184.0" y="586.0" width="40.0" height="40.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="0"/>
+<rect x="1232.0" y="586.0" width="40.0" height="40.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="0"/>
+<rect x="1280.0" y="586.0" width="40.0" height="40.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="0"/>
+<rect x="1328.0" y="586.0" width="40.0" height="40.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="0"/>
+<rect x="1376.0" y="586.0" width="40.0" height="40.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="0"/>
+<rect x="1424.0" y="586.0" width="40.0" height="40.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="0"/>
+<rect x="1472.0" y="586.0" width="40.0" height="40.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="0"/>
+<rect x="1040.0" y="634.0" width="40.0" height="40.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="0"/>
+<rect x="1088.0" y="634.0" width="40.0" height="40.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="0"/>
+<rect x="1136.0" y="634.0" width="40.0" height="40.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="0"/>
+<rect x="1184.0" y="634.0" width="40.0" height="40.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="0"/>
+<rect x="1232.0" y="634.0" width="40.0" height="40.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="0"/>
+<rect x="1280.0" y="634.0" width="40.0" height="40.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="0"/>
+<rect x="1328.0" y="634.0" width="40.0" height="40.0" rx="8" fill="#4f46e5" stroke="none" stroke-width="0"/>
+<text class="m" x="1040.0" y="220.0" text-anchor="start" style="font-size:31.8px">87 advertisers buying both</text>
+<text class="b" x="1040.0" y="734.0" text-anchor="start">73 made no sale on ChatGPT</text>
+<text class="s" x="1040.0" y="778.0" text-anchor="start">All sales came from the other 14</text>
+</svg>

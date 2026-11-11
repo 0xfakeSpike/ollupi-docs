@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+<defs><marker id="aS" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#64748b"/></marker><marker id="aI" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#4f46e5"/></marker><marker id="aR" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#f43f5e"/></marker><marker id="aT" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#0d9488"/></marker><marker id="aP" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#ec4899"/></marker></defs>
+<style>text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #1e1b4b; } .t { font-size: 56px; font-weight: 800; } .k { font-size: 44px; font-weight: 800; } .n { font-size: 88px; font-weight: 800; } .m { font-size: 34px; font-weight: 700; } .b { font-size: 30px; fill: #334155; } .s { font-size: 26px; fill: #64748b; } .f { font-size: 22px; fill: #94a3b8; }</style>
+<rect width="1600" height="900" fill="#ffffff"/>
+<text class="t" x="80" y="118" style="font-size:56.0px">Tokens got 57% cheaper; usage grew 25×</text>
+<text class="f" x="80" y="864">Fig. 4 · OpenRouter, January vs October 2026</text>
+<text class="f" x="1520" y="864" text-anchor="end">AI Knows You Better Than Ever. Who Gets Paid for It?</text>
+<text class="m" x="80.0" y="214.0" text-anchor="start">Avg price per 1M tokens (closed)</text>
+<line x1="80" y1="740" x2="740" y2="740" stroke="#cbd5e1" stroke-width="3"/>
+<path d="M140.0,740.0 V348.0 Q140.0,340.0 148.0,340.0 H312.0 Q320.0,340.0 320.0,348.0 V740.0 Z" fill="#818cf8"/>
+<text class="m" x="230.0" y="318.0" text-anchor="middle">$1.21</text>
+<text class="b" x="230.0" y="790.0" text-anchor="middle">Jan</text>
+<path d="M400.0,740.0 V576.1 Q400.0,568.1 408.0,568.1 H572.0 Q580.0,568.1 580.0,576.1 V740.0 Z" fill="#4f46e5"/>
+<text class="m" x="490.0" y="546.1" text-anchor="middle">$0.52</text>
+<text class="b" x="490.0" y="790.0" text-anchor="middle">Oct</text>
+<text class="m" x="860.0" y="214.0" text-anchor="start">Tokens used per month</text>
+<line x1="860" y1="740" x2="1520" y2="740" stroke="#cbd5e1" stroke-width="3"/>
+<path d="M920.0,740.0 V732.0 Q920.0,724.0 928.0,724.0 H1092.0 Q1100.0,724.0 1100.0,732.0 V740.0 Z" fill="#818cf8"/>
+<text class="m" x="1010.0" y="702.0" text-anchor="middle">~32T</text>
+<text class="b" x="1010.0" y="790.0" text-anchor="middle">Jan</text>
+<path d="M1180.0,740.0 V348.0 Q1180.0,340.0 1188.0,340.0 H1352.0 Q1360.0,340.0 1360.0,348.0 V740.0 Z" fill="#4f46e5"/>
+<text class="m" x="1270.0" y="318.0" text-anchor="middle">790T</text>
+<text class="b" x="1270.0" y="790.0" text-anchor="middle">Oct</text>
+<text class="n" x="720.0" y="330.0" text-anchor="end" style="fill:#4f46e5">−57%</text>
+<text class="n" x="880.0" y="330.0" text-anchor="start" style="fill:#4f46e5">×25</text>
+<text class="s" x="880.0" y="384.0" text-anchor="start">76% of it used by agents</text>
+</svg>

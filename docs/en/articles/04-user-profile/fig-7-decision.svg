@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+<defs><marker id="aS" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#64748b"/></marker><marker id="aI" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#4f46e5"/></marker><marker id="aR" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#f43f5e"/></marker><marker id="aT" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#0d9488"/></marker><marker id="aP" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#ec4899"/></marker></defs>
+<style>text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #1e1b4b; } .t { font-size: 56px; font-weight: 800; } .k { font-size: 44px; font-weight: 800; } .n { font-size: 88px; font-weight: 800; } .m { font-size: 34px; font-weight: 700; } .b { font-size: 30px; fill: #334155; } .s { font-size: 26px; fill: #64748b; } .f { font-size: 22px; fill: #94a3b8; }</style>
+<rect width="1600" height="900" fill="#ffffff"/>
+<text class="t" x="80" y="118" style="font-size:43.6px">The closer an ad is to your purchase, the more it’s worth</text>
+<text class="f" x="80" y="864">Fig. 7 · ChatGPT ads since Feb 2026; Google announced in May; Douyin’s fee since August</text>
+<text class="f" x="1520" y="864" text-anchor="end">AI Knows You Better Than Ever. Who Gets Paid for It?</text>
+<rect x="180.0" y="160.0" width="300.0" height="380.0" rx="36" fill="#ffffff" stroke="#334155" stroke-width="4"/>
+<rect x="290.0" y="176.0" width="80.0" height="10.0" rx="5" fill="#cbd5e1" stroke="none" stroke-width="0"/>
+<text class="s" x="204.0" y="230.0" text-anchor="start">AI’s answer</text>
+<rect x="204.0" y="258.0" width="252.0" height="14.0" rx="7" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="204.0" y="288.0" width="214.2" height="14.0" rx="7" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="204.0" y="318.0" width="239.4" height="14.0" rx="7" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="204.0" y="348.0" width="176.4" height="14.0" rx="7" fill="#e2e8f0" stroke="none" stroke-width="0"/>
+<rect x="204.0" y="418.0" width="252.0" height="84.0" rx="12" fill="#eef2ff" stroke="#4f46e5" stroke-width="3" stroke-dasharray="12 9"/>
+<text class="m" x="330.0" y="472.0" text-anchor="middle" style="fill:#4f46e5">Ad</text>
+<rect x="650.0" y="160.0" width="300.0" height="380.0" rx="36" fill="#ffffff" stroke="#334155" stroke-width="4"/>
+<rect x="760.0" y="176.0" width="80.0" height="10.0" rx="5" fill="#cbd5e1" stroke="none" stroke-width="0"/>
+<text class="s" x="674.0" y="230.0" text-anchor="start">AI’s picks</text>
+<rect x="674.0" y="252.0" width="252.0" height="72.0" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="3"/>
+<text class="b" x="800.0" y="298.0" text-anchor="middle">Pick 1</text>
+<rect x="674.0" y="340.0" width="252.0" height="72.0" rx="12" fill="#eef2ff" stroke="#4f46e5" stroke-width="3" stroke-dasharray="12 9"/>
+<text class="m" x="800.0" y="388.0" text-anchor="middle" style="fill:#4f46e5">Ad</text>
+<rect x="674.0" y="428.0" width="252.0" height="72.0" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="3"/>
+<text class="b" x="800.0" y="474.0" text-anchor="middle">Pick 2</text>
+<rect x="1120.0" y="160.0" width="300.0" height="380.0" rx="36" fill="#ffffff" stroke="#334155" stroke-width="4"/>
+<rect x="1230.0" y="176.0" width="80.0" height="10.0" rx="5" fill="#cbd5e1" stroke="none" stroke-width="0"/>
+<text class="s" x="1144.0" y="230.0" text-anchor="start">AI’s pick</text>
+<rect x="1144.0" y="252.0" width="252.0" height="72.0" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="3"/>
+<text class="b" x="1270.0" y="298.0" text-anchor="middle">Pick 1</text>
+<circle cx="1184.0" cy="368" r="22" fill="#4f46e5"/>
+<path d="M1174.8333333333333,368 L1181.25,375.3333333333333 L1194.0833333333333,360.6666666666667" fill="none" stroke="#fff" stroke-width="4.766666666666667" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="m" x="1220.0" y="379.0" text-anchor="start" style="font-size:22.8px">You bought it</text>
+<rect x="1144.0" y="418.0" width="252.0" height="84.0" rx="12" fill="#eef2ff" stroke="#4f46e5" stroke-width="3" stroke-dasharray="12 9"/>
+<text class="m" x="1270.0" y="472.0" text-anchor="middle" style="fill:#4f46e5;font-size:26.2px">Seller pays 12%</text>
+<text class="m" x="330.0" y="600.0" text-anchor="middle">An ad under the answer</text>
+<text class="s" x="330.0" y="642.0" text-anchor="middle">ChatGPT</text>
+<text class="m" x="800.0" y="600.0" text-anchor="middle">An ad among the picks</text>
+<text class="s" x="800.0" y="642.0" text-anchor="middle">Google AI Mode</text>
+<text class="m" x="1270.0" y="600.0" text-anchor="middle" style="font-size:31.6px">No ad; a cut of the sale</text>
+<text class="s" x="1270.0" y="642.0" text-anchor="middle">Douyin hotels booked via Doubao</text>
+<path d="M120,730 H1480" fill="none" stroke="#4f46e5" stroke-width="6" stroke-linecap="round" marker-end="url(#aI)"/>
+<rect x="365.7" y="702.0" width="868.5" height="56.0" rx="0" fill="#ffffff" stroke="none" stroke-width="0"/>
+<text class="m" x="800.0" y="742.0" text-anchor="middle">Worth more, and harder to tell it’s an ad</text>
+</svg>
