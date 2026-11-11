@@ -6,9 +6,9 @@
 
 先写中文，中文定稿后再照着写英文。英文页还没写时，页首写明并链接中文版。
 
-每篇文章是一个目录：`docs/en/articles/<slug>/index.md` 和 `docs/zh/articles/<slug>/index.md`，插图和正文放在同一个目录里，用相对路径引用（`![…](./fig-1-intro.svg)`）。构建时图片会带上内容哈希，引用的文件不存在时构建直接失败。`config.ts` 的 `rewrites` 把文章目录映射成 `/articles/<slug>`，网址不带结尾斜杠，已经发出去的链接不要改。两边用同一个 slug，页首互相链接，发布后在两边的 `articles/index.md` 和 `sections.articles` 里登记。
+每篇文章是一个目录：`docs/en/articles/<NN>-<slug>/index.md` 和 `docs/zh/articles/<NN>-<slug>/index.md`，`<NN>` 是两位序号，按动笔先后接着往下编，让目录按时间排序；同一篇文章两边用同一个序号和 slug。插图和正文放在同一个目录里，用相对路径引用（`![…](./fig-1-intro.svg)`）。构建时图片会带上内容哈希，引用的文件不存在时构建直接失败。`config.ts` 的 `rewrites` 去掉序号，把文章目录映射成 `/articles/<slug>`，网址不带结尾斜杠，已经发出去的链接不要改。站内链接文章时写网址（`/zh/articles/<slug>`），不写目录名。两边页首互相链接，发布后在两边的 `articles/index.md` 和 `sections.articles` 里登记。
 
-插图如果是脚本生成的，脚本放在 `scripts/figures/<slug>.py`，按语言输出到对应的文章目录（`python3 scripts/figures/<slug>.py zh`、`... en`），生成结果提交进仓库。只有需要固定网址的文件（favicon、logo、给外站引用的社交卡片图）才放 `docs/public/`。文章的分享卡片图放在 `docs/public/og/<slug>.png`（1200×630），在两种语言的 frontmatter 里写 `image: /og/<slug>.png`，`config.ts` 的 `transformHead` 据此生成 og 和 twitter 标签；源文件放 `scripts/figures/<slug>-og.svg`。
+插图如果是脚本生成的，脚本放在 `scripts/figures/<slug>.py`，按语言输出到对应的文章目录 `docs/<lang>/articles/<NN>-<slug>/`（`python3 scripts/figures/<slug>.py zh`、`... en`），生成结果提交进仓库。只有需要固定网址的文件（favicon、logo、给外站引用的社交卡片图）才放 `docs/public/`。文章的分享卡片图放在 `docs/public/og/<slug>.png`（1200×630），在两种语言的 frontmatter 里写 `image: /og/<slug>.png`，`config.ts` 的 `transformHead` 据此生成 og 和 twitter 标签；源文件放 `scripts/figures/<slug>-og.svg`。
 
 ## 目录按读者分
 

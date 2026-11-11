@@ -253,13 +253,14 @@ export default defineConfig({
   },
   // Sources are split by language: docs/en/ and docs/zh/, one mirror of the
   // other. English is served at the root, so docs/en/x.md becomes /x.
-  // An article is a folder holding index.md and its figures; it is served as
-  // /articles/<slug>, not /articles/<slug>/, so published links keep working.
-  // The more specific rules come first: the first match wins.
-  rewrites: {
-    'en/articles/:slug/index.md': 'articles/:slug.md',
-    'zh/articles/:slug/index.md': 'zh/articles/:slug.md',
-    'en/:rest*': ':rest*',
+  // An article is a folder holding index.md and its figures, named
+  // <NN>-<slug> so the folders sort by publication order. It is served as
+  // /articles/<slug>, without the number and without a trailing slash, so
+  // published links keep working.
+  rewrites(id) {
+    const article = id.match(/^(en|zh)\/articles\/(?:\d+-)?([^/]+)\/index\.md$/)
+    if (article) return `${article[1] === 'en' ? '' : 'zh/'}articles/${article[2]}.md`
+    return id.startsWith('en/') ? id.slice('en/'.length) : id
   },
   locales: {
     root: {

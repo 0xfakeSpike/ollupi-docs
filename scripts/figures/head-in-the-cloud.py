@@ -6,14 +6,14 @@ access = teal, runtime = indigo, execution = pink, model = slate, state = light 
 Isolation boundaries are rose and dashed. Text never takes a series color.
 
 Run: python3 scripts/figures/head-in-the-cloud.py zh && python3 scripts/figures/head-in-the-cloud.py en
-Output: docs/{zh,en}/articles/head-in-the-cloud/fig-*.svg, next to the article that uses them. Commit the output.
+Output: docs/{zh,en}/articles/01-head-in-the-cloud/fig-*.svg, next to the article that uses them. Commit the output.
 """
 import os
 import sys
 
 LANG = sys.argv[1] if len(sys.argv) > 1 else "zh"
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-OUT = os.path.join(ROOT, "docs", LANG, "articles", "head-in-the-cloud")
+OUT = os.path.join(ROOT, "docs", LANG, "articles", "01-head-in-the-cloud")
 W, PAD = 1600, 72
 
 INDIGO, INDIGO_2, INDIGO_DEEP = "#4f46e5", "#818cf8", "#1e1b4b"
