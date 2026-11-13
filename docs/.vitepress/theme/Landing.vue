@@ -196,7 +196,7 @@ section {
 }
 
 .logo {
-  width: 240px;
+  width: 260px;
   height: auto;
   margin-left: -12px;
 }
@@ -211,7 +211,7 @@ h1 {
   font-size: 44px;
   line-height: 1.2;
   font-weight: 650;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
   color: var(--vp-c-text-1);
 }
 
@@ -231,23 +231,26 @@ h1 {
 }
 
 .action {
-  padding: 9px 18px;
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 8px;
+  padding: 9px 20px;
+  border-radius: 999px;
+  background: var(--vp-c-bg-alt);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--vp-c-text-1);
-  transition: border-color 0.2s;
+  transition: background-color 0.2s, opacity 0.2s;
 }
 
 .action:hover {
-  border-color: var(--vp-c-brand-1);
+  background: var(--vp-c-gutter);
 }
 
 .action.primary {
-  border-color: #312e81;
-  background: #312e81;
-  color: #ffffff;
+  background: #263b30;
+  color: #f3f5f1;
+}
+
+.action.primary:hover {
+  opacity: 0.9;
 }
 
 .properties {
@@ -433,8 +436,7 @@ td:last-child {
 }
 
 .dark .landing .action.primary {
-  border-color: #a5b4fc;
-  background: #a5b4fc;
-  color: #1e1b4b;
+  background: #cfe0c9;
+  color: #18241d;
 }
 </style>

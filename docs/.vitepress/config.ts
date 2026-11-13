@@ -123,6 +123,7 @@ const sections: Record<string, Group[]> = {
         { en: 'Side panels', zh: '侧边面板的实现', link: 'desktop/side-panels' },
         { en: 'Built-in browser', zh: '内置浏览器的实现', link: 'desktop/browser' },
         { en: 'Feishu bot', zh: '飞书机器人的实现', link: 'desktop/feishu-bot' },
+        { en: 'Brand', zh: '品牌', link: 'desktop/brand' },
         { en: 'Design language', zh: '设计语言', link: 'desktop/design' },
         { en: 'Build and release', zh: '构建与发布', link: 'desktop/release' },
       ],

@@ -1,28 +1,51 @@
-/* Colours come from the Ollupi logo: indigo for the fur shadow and slate for
-   the wordmark. */
+/* Colours from the desktop app's stone and moss (packages/ui/src/theme.css in
+   ollupi-desktop): paper and stone grounds, moss for links and actions. The
+   brand's night purple stays in the logo. Type is Manrope, as in the app. */
 :root {
-  --vp-c-brand-1: #3f3a9e;
-  --vp-c-brand-2: #312e81;
-  --vp-c-brand-3: #312e81;
-  --vp-c-brand-soft: rgba(165, 180, 252, 0.22);
-  --vp-font-family-base: 'Inter', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', -apple-system,
+  --vp-c-bg: #f8f7f4;
+  --vp-c-bg-alt: #eeede8;
+  --vp-c-bg-elv: #ffffff;
+  --vp-c-bg-soft: #eeede8;
+  --vp-c-text-1: #22252a;
+  --vp-c-text-2: #4c5057;
+  --vp-c-text-3: #63676e;
+  --vp-c-brand-1: #263b30;
+  --vp-c-brand-2: #34503f;
+  --vp-c-brand-3: #263b30;
+  --vp-c-brand-soft: rgba(38, 59, 48, 0.1);
+  --vp-c-divider: rgba(34, 37, 42, 0.08);
+  --vp-c-gutter: rgba(34, 37, 42, 0.06);
+  --vp-font-family-base: 'Manrope Variable', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', -apple-system,
     BlinkMacSystemFont, sans-serif;
   --vp-sidebar-width: 280px;
 }
 
 .dark {
-  --vp-c-bg: #0e1118;
-  --vp-c-bg-alt: #0b0d13;
-  --vp-c-bg-elv: #151924;
-  --vp-c-bg-soft: #151924;
-  --vp-c-brand-1: #a5b4fc;
-  --vp-c-brand-2: #8b9cf8;
-  --vp-c-brand-3: #4f46b8;
-  --vp-c-brand-soft: rgba(165, 180, 252, 0.14);
+  --vp-c-bg: #1d201f;
+  --vp-c-bg-alt: #151716;
+  --vp-c-bg-elv: #262a28;
+  --vp-c-bg-soft: #262a28;
+  --vp-c-text-1: #ecedea;
+  --vp-c-text-2: #adb3ab;
+  --vp-c-text-3: #8e948c;
+  --vp-c-brand-1: #cfe0c9;
+  --vp-c-brand-2: #b8cfb1;
+  --vp-c-brand-3: #4f6b59;
+  --vp-c-brand-soft: rgba(207, 224, 201, 0.12);
+  --vp-c-divider: rgba(236, 237, 234, 0.08);
+  --vp-c-gutter: rgba(236, 237, 234, 0.06);
+}
+
+::selection {
+  background: rgba(38, 59, 48, 0.18);
+}
+
+.dark ::selection {
+  background: rgba(207, 224, 201, 0.25);
 }
 
 .VPNavBarTitle .logo {
-  height: 26px;
+  height: 28px;
 }
 
 .vp-doc table {
@@ -32,7 +55,7 @@
 
 /* The figures from the engine repository have white backgrounds. */
 .vp-doc img[src*='/images/'] {
-  border-radius: 8px;
+  border-radius: 16px;
   background: #ffffff;
   padding: 12px;
   border: 1px solid var(--vp-c-divider);

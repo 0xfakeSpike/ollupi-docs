@@ -4,6 +4,7 @@ import type { Theme } from 'vitepress'
 import EngineVersion from './EngineVersion.vue'
 import Landing from './Landing.vue'
 import MermaidDiagram from './MermaidDiagram.vue'
+import '@fontsource-variable/manrope'
 import './style.css'
 
 export default {
