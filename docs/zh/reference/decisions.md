@@ -34,6 +34,7 @@
 | 22 | 石与苔：界面先给结论 | 导览图式的区域、一个赭色信号，过程和细节收起来 |
 | 23 | 标识是月亮前的小狼 | 名字保留并赋予含义，标识换成可亲的小狼，图标是燕麦底 |
 | 24 | 浏览器由 Playwright 驱动 | 用成熟库读页面和操作，经进程内的 CDP 代理连到标签页，不开调试端口 |
+| 25 | 主题：石与苔之外的暮色 | 主题是一组 token；暮色是一张带颗粒的纸，点缀只放空处 |
 
 ## 1. 池化 runtime
 
@@ -714,6 +715,37 @@ VS Code 的内置浏览器是同一结构：`WebContentsView` 由主进程拥有
 **依据**
 
 `desktop@c0295de`，`apps/desktop/src/main/browser/cdp.ts`，`apps/desktop/src/main/browser/playwright.ts`，`apps/desktop/src/main/browser/browser.ts`；VS Code 的 `.github/skills/integrated-browser/SKILL.md` 和 `src/vs/platform/browserView/node/playwrightService.ts`；Chrome 博客《Changes to remote debugging switches to improve security》。
+
+## 25. 主题：石与苔之外的暮色
+
+**背景**
+
+决策 22 定下石与苔时只留了一套配色。之后用户看到一组傍晚主题的品牌视觉，觉得"审美好高级"，希望有不同的主题，但不抛弃现有的设计。
+
+**决定**
+
+- 主题是一组 token：石与苔仍是默认（`:root`），暮色写在 `[data-theme='dusk']` 下，各有浅色和深色；组件一行不改。设置 → 外观里用两张以各自 token 画的小预览卡选，存在本应用自己的存储里。
+- 暮色是一张纸：一层细颗粒盖住整个窗口，纸面和底色同一种材质；黄昏的光只在窗口底色的四角，纸面更亮更静，文字和控件保持利落。
+- 小狼有暮色版（`assets/brand/dusk.py`）：黄昏天空、发光的月亮、颗粒、溶解的边缘、喷枪式明暗，周围是非洲草原的点缀（草丛、金合欢、萤火虫、蜻蜓、飞鸟）。暮色下 Dock 图标在运行时换成这一版，圆形标识也跟着换。
+- 草原点缀只放在真正空着的地方：侧栏顶部的蜻蜓、新会话页问候上方的地平线、空状态小狼脚边的草和萤火；对话页不放。
+
+**放弃的方案**
+
+- 只换配色、颗粒很淡：用户觉得"没有他的那种质感"。参考图的质感来自看得见的颗粒、溶解成颗粒的边缘和一团团晕开的光，不是配色。
+- 平涂矢量的暮色小狼（纸底四角渗光、黄昏天空渐变、日落之后三版）：同样缺质感。
+- 颗粒压满整幅：整体发灰，月亮失去亮度；改成细颗粒，并把月亮放在够深的天空前。
+- 侧栏左下角的草丛、新会话页下角的草丛：压到了"记忆""已连接"和输入框。
+- 颗粒只画在窗口底色上、纸面光滑：两种材质在纸面边缘断开，过渡不自然。把纸面做成另一种材质（加阴影和边）也能解释这种差异，但和石与苔"分区靠底色、不靠线和阴影"冲突。
+
+**代价**
+
+- 每套主题都要核对一遍对比度，浅色、深色各一次。
+- 暮色的图用 SVG 滤镜画颗粒和溶解的边缘，比平涂的图重；只用在少数几处。
+- Finder 和启动台里的图标仍是打包时的燕麦版。
+
+**依据**
+
+`packages/ui/src/theme.css`、`packages/ui/DESIGN.md` 的 2.1.2、`assets/brand/dusk.py`、`apps/desktop/src/main/appIcon.ts`、`apps/desktop/src/renderer/src/views/common/Wolf.tsx`。
 
 ## 代码位置
 
