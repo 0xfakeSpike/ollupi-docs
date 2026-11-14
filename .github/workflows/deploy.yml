@@ -35,6 +35,14 @@ jobs:
             docs
             gateway
 
+      # The brand's marks live with the desktop app.
+      - uses: actions/checkout@v7
+        with:
+          repository: 0xfakeSpike/ollupi-desktop
+          path: .sources/ollupi-desktop
+          sparse-checkout: |
+            assets/brand
+
       - uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v7

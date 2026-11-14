@@ -57,16 +57,18 @@ Ollupi 的名字、标识、图标和字标，以及它们在产品里出现的�
 |---|---|
 | `app-icon.svg` | macOS 图标：1024 画布，824 的圆角方块内缩 100，带阴影 |
 | `app-icon-small.svg`、`app-icon-16.svg` | 64px 以下：小狼放大、单色、无阴影，小尺寸也认得出 |
-| `mark.svg`、`favicon.svg` | 圆形标识：夜色圆、月亮、小狼。头像、文档站导航、README |
+| `mark.svg`、`favicon.svg` | 圆形标识：燕麦圆、月亮、小狼。头像、文档站导航、README |
 | `mark-mono.svg` | 单色剪影，只在必须单色时用 |
 | `wordmark.svg`、`wordmark-dark.svg` | 字标 |
 | `logo.svg`、`logo-dark.svg` | 圆形标识加字标 |
 | `poses/wolf-*.svg` | 小狼的六种姿势（见下） |
+| `png/` | 各尺寸的图标、favicon、圆形标识和 logo 的 PNG |
+| `Ollupi.icns` | macOS 图标，打包进应用 |
 | `preview.png` | 品牌总览图 |
 
 **字标**是小写的 "ollupi"，Manrope 750、字距 −3%，转成路径，不依赖字体。浅底用墨（`#22252a`），深底用纸色（`#ecedea`）。和标识并排时，字的 x 高居中对齐标识的中线，字高（1em）约为标识直径的 46%。应用里，字标在侧栏顶部、红绿灯那一行的右端。
 
-所有文件由 ollupi-desktop 的 `assets/logo/make.py` 从一处画法（`figure.py`、`poses.py`）和 Manrope 的字形生成。引擎仓库的 `docs/logo` 和本站的 `public/logo` 用同一套文件；应用里用的姿势也由它生成到 `views/common/wolfArt.ts`。改画法只改一处，重新生成。
+品牌的一切都在 ollupi-desktop 的 `assets/brand/`，只此一处：`make.py` 从一处画法（`figure.py`、`poses.py`）和 Manrope 的字形生成全部 svg、各尺寸 png、macOS 图标 `Ollupi.icns` 和总览图，也把应用里用的姿势和圆形标识生成到 `views/common/wolfArt.ts`。应用打包直接用这里的图标；引擎的 README 用这里的 logo，引擎的配图从这里读圆形标识，本站构建时从这里同步标识。改画法只改一处，重新生成。
 
 ## 小狼的姿势
 
@@ -97,9 +99,8 @@ Ollupi 的名字、标识、图标和字标，以及它们在产品里出现的�
 |---|---|
 | ollupi-desktop `apps/desktop/PRODUCT.md` | 名字、读法、含义、定义句、标语 |
 | ollupi-desktop `packages/ui/DESIGN.md` 第 0 节 | 标识、颜色、文件、姿势的用法 |
-| ollupi-desktop `assets/logo/figure.py`、`poses.py` | 小狼的画法 |
-| ollupi-desktop `assets/logo/make.py` | 生成全部标识文件和 `wolfArt.ts` |
-| ollupi-desktop `apps/desktop/build/icon.icns` | 打包进应用的图标 |
+| ollupi-desktop `assets/brand/figure.py`、`poses.py` | 小狼的画法 |
+| ollupi-desktop `assets/brand/make.py` | 生成全部标识、png、`Ollupi.icns`、总览图和 `wolfArt.ts` |
+| ollupi-desktop `assets/brand/Ollupi.icns` | 打包进应用的图标（`electron-builder.yml` 的 `mac.icon`） |
 | ollupi-desktop `apps/desktop/src/renderer/src/views/common/Wolf.tsx` | `Wolf`、`Emblem` 组件 |
 | ollupi-desktop `apps/desktop/src/renderer/src/views/common/Wordmark.tsx` | 侧栏字标 |
-| ollupi `docs/logo` | 本站和 README 用的标识 |
