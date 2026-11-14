@@ -2,7 +2,7 @@
 
 内置浏览器是应用自带的 Chromium 标签页，放在会话右侧，agent 和用户共用。agent 能打开网页、读内容、点击、输入；用户看得到它在做什么，也能随时接手，比如登录一个 agent 进不去的站点。
 
-浏览器属于桌面端，不属于引擎。sidecar 只提供工具的名称和描述，把调用转发给主进程。主进程拥有全部 `WebContentsView`，页面脚本也在那里运行。
+浏览器属于桌面端，不属于引擎。sidecar 只提供工具的名称和描述，把调用转发给主进程。主进程拥有全部 `WebContentsView`，agent 的动作由主进程里的 Playwright 读页面、执行，它经一个进程内的 CDP 代理连到标签页，不开调试端口。
 
 ## 标签页归属
 
@@ -59,14 +59,14 @@ sequenceDiagram
   E->>S: PermissionContent(click, ref)
   S->>P: POST /describe
   P->>B: describe(thread, action, args)
-  B->>W: describeScript
-  W-->>S: host, text
+  Note over B: 元素名取自最新快照
+  B-->>S: host, text
   Note over E: 用 host 匹配规则，需要时审批
   E->>S: Invoke(browser_click)
   S->>P: POST /call
   P->>B: call(thread, action, args)
-  B->>W: 输入事件或页面脚本
-  B->>W: snapshotScript
+  B->>W: Playwright 动作（经 CDP 代理）
+  B->>W: page.ariaSnapshot
   W-->>S: text
   S-->>E: 工具结果
 ```
@@ -97,7 +97,7 @@ sidecar 的 HTTP 超时是 90 秒，够页面在动作之后加载完。主进�
 | 工具 | 参数 | 只读 | 开放世界 | 有权限内容 |
 |---|---|---|---|---|
 | `browser_navigate` | `url` | 是 | 是 | 是 |
-| `browser_snapshot` | | 是 | 否 | 否 |
+| `browser_snapshot` | `page` | 是 | 否 | 否 |
 | `browser_click` | `ref` | 否 | 是 | 是 |
 | `browser_type` | `ref`、`text`、`submit` | 否 | 是 | 是 |
 | `browser_press_key` | `key` | 否 | 是 | 是 |
@@ -118,7 +118,7 @@ sidecar 的 HTTP 超时是 90 秒，够页面在动作之后加载完。主进�
 | `press_key` | `Press Enter on example.com` |
 | `back` | `Go back from example.com` |
 
-`describe` 里 ref 过期，或 `back` 没有更早的页面，直接拒绝。
+`click` 和 `type` 的元素名取自这个标签页最新的那份快照，也就是 agent 看到的样子。不去页面上查，是因为 Playwright 给元素拍一次快照就会给整帧重新编 ref，审批完 agent 手里的 ref 就失效了。ref 不在最新快照里，或 `back` 没有更早的页面，直接拒绝。
 
 审批策略由工具注解决定（[权限](/zh/engine/permissions)）：
 
@@ -135,66 +135,78 @@ sidecar 的 HTTP 超时是 90 秒，够页面在动作之后加载完。主进�
 | 动作 | 怎么做 |
 |---|---|
 | `navigate` | `normalize` 地址后 `loadURL`，没有标签页时新建。加载失败不算错，页面显示错误页 |
-| `click` | 标签页在屏幕上时，`locateScript` 滚到元素中心，用 `sendInputEvent` 发真实的鼠标事件，页面看到的是人的点击。不在屏幕上时收不到输入事件，改用 DOM 的 `el.click()` |
-| `type` | `focusScript` 聚焦并全选，`insertText` 替换内容，`submit` 时再按 Enter |
-| `press_key` | `sendInputEvent` 发 `keyDown`、`keyUp`，单个字符时加 `char` |
-| `scroll` | `window.scrollBy`，一屏的 80% |
-| `back` | `navigationHistory.goBack` |
+| `click` | `page.getByRef(ref).click()`。Playwright 先把元素滚进视野，等它可见、可用、位置稳定、没被别的元素挡住，再发 CDP 的鼠标事件 |
+| `type` | `fill` 替换内容，`submit` 时再 `press('Enter')` |
+| `press_key` | `page.keyboard.press`，键名按 Playwright：`Enter`、`ArrowUp`、`PageDown`，也能组合，如 `Control+A` |
+| `scroll` | 鼠标移到页面中央，滚轮滚一屏的 80%。滚动的是中央那块区域，页面里自己滚动的列表也会滚 |
+| `back` | `page.goBack`，只等到提交，加载交给之后的读取 |
 
-只有 `click` 有屏幕外的回退，`press_key` 和 `submit` 的 Enter 总是走 `sendInputEvent`。
+`click` 和 `type` 先用 `count()` 确认 ref 还指向页面上的元素，不在就立即拒绝：`no element eN on the page now; take a new snapshot`。不先查的话，Playwright 会等满整个超时（10 秒）。
+
+动作出错时（元素一直不可点、键名不认识），Playwright 的错误信息和调用日志的前 12 行作为 `Refusal` 返回给 agent，调用日志说明它在等什么。
+
+**不在屏幕上的标签页。** 会话不在屏幕上时，它的标签页尺寸是 0，页面不跑动画帧，Playwright 判断元素是否稳定要等动画帧，于是一直等下去。每个动作期间 `Pages.act` 用 CDP 打开焦点模拟（`Emulation.setFocusEmulationEnabled`），让页面照常运行；标签页不在屏幕上时，再按浏览器面板上次显示的尺寸设置 `Emulation.setDeviceMetricsOverride`，没显示过面板时用 1280×800。动作结束后两者都清掉。焦点模拟在屏幕上的标签页也开，因为窗口被遮住时页面同样可能停跑动画帧（这一点是推断，没有单独测过）。
 
 `call` 开始时发 `used` 事件。渲染进程收到后，如果这个会话正在屏幕上，打开浏览器面板，让用户看到 agent 在做什么。
 
+::: info 演进
+以前的动作是自己写的页面脚本，跑在 1001 号隔离世界里：点击用 `sendInputEvent`，标签页不在屏幕上时退回 DOM 的 `el.click()`，只响应 `pointerdown` 的控件点不动；快照跳过 iframe；滚动只滚整个窗口。`desktop@c0295de` 换成 Playwright。
+:::
+
 ## Snapshot 格式
 
-每个动作都以页面文本作答，`snapshot` 只是不做动作直接读。`read` 先等 200 毫秒，页面还在加载时再等 `did-stop-loading`，最多 15 秒。
+每个动作都以页面文本作答，`snapshot` 不做动作直接读。读之前，如果当前标签页是刚被链接打开、还没有地址的新标签页，先等它停止加载；再等页面的 `load`，最多 15 秒，超时就按已经加载出来的内容读。
 
-返回的文本是标题、地址和快照：
+快照是 Playwright 的 `page.ariaSnapshot({ mode: 'ai' })`：按无障碍树写成 YAML，能操作的元素带 `[ref=eN]`，iframe 展开在 `iframe` 节点下，里面的 ref 带帧前缀，如 `f1e2`；跨站的 iframe 也在内。Shadow DOM 里的元素照常列出。返回的文本是标题、地址和快照，例如测试页的开头：
 
 ```
-Example Domain
-https://example.com/
+E2E
+http://127.0.0.1:8765/
 
-- heading "Example Domain" [level=1]
-- text "This domain is for use in documentation examples."
-  - link "Learn more" [ref=e1] -> https://iana.org/domains/example
+- generic [active] [ref=e1]:
+  - heading "Hello" [level=1] [ref=e2]
+  - button "pointer only" [ref=e3]
+  - textbox "Name" [ref=e4]
+  - link "get file" [ref=e5] [cursor=pointer]:
+    - /url: /file.txt
+  - button "shadow button" [ref=e8]
+  - iframe [ref=e9]:
+    - button "frame button" [ref=f1e2]
 ```
 
 页面为空时写 `(the page shows nothing)`。
 
-`snapshotScript` 从 `document.body` 开始按文档顺序遍历，只读显示出来的内容：
+### 分页
 
-| 节点 | 输出 |
+快照不截断。超过 40000 字符（`SNAPSHOT_PAGE`，约 1 万 token）时，`paged` 按行切成几页，每页不超过这个长度，单独一行超长时再切开。返回第 1 页，结尾写：
+
+```
+[page 1 of 6 of this snapshot; snapshot with page 2 reads on]
+```
+
+`browser_snapshot` 带 `page` 时不重新拍，从这个标签页最新的那份快照里取那一页。Playwright 的 ref 绑定在最近一次快照上，所以同一份快照每一页的 ref 都有效，直到下一次拍快照。不带 `page` 就重新拍，从第 1 页开始。页数超出范围、或还没有快照时拒绝。
+
+分页和滚动是两回事：已经在 DOM 里的内容都在快照的各页里；`scroll` 用于页面滚到才加载的内容。
+
+## Playwright 怎么连到标签页
+
+Electron 给每个页面一个 CDP 通道（`webContents.debugger`），Playwright 连的却是整个浏览器。`TabsOverCDP` 在两者之间：
+
+- 对 Playwright 连接时发的四个浏览器级命令直接作答：`Browser.getVersion`、`Target.setAutoAttach`（随即把已有的标签页报成 `Target.attachedToTarget`）、`Target.getTargetInfo`、`Browser.setDownloadBehavior`（空答，下载仍由应用处理）。其余浏览器级命令拒绝。
+- 标签页会话上的命令转给那个标签页的 debugger。标签页里跨站的 iframe 是 Chromium 另开的子会话，按 `attachedToTarget` 事件记下它属于哪个标签页，命令带着子会话 ID 转过去。
+- 标签页的 debugger 断开（关闭、崩溃）时，向 Playwright 报 `Target.detachedFromTarget`。
+
+Playwright 用 `chromium.connectOverCDP(transport)` 在进程内连上它，`transport` 是一个对象，不经过 socket。连接带 `noDefaults`，Playwright 不改页面的模拟、焦点和下载行为。
+
+| 规则 | 原因 |
 |---|---|
-| 可交互元素 | `- <角色> "<名称>" [ref=eN]`，不再往下走 |
-| `h1` 到 `h6` | `- heading "<文字>" [level=N]`，最长 160 字符 |
-| 有 `alt` 的 `img` | `- img "<alt>"` |
-| 有直接文本的元素 | `- text "<文字>"`，最长 300 字符，子元素缩进一级 |
-| `script`、`style`、`noscript`、`template`、`svg`、`iframe` | 跳过 |
-| Shadow DOM | 进入 `shadowRoot` 的子元素 |
+| 不开 `--remote-debugging-port` | 调试端口没有认证，本机任何程序都能接管所有标签页和登录状态，连应用自己的界面也在目标列表里 |
+| Playwright 在 agent 第一次动作时才加载、连接 | 加载它要约 200 毫秒，不让应用启动付这笔 |
+| 标签页在 agent 第一次在里面动作时才接入 | 只有用户在用的标签页从不被自动化 |
+| 一次只接入一个标签页 | 接入时 Playwright 收到的下一个页面就是它 |
+| 子会话的 `Target.setAutoAttach` 改成 `waitForDebuggerOnStart: false` | 接入之后才出现的跨站 iframe 如果暂停等调试器，经 Electron 的 debugger 发去的恢复命令不会得到回应，整个页面停在加载中 |
 
-**可交互元素**包括 `a[href]`、`button`、非隐藏的 `input`、`textarea`、`select`、`summary`、`contenteditable`，以及 `role` 为 button、link、checkbox、radio、switch、tab、menuitem、option、combobox、textbox、searchbox 的元素。
-
-**角色**优先取 `role` 属性，否则按标签推断。**名称**依次取 `aria-label`、`aria-labelledby`、关联的 `label`、文字、`placeholder`、`title`、`alt`、`value`，截到 100 字符。
-
-**附加信息**：
-
-- 链接后加 `-> <href>`，截到 80 字符。
-- 文本框的内容写成 `value="..."`。密码框只写 `value=(hidden)`，内容不进快照。
-- `checked`、`disabled` 标在行尾。
-- `select` 写当前选项。
-
-**隐藏判断**：`aria-hidden="true"`、`display: none`、`visibility: hidden`，或宽高都是 0（`display: contents` 除外）。
-
-**长度**：上限 40000 字符（`SNAPSHOT_LIMIT`，注释说约 1 万 token）。超过时结尾写 `[the page goes on; scroll and take another snapshot to read more]`。缩进最多 12 级。
-
-### ref 和隔离世界
-
-ref 是这次快照的元素编号，`e1`、`e2`。`window.__ollupiRefs` 是 ref 到元素的 Map，下次快照时重建。
-
-所有页面脚本都用 `executeJavaScriptInIsolatedWorld` 跑在 1001 号隔离世界（`WORLD`）。页面自己的脚本看不到也改不了它，它能看到页面的 DOM。
-
-元素已从页面移除时（`isConnected` 为假），动作报 `no element eN on the page now; take a new snapshot`，agent 读到后重新快照。ref 必须匹配 `^e\d+$`。
+VS Code 的内置浏览器用的是同一种结构：主进程里的 `WebContentsView`、协议感知的 CDP 代理、`connectOverCDP(transport)`，也把子目标设为不等调试器。
 
 ## 地址
 
@@ -211,7 +223,7 @@ ref 是这次快照的元素编号，`e1`、`e2`。`window.__ollupiRefs` 是 ref
 |---|---|---|
 | User-Agent | Chromium 的默认值去掉 `Electron/...` 和应用名 | Google 登录这类站点会拒绝标着嵌入式浏览器的 UA |
 | 设备权限 | 一律拒绝 | `setPermissionRequestHandler` 回 `false` |
-| 下载 | 全部取消 | `will-download` 里 `item.cancel()` |
+| 下载 | 问存到哪里 | `will-download` 里弹出保存对话框，默认在「下载」；Playwright 连接带 `noDefaults`，不接管下载 |
 | `webPreferences` | `sandbox`、`contextIsolation` 开，`nodeIntegration` 关 | |
 
 这些在第一次创建标签页时配置一次。
@@ -277,8 +289,9 @@ Chrome 的收藏只读，列出时现读：
 | 位置 | 职责 |
 |---|---|
 | ollupi-desktop `sidecar/internal/browser/browser.go` | 工具定义和转发 |
-| ollupi-desktop `apps/desktop/src/main/browser/browser.ts` | `AgentBrowser`：标签页、动作、分区配置 |
-| ollupi-desktop `apps/desktop/src/main/browser/page.ts` | 页面内脚本：快照、定位、点击、聚焦 |
+| ollupi-desktop `apps/desktop/src/main/browser/browser.ts` | `AgentBrowser`：标签页、动作、快照分页、分区配置 |
+| ollupi-desktop `apps/desktop/src/main/browser/playwright.ts` | `Pages`：加载和连接 Playwright、接入标签页、动作期间唤醒 |
+| ollupi-desktop `apps/desktop/src/main/browser/cdp.ts` | `TabsOverCDP`：把标签页拼成一个 CDP 浏览器给 Playwright |
 | ollupi-desktop `apps/desktop/src/main/browser/endpoint.ts` | 回环 HTTP 端点 |
 | ollupi-desktop `apps/desktop/src/main/browser/address.ts` | 地址规范化 |
 | ollupi-desktop `apps/desktop/src/main/browser/history.ts` | 历史记录 |

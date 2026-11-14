@@ -33,6 +33,7 @@
 | 21 | 自建更新器 | ad hoc 签名下 Squirrel.Mac 不可用 |
 | 22 | 石与苔：界面先给结论 | 导览图式的区域、一个赭色信号，过程和细节收起来 |
 | 23 | 标识是月亮前的小狼 | 名字保留并赋予含义，标识换成可亲的小狼，图标是燕麦底 |
+| 24 | 浏览器由 Playwright 驱动 | 用成熟库读页面和操作，经进程内的 CDP 代理连到标签页，不开调试端口 |
 
 ## 1. 池化 runtime
 
@@ -680,6 +681,40 @@ Squirrel.Mac（`desktop@63813b7` 写明不可用）。
 
 `desktop@2bb5967`、`desktop@c1bf458`、`a9b3ddd`（引擎仓库的 `docs/logo`），ollupi-desktop 的 `assets/logo/make.py`、`apps/desktop/PRODUCT.md` 的 Brand Commitments。
 
+## 24. 浏览器由 Playwright 驱动
+
+**背景**
+
+内置浏览器的动作原来是自己写的页面脚本：快照跳过 iframe，标签页不在屏幕上时点击退回 DOM 的 `el.click()`，只响应 `pointerdown` 的控件点不动，点击前不等元素就绪，快照每次从页面开头读、截在 4 万字符，长页面后半段读不到。这些正是浏览器自动化库多年打磨的部分。
+
+**决定**
+
+动作和快照交给 Playwright（`desktop@c0295de`），标签页的生命周期、显示、下载、历史仍归 `AgentBrowser`。
+
+- Electron 只给每个页面一个 CDP 通道（`webContents.debugger`），Playwright 要的是一个浏览器。`TabsOverCDP` 回答 Playwright 连接时的四个浏览器级命令，其余按会话转给各标签页的 debugger。Playwright 用 `connectOverCDP(transport)` 在进程内连上，不经 socket。
+- 不开 `--remote-debugging-port`。
+- 快照用 Playwright 的 AI 快照，超长时分页读，同一份快照各页的 ref 都有效。
+- 设备模拟归浏览器自己：连接带 `noDefaults`，只在动作期间打开焦点模拟，不在屏幕上的标签页按面板大小排版。
+
+VS Code 的内置浏览器是同一结构：`WebContentsView` 由主进程拥有，协议感知的 CDP 代理把它们拼成一个逻辑浏览器，Playwright 用 `connectOverCDP(transport)` 接入，Playwright 自己的模拟只在 agent 动作期间放行。Playwright MCP 的扩展模式也是用中继把 `chrome.debugger` 拼成浏览器。
+
+**放弃的方案**
+
+- 应用开 `--remote-debugging-port`，Playwright 用地址连上去：`puppeteer-in-electron` 的做法，也是 Playwright `_electron.launch` 测试时的做法。端口没有认证，本机任何程序都能接管所有标签页和登录状态，应用自己的界面也在目标列表里。Chrome 136 起在默认用户资料上忽略这个开关，原因就是窃密程序用它偷 cookie。
+- 中继开一个带令牌的回环 WebSocket，Playwright 用地址连：能用，但 Playwright 和中继在同一个进程里，绕一圈 socket 没有必要，`connectOverCDP` 本来就接受 transport 对象。
+- browser-use、Stagehand：自带 agent 循环、自己调模型，和引擎的循环冲突；browser-use 还要 Python。
+- 继续自己写页面脚本：iframe、动作就绪判断、无障碍名称这些都要自己追。
+
+**代价**
+
+- 依赖 playwright-core（约 14MB）。`connectOverCDP` 的文档说它比 Playwright 自己的协议"fidelity 低"，`noDefaults` 下也少了 Playwright 默认的一些设置。
+- `TabsOverCDP` 要跟上 Playwright 连接时发的浏览器级命令。它拒绝不认识的命令，Playwright 升级后多发一个就会连不上，需要补上。
+- Electron 的 debugger 恢复不了暂停等调试器的子目标，所以子目标一律不暂停，iframe 开始时的最早几条事件 Playwright 可能收不到。
+
+**依据**
+
+`desktop@c0295de`，`apps/desktop/src/main/browser/cdp.ts`，`apps/desktop/src/main/browser/playwright.ts`，`apps/desktop/src/main/browser/browser.ts`；VS Code 的 `.github/skills/integrated-browser/SKILL.md` 和 `src/vs/platform/browserView/node/playwrightService.ts`；Chrome 博客《Changes to remote debugging switches to improve security》。
+
 ## 代码位置
 
 | 仓库 | 路径 | 职责 |
@@ -708,4 +743,5 @@ Squirrel.Mac（`desktop@63813b7` 写明不可用）。
 | ollupi-desktop | `sidecar/internal/host/host.go` | 组件装配 |
 | ollupi-desktop | `apps/desktop/src/main/backend/` | 托管后端、配置和技能的校验写入 |
 | ollupi-desktop | `apps/desktop/src/main/update.ts` | 自建更新器 |
+| ollupi-desktop | `apps/desktop/src/main/browser/cdp.ts`、`playwright.ts` | 浏览器的 CDP 代理和 Playwright 接入 |
 | ollupi-docs | `docs/zh/reference/backlog.md` | 分层原则 |

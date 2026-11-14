@@ -12,7 +12,8 @@ The full page covers:
 - Placing the view
 - The path of a tool call
 - Tools
-- Snapshot format
+- Snapshot format, and reading long pages by pages
+- How Playwright reaches the tabs
 - Addresses
 - Sign-in partitions
 - History
