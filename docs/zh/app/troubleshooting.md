@@ -33,7 +33,7 @@ models: provider openai lists no models
 ```
 
 ```text
-mcp server github: Authorization: environment variable GITHUB_TOKEN is not set
+json: unknown field "permissions"
 ```
 
 常见的几类：
@@ -41,10 +41,9 @@ mcp server github: Authorization: environment variable GITHUB_TOKEN is not set
 | 原因里提到 | 通常是 | 怎么办 |
 |---|---|---|
 | 某个拼错或不认识的字段 | 手改时键名写错。未知字段会报错，不会被悄悄忽略 | 对照[字段表](/zh/app/config#字段)改正 |
+| `config.yaml: permissions`、`config.yaml: mcp` | 升级时把旧文件里的权限或 MCP 服务器搬进应用，后端不接受其中一项，比如规则写错，或规则里的 MCP 工具所在的服务器连不上。文件保持原样，下次启动再搬 | 按原因改正或删掉文件里那一项，再重启后端，见[在应用里设置的](/zh/app/config#在应用里设置的) |
 | `models` | 提供方没有模型、名字重复、缺 `limits` | 按原因补上或删掉 |
-| `approval policy` | 没写审批策略 | 在 `permissions` 里写 `approval` |
-| `environment variable … is not set` | MCP 服务器引用的 `${NAME}` 在你的 shell 里没设置 | 在 `~/.zshrc` 里 `export` 它，或在能力页改掉这个引用 |
-| `memory.model` | 开了记忆提炼，但没指定或指错了模型 | 在记忆设置里选一个已有的模型 |
+| `memory.model` | 指定的学习模型不在 `models` 里 | 在记忆页选一个已有的模型，或删掉这一项 |
 
 点 **打开配置** 改好文件，保存后点 **重启后端**。
 
@@ -61,11 +60,9 @@ mcp server github: Authorization: environment variable GITHUB_TOKEN is not set
 后端只在启动时读 `config.yaml` 和技能文件夹。直接改了文件之后，应用会在对应的页面提示文件和正在运行的后端不一致：
 
 - 设置 → 模型
-- 能力 → MCP
 - 能力 → 技能
-- 记忆设置
 
-点提示里的 **重启后端** 就会生效。在应用里保存的改动会自动重启，不需要这一步。
+点提示里的 **重启后端** 就会生效。在应用里保存的模型和技能改动会自动重启后端，不需要这一步。权限、MCP 服务器和记忆、学习两个开关不在 `config.yaml` 里，在应用里保存就生效，不用重启后端。
 
 ## 模型调用出错
 
@@ -108,9 +105,9 @@ mcp server github: Authorization: environment variable GITHUB_TOKEN is not set
 
 ## MCP 服务器"未连接"
 
-能力页里 MCP 服务器的卡片显示"未连接"时，卡片下方有原因。连不上的服务器只是被跳过，不影响其他功能。按原因修好命令、URL 或密钥，保存或重启后端。
+能力页里 MCP 服务器的卡片显示"未连接"时，卡片下方有原因。连不上的服务器只是被跳过，不影响其他功能。按原因修好命令、URL 或密钥，点 **保存**，马上生效，不用重启后端。
 
-卡片显示"未启动"，说明后端启动时还没有这个服务器，点 **重启后端**。见[技能、MCP 与工具](/zh/app/capabilities#连接状态)。
+卡片显示"用到时启动"不是故障：这个服务器还没用到过，agent 要用它的工具时才启动。见[技能、MCP 与工具](/zh/app/capabilities#连接状态)。
 
 ## 侧边栏显示"正在重新连接…"
 

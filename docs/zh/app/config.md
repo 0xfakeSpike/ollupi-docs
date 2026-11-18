@@ -52,7 +52,7 @@ Ollupi 的配置和数据都在本机的 `~/.ollupi`。大多数设置在应用�
 
 ## 首次启动
 
-`config.yaml` 不存在时，sidecar 先写入自带技能，再写入模板。模板是可运行的最小配置，带注释说明。
+`config.yaml` 不存在时，sidecar 先写入自带技能，再写入模板。模板是可运行的最小配置，带注释说明。权限、MCP 服务器和记忆、学习两个开关不在这个文件里，见[在应用里设置的](#在应用里设置的)。
 
 ```yaml
 name: ollupi
@@ -68,12 +68,6 @@ models:
         images: true
         limits: { context: 400000, output: 128000 }
 
-permissions:
-  approval: on-request # untrusted | on-request | never
-  allow: []
-  ask: []
-  deny: []
-
 workspace:
   enabled: true
   sandbox_mode: workspace-write # read-only | workspace-write | full-access
@@ -82,10 +76,21 @@ workspace:
 
 skills_dir: skills
 
-memory:
-  use: true
-  generate: false
+# memory:
+#   model: openai/gpt-5.2
 ```
+
+## 在应用里设置的
+
+这几项由后端自己保存，不写进 `config.yaml`，在应用里改，保存后马上生效，不重启后端：
+
+| 设置 | 在哪改 |
+|---|---|
+| 所有会话默认的审批策略和例外规则 | **设置 → 权限**，见[审批与权限](/zh/app/permissions#选一档审批策略) |
+| MCP 服务器 | **能力 → MCP**，见[技能、MCP 与工具](/zh/app/capabilities#mcp) |
+| 记忆开关、从会话中学习 | **记忆 → 全局**，见[定时任务与记忆](/zh/app/automation#设置) |
+
+从 0.7.53 之前的版本升级时，`config.yaml` 里的 `permissions`、`mcp`、`memory.use` 和 `memory.generate` 在第一次启动时自动搬进应用，再从文件里删掉，不用手改。`permissions` 只在你还没在应用里设过权限时才搬；`mcp` 里写成 `${NAME}` 的值，会换成那时登录 shell 里这个变量的值。
 
 ## 字段
 
@@ -99,11 +104,9 @@ memory:
 | `prompt` | string | 空，用引擎默认的系统提示词 | `""` | 自定义提示词 |
 | `models` | list | 必填，至少一个模型 | 见下 | 提供方和模型 |
 | `tools` | string list | 不写时不限制 | 不写 | 引擎的工具白名单 |
-| `permissions` | object | `approval` 必填 | 见下 | agent 默认的权限层 |
 | `slots` | int | `0`，取引擎默认的 32 | 注释掉 | 同时运行的轮次数，不能为负 |
 | `workspace` | object | `enabled` 为假 | 见下 | 命令和文件工具 |
-| `mcp` | list | 空 | 注释掉 | MCP 服务器 |
-| `memory` | object | 全部关闭 | 见下 | 记忆 |
+| `memory` | object | 不学习新记忆 | 注释掉 | 学习记忆用的模型 |
 | `skills_dir` | string | 空，关闭技能 | `skills` | 技能文件夹，相对路径基于 home |
 | `feishu` | object | 不启用 | 注释掉 | 飞书机器人 |
 
@@ -135,19 +138,6 @@ memory:
 
 模型以 `provider/name` 选择，这也是引擎的连接 ID。两个提供方可以有同名模型。顺序有意义：第一个提供方的第一个模型是默认模型。
 
-### permissions
-
-agent 默认的权限层，工作区和会话在上面叠加。详见 [权限](/zh/engine/permissions)。
-
-| 字段 | 类型 | 默认值 | 含义 |
-|---|---|---|---|
-| `approval` | string | 必填 | `untrusted`（严格）、`on-request`（适中）、`never`（宽松） |
-| `allow` | string list | 空 | 不问直接做，如 `run_command(git:*)` |
-| `ask` | string list | 空 | 总是先问 |
-| `deny` | string list | 空 | 永远不做 |
-
-`approval` 没有默认值。不写时 `Validate` 能过，引擎启动时报 `approval policy "" must be one of ...`。
-
 ### workspace
 
 `enabled` 打开 `run_command`、`edit_file`、`write_file`，其余字段是引擎 `workspace.Config` 的 json 标签，直接平铺在这一层。沙箱行为见 [沙箱](/zh/engine/sandbox)。
@@ -170,32 +160,13 @@ agent 默认的权限层，工作区和会话在上面叠加。详见 [权限](/
 | `env_passthrough` | string list | 空 | 不写 | 透传给命令的环境变量名 |
 | `max_output_bytes` | int | 1 MiB | 不写 | 命令输出上限，不能为负 |
 
-### mcp
-
-每项是一个服务器：命令走 stdio，或 URL 走 Streamable HTTP。
-
-| 字段 | 类型 | 含义 |
-|---|---|---|
-| `name` | string | 工具以 `<name>__<tool>` 提供。不能是 `browser`，这个名字归内置浏览器 |
-| `command` | string | stdio 服务器的命令 |
-| `args` | string list | 参数 |
-| `env` | map | 环境变量，命令还会继承后端的环境 |
-| `url` | string | HTTP 服务器的地址 |
-| `headers` | map | 随每个请求发送 |
-
-`env` 和 `headers` 的值里可以写 `${NAME}` 引用环境变量，密钥就不用写在文件里。引用的变量没设置时整份配置被拒绝。
-
-连不上的服务器被跳过，不影响启动，原因显示在能力页。
-
-界面里的校验比这张表更严：名称要匹配 `^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$` 且不含 `__`。
-
 ### memory
 
 | 字段 | 类型 | 默认值 | 模板 | 含义 |
 |---|---|---|---|---|
-| `use` | bool | `false` | `true` | 把记忆放进上下文 |
-| `generate` | bool | `false` | `false` | 从结束的轮次提炼记忆 |
-| `model` | string | 空 | 注释掉 | 提炼用的模型，`provider/name`。`generate` 为真时必填，它和这个模型共用 `calls` |
+| `model` | string | 空，不学习新记忆 | 注释掉 | 从结束的轮次学习记忆的模型，`provider/name`，必须是 `models` 里的一个。它和这个模型共用 `calls` |
+
+记忆和学习的开关在记忆页，任一个关着时这个模型都不学习。在记忆页换模型会改写这一项并重启后端，见[定时任务与记忆](/zh/app/automation#设置)。
 
 ### feishu
 
