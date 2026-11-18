@@ -37,7 +37,7 @@ const copy = {
       { value: '160 KB', label: '每个活跃会话的内存；每会话一个进程时是 20.0 MB' },
       { value: '4096', label: '一台 8 GB 的 M1 上同时活跃的会话，p50 20.9 秒，单独运行约 17 秒' },
     ],
-    numbersNote: '模型和工具都是模拟的，测的是调度和持久化，不是模型质量。这些数字在多用户、分片和沙箱接口改动之前测得，之后没有重测。',
+    numbersNote: '模型和工具都是模拟的，测的是调度和持久化，不是模型质量。这些数字测于 v0.8.3 到 v0.8.5，早于多用户、分片、沙箱接口和日志重建，之后还没有重测。',
     numbersLink: '方法和完整数据',
     productsTitle: '两个项目',
     products: [
@@ -81,7 +81,7 @@ const copy = {
       { value: '160 KB', label: 'memory per active session, against 20.0 MB with one process per session' },
       { value: '4096', label: 'active sessions on one 8 GB M1, p50 20.9 s against about 17 s alone' },
     ],
-    numbersNote: 'The model and tools are simulated, so these measure scheduling and persistence, not model quality. They predate the multi-user, shard and sandbox interface changes and have not been re-measured.',
+    numbersNote: 'The model and tools are simulated, so these measure scheduling and persistence, not model quality. They were measured on v0.8.3 to v0.8.5, before multi-user, shards, the sandbox interface and the log rebuild, and have not been re-measured since.',
     numbersLink: 'Method and full data',
     productsTitle: 'Two projects',
     products: [
