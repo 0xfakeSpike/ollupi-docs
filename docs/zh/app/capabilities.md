@@ -110,15 +110,13 @@ MCP 服务器不在 agent 命令的沙箱里。它在 `~/.ollupi` 下以你的�
 
 ## MCP 工具和审批
 
-MCP 工具和内置工具一样经过审批策略，判断依据是服务器自己声明的"只读""外部"标记：
+MCP 工具和内置工具一样经过审批策略。服务器可以给自己的工具标上"只读""不接触外部"，但这些标记是服务器自报的，应用无法验证，所以审批时不采信，每个 MCP 工具都按"会改东西"对待：
 
 | MCP 工具 | 严格 | 适中 | 宽松 |
 |---|---|---|---|
-| 声明只读，且声明不接触外部 | 直接做 | 直接做 | 直接做 |
-| 声明只读，没声明不接触外部 | 先问你 | 直接做 | 直接做 |
-| 没声明只读 | 先问你 | 先问你 | 直接做 |
+| 任何工具 | 先问你 | 先问你 | 直接做 |
 
-标记是服务器自报的，应用无法验证。对不熟悉的服务器，可以用例外规则让它的工具总是先问你。
+经常用、又确定无害的工具，可以写一条例外规则让它直接做；不想让它做的，写一条规则禁止。
 
 例外规则对 MCP 工具只能写到工具名，比如 `github__create_issue`，不能像 `run_command(git:*)` 那样在括号里限定范围；写规则时这个服务器要连着，否则规则被拒绝。审批策略和例外规则怎么设，见[审批与权限](/zh/app/permissions)。
 
@@ -129,4 +127,4 @@ MCP 工具和内置工具一样经过审批策略，判断依据是服务器自�
 | ollupi-desktop `apps/desktop/src/renderer/src/views/capabilities/` | 能力页的三个分区 |
 | ollupi-desktop `apps/desktop/src/main/backend/skills.ts` | 技能的新建、导入、保存前检查和删除 |
 | ollupi-desktop `apps/desktop/src/renderer/src/domains/mcp.ts` | MCP 服务器的读取、保存和删除 |
-| ollupi `agent/permission/policy.go` | 审批策略怎样看只读和外部标记 |
+| ollupi `policy/policy.go` | 审批策略怎样决定直接做还是先问你 |

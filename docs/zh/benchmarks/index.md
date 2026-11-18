@@ -1,46 +1,64 @@
 # 性能基准
 
-这一页讲一个 Ollupi 进程能同时服务多少会话，以及进程被杀、模型报错、定时任务扎堆时它还能不能把活干完。数据来自引擎仓库的 `bench/README.md` 与 `bench/results/`，测的是调度和持久化，不是模型质量。先读第一节再看数字：适用条件比数字本身重要。
+这一页讲一个 Ollupi 进程能同时服务多少会话，以及进程被杀、模型报错、定时任务扎堆时它还能不能把活干完。数据来自引擎仓库的 `bench/README.md` 与 `bench/results/`，测的是调度和持久化，不是模型质量。先读第一节再看数字：每个数字测于哪个引擎版本、在什么条件下测的，比数字本身重要。
 
 下一轮要测什么，见[接下来要测的](/zh/benchmarks/plan)。
 
 ## 方法与诚实边界
 
-`bench` 是引擎的一个宿主程序，和桌面端的 sidecar 一样用 `agent.New` 装配：真的 `Agent`、真的 SQLite 数据库、真的调度循环和条目写入，只有模型和工具是模拟的。
+`bench` 是引擎的一个宿主程序：真的宿主装配、真的 SQLite 数据库、真的调度和持久化，只有模型和工具是模拟的。在 v0.17.1 的代码里，它和别的宿主一样用 `host.New` 装配（`032b918`）；下面的数字测于更早的引擎，那时它经当时的入口装配。
 
 | 项目 | 做法 |
 |---|---|
-| 模型 | `bench provider`，OpenAI 兼容的假端点：耗时是延迟加减抖动，在途请求超过配额时回 429 |
-| 工具 | 立即返回的假工具，不读文件、不跑命令 |
+| 模型 | `bench provider`，OpenAI 兼容的假端点，经真实的 OpenAI 客户端访问：耗时是延迟加减抖动，在途请求超过配额时回 429 |
+| 工具 | 假工具 `bench__work`：等设定的时长后返回，不读文件、不跑命令。`steady -command` 是例外，见[写好但还没测的实验](#写好但还没测的实验) |
 | 一轮的形状 | 3 次模型调用加 2 次工具调用；默认模型 5 s ± 2 s、工具 1 s，单独跑约 17 s |
-| 机器 | Apple M1，8 核，8 GB，一个进程，一个 SQLite 数据库 |
-| 时间 | `results/` 里的数字测于 2026-11-04，每个实验一次 |
+| 机器 | Apple M1，8 核，8 GB，一个 SQLite 数据库 |
+| 引擎版本 | 见下表；没有一个数字测于 v0.17.1 |
+
+| 数字 | 测于 | 原始输出 |
+|---|---|---|
+| `steady`（六档、故障、长尾）、`mix`、`fanout`、`soak` | 2026-11-04 在空闲机器上重跑（`350df4b`），引擎代码与 v0.8.5 相同；输出随 `9a35769`（即 v0.8.5）提交 | `results/` 下的 `.txt` 与 `soak.csv` |
+| `burst` | 2026-11-02，v0.8.4（`c6da32f`） | 只有时间线 `results/burst.csv`（`7879e35`） |
+| `parked`、`isolated`、`resume` | 2026-11-02，v0.8.4（`c6da32f`） | 没有保留 |
+| `crash` | 2026-11-02，v0.8.3（`c326c52`） | 没有保留 |
 
 三件必须一起读：
 
-1. **数字测于改动之前。** README 写明 `results/` 里的数字早于多用户、分片和沙箱接口的改动，之后没有重测；`parked`、`isolated`、`burst`、`resume`、`crash` 五项更早，也没有重测。[设计决策](/zh/reference/decisions) 第 10 条记的是同一件事（`d85f978`）。
-2. **每个数字是一次运行。** 没有重复测量，没有误差范围。相邻档位的不一致就落在这个量级里：连接等待在 1536 档是 15.2 ms，在 2048 档是 6.3 ms。
-3. **模拟件不产生真实的成本。** 没有首字延迟、token 计费和模型差异；工具不碰磁盘、进程和网络。真实模型和工具花掉的时间，这一页一个数字都不包含。
+1. **数字早于之后所有的架构改动。** v0.9 到 v0.11 加了多用户、分片和沙箱接口，v0.16.0 把引擎重建为以对话日志为中心。v0.16.0 的 tag 说明写明 bench 的数字早于这次重建、要重测；`bench/README.md` 也写明 `results/` 早于多用户、分片和沙箱接口的改动，之后没有重测。[设计决策](/zh/reference/decisions) 第 10 条记的是同一件事（`d85f978`）。
+2. **还没有一个数字是用 run.sh 测的。** `bench/run.sh`（`0fddf92`，2026-11-12）按固定规则逐个跑实验，并在每份输出开头写上命令、提交、时间和机器（规则见[复现](#复现)）。`results/` 里现有的文件都没有这个文件头，都早于它；README 的实验表把每个实验标成 "not yet measured with run.sh" 或 "not yet measured"。
+3. **每个数字是一次运行，模拟件不产生真实的成本。** 没有重复测量，没有误差范围：连接等待在 1536 档是 15.2 ms，在 2048 档是 6.3 ms，相邻档位的不一致就落在这个量级里。没有首字延迟、token 计费和模型差异；假工具不碰磁盘、进程和网络。
 
-所以结论只落在调度和存储上：装得下多少会话、杀掉后能捡回多少、排队公不公平。端到端响应时间要另测。
+所以结论只落在调度和存储上，而且只对测它的那个版本成立：装得下多少会话、杀掉后能捡回多少、排队公不公平。端到端响应时间要另测；对 v0.17.1 是否成立，要等 run.sh 重测。
 
 ## 场景表
 
-| 实验 | 子命令 | 测什么 | 配置 | 结论 | 原始输出 |
+实验名是 `bench/run.sh` 里的名字，`bench/run.sh -l` 列出每个名字对应的命令。
+
+| 实验 | 命令（`bench` 之后） | 测什么 | 结论 | 测于 | 原始输出 |
 |---|---|---|---|---|---|
-| 内存 | `parked` | 停放会话的内存与磁盘，以及对同进程活跃轮次的影响 | `-n 50000 -state waiting -latency 5s -rounds 3` | 约 14 MB，活跃轮次几乎不变 | 未保留 |
-| 隔离对照 | `isolated` | 每会话一个进程的基线 | `-k 20` | 每会话 20.0 MB | 未保留 |
-| 容量 | `steady` | 闭环：上一轮结束就发下一轮 | `-c 512` 到 `-c 4096`，`slots`、`calls` 随 `c` | 4096 个时 p50 20.9 s | `results/steady-*.txt` |
-| 突发 | `burst` | 大量轮次同时提交时的排队与配额 | `-n 3000 -slots 512 -calls 256 -latency 5s -jitter 2s -tool 1s` | 无 429，1.03 倍下限 | `results/burst.csv` |
-| 唤醒与重启 | `resume` | 唤醒闲置会话到模型请求发出的时间；重启时间 | `-history 10,100,1000 -waiting 10000 -running 500` | 重启 448 ms | 未保留 |
-| 崩溃 | `crash` | 随机 `kill -9` 之后一轮能否继续 | `-n 500 -kills 30`；带租约一档 `-n 400 -kills 8 -lease 1500ms` | 960 个轮次全部完成（早于租约，和这两条命令对不上，见[恢复](#恢复)）；租约一档没有结果 | 未保留 |
-| 混合负载 | `mix` | 用户轮次、子 agent、定时任务混在一起的等待与公平性 | `-c 256`（20% 交给子 agent）、`-peak 1000`、`-slots 512`、`-calls 256` | 峰值 p50 44.1 s | `results/mix.txt` |
-| 子 agent 发散 | `fanout` | 子 agent 多于槽位时父轮次是否让出槽位 | `-parents 64 -n 8 -slots 32 -calls 256` | 576 个轮次全部完成 | `results/fanout.txt` |
-| 长跑 | `soak` | 延迟、内存、goroutine、GC 与库增长是否平稳 | `-c 256 -d 8m -every 30s -latency 1s -jitter 200ms -tool 200ms` | goroutine、WAL 平稳 | `results/soak.csv` |
+| `parked` | `parked -n 50000 -state waiting -latency 5s -rounds 3` | 停放会话的内存与磁盘，以及对同进程活跃轮次的影响 | 约 14 MB，活跃轮次几乎不变 | v0.8.4 | 未保留 |
+| `isolated` | `isolated -k 20` | 每会话一个进程的对照 | 每会话 20.0 MB | v0.8.4 | 未保留 |
+| `steady-512` … `steady-4096` | `steady -c N`，`slots`、`calls` 随 `c` | 闭环：上一轮结束就发下一轮 | 4096 个时 p50 20.9 s | v0.8.5 | `results/steady-*.txt` |
+| `steady-faults` | `steady -c 1024 -fail 0.05 -others 256` | 模型请求出错、配额被别人占用 | 0 失败，p99 28.5 s | v0.8.5 | `results/steady-faults.txt` |
+| `steady-lognormal` | `steady -c 1536 -sigma 0.6` | 模型延迟长尾 | 0 失败，p99 42.4 s | v0.8.5 | `results/steady-lognormal.txt` |
+| `steady-workspace-write`、`steady-full-access` | `steady -c 1024 -command workspace-write`（或 `full-access`） | 每次工具调用经 `run_command` 在沙箱里真跑一次 `sleep` | 还没测 | — | 无 |
+| `burst` | `burst -n 3000 -slots 512 -calls 256 -latency 5s -jitter 2s -tool 1s` | 大量轮次同时提交时的排队与配额 | 无 429，1.03 倍下限 | v0.8.4 | `results/burst.csv` |
+| `resume` | `resume`（默认 `-history 10,100,1000 -waiting 10000 -running 500`） | 唤醒闲置会话到模型请求发出的时间；重启时间 | 重启 448 ms | v0.8.4 | 未保留 |
+| `crash`、`crash-lease` | `crash -n 500 -kills 30`；`crash -n 400 -kills 8 -lease 1500ms` | 随机 `kill -9` 之后一轮能否继续；带租约时由备用进程接管 | 960 个轮次全部完成（和这两条命令对不上，见[恢复](#恢复)）；租约一档没有结果 | v0.8.3 | 未保留 |
+| `mix` | `mix`（默认 `-c 256 -delegate 0.2 -peak 1000 -slots 512 -calls 256`） | 用户轮次、子 agent、定时任务混在一起的等待与公平性 | 峰值 p50 44.1 s | v0.8.5 | `results/mix.txt` |
+| `fanout` | `fanout`（默认 `-parents 64 -n 8 -slots 32 -calls 256`） | 子 agent 多于槽位时父轮次是否让出槽位 | 576 个轮次全部完成 | v0.8.5 | `results/fanout.txt` |
+| `soak` | `soak -c 256 -d 8m -every 30s -latency 1s -jitter 200ms -tool 200ms` | 延迟、内存、goroutine、GC 与库增长是否平稳 | goroutine、WAL 平稳 | v0.8.5 | `results/soak.csv` |
+| `users`、`users-slots`、`users-limit` | `users`；加 `-user-slots 64`；再加 `-heavy-calls 64 -heavy-limit 32` | 一个分片上多个用户各用各的密钥和配额，旁边一个占满自己密钥的重度用户 | 还没测 | — | 无 |
+| `conns`、`conns-router` | `conns -n 1000,2000,4000,8000 -storm`；`conns -n 1000,2000,4000 -router -storm` | 空闲客户端连接的成本，直连分片或经路由；分片重启后的重连 | 还没测 | — | 无 |
 
 ## 关键数字
 
+下面每一节的数字都测于上表写的版本，不是 v0.17.1。
+
 ### 内存与隔离
+
+测于：`parked`、`isolated` 在 v0.8.4；"每个活跃会话"一行由 v0.8.5 的 `steady` 算出。
 
 | 项目 | 数值 | 测量条件 |
 |---|---|---|
@@ -57,9 +75,11 @@
 
 ### 容量
 
+测于：v0.8.5，2026-11-04。
+
 闭环：上一轮结束就发下一轮。每档 `slots`、`calls` 与配额都等于会话数，`refused_429=0`、`failed_turns=0`。
 
-| Active sessions | p50 | p95 | p99 | 每秒模型调用 | CPU（核） | 常驻内存 | 每轮等连接 |
+| 活跃会话 | p50 | p95 | p99 | 每秒模型调用 | CPU（核） | 常驻内存 | 每轮等连接 |
 |---|---|---|---|---|---|---|---|
 | 512 | 17.1 s | 20.4 s | 21.4 s | 72 | 0.39 | 132 MB | 2.9 ms |
 | 1024 | 17.2 s | 20.5 s | 21.6 s | 147 | 0.60 | 223 MB | 4.5 ms |
@@ -68,7 +88,7 @@
 | 3072 | 18.0 s | 22.5 s | 24.0 s | 416 | 1.39 | 570 MB | 22.8 ms |
 | 4096 | 20.9 s | 26.1 s | 27.7 s | 477 | 1.67 | 692 MB | 43.0 ms |
 
-单独跑一轮是 17.0 s（各档输出里的 `alone_s`），4096 个活跃会话时一轮慢 3.9 s。每轮 68 次读、15 次写，约 11.6 KB 磁盘。
+单独跑一轮是 17.0 s（各档输出里的 `alone_s`），4096 个活跃会话时一轮慢 3.9 s。每轮 68 次读、15 次写，约 11.6 KB 磁盘；这几个读写数字属于 v0.8.5 的存储，v0.16.0 之后每一步写的是日志记录，读写量要重测才知道。
 
 ![活跃会话数与一轮耗时的关系](/images/bench-capacity.svg)
 
@@ -76,9 +96,13 @@
 
 ### 突发
 
-3000 个轮次同时提交，槽位 512、配额 256：在途请求从未超过配额，没有 429，全部跑完的耗时是理论下限的 1.03 倍。
+测于：v0.8.4，2026-11-02。
+
+3000 个轮次同时提交，槽位 512、配额 256：在途请求从未超过配额（时间线里的峰值是 256），没有 429，全部跑完的耗时是理论下限的 1.03 倍。
 
 ### 混合负载与公平
+
+测于：v0.8.5，2026-11-04。
 
 256 个会话不停发轮次（20% 交给子 agent），中途 1000 个定时任务到期。等待指从提交到第一个模型请求发出：
 
@@ -97,9 +121,13 @@
 
 ### 子 agent 发散
 
-64 个轮次各派生 8 个子 agent，512 个子 agent 跑在 32 个槽位上：576 个轮次全部完成，耗时是理论下限的 1.11 倍，等子 agent 的父轮次都让出了槽位。
+测于：v0.8.5，2026-11-04。
+
+64 个轮次各派生 8 个子 agent，512 个子 agent 跑在 32 个槽位上：576 个轮次全部完成，耗时是理论下限的 1.11 倍，等子 agent 的父轮次都让出了槽位。当时父轮次在派生调用上等子 agent 的结果；v0.14.0 起派生立即返回，报告作为条目写回父轮次，这个实验在新机制上还没有结果。
 
 ### 故障与长尾
+
+测于：v0.8.5，2026-11-04。
 
 | 注入 | 规模 | 结果 |
 |---|---|---|
@@ -111,9 +139,11 @@
 
 ### 恢复
 
+测于：`crash` 在 v0.8.3，`resume` 在 v0.8.4，都在 2026-11-02。
+
 混合负载下（工具调用、向用户提问、派生子 agent）共 90 次随机 `kill -9`：960 个轮次全部完成，没有工具调用执行两次，被中断的调用都标成「可能已生效」。这一档把模型调用缩到 200 ms、工具调用缩到 300 ms，让中断落在每个执行阶段。
 
-这组数字的出处要单独说明：它首次出现在 `c326c52`（11-02），早于分片租约（`cd8faee`，11-05）；README 里列的两条 `crash` 命令合起来只有 38 次 kill，和 90 次对不上，也没有记录是哪几次运行得出的。带租约、由备用进程接管的那一档（`-lease 1500ms`）目前没有报告任何结果，接管延迟和接管期间的行为都还没有数字。
+这组数字的出处要单独说明：它首次出现在 `c326c52`（11-02），早于分片租约（`cd8faee`，11-05）；README 里列的两条 `crash` 命令合起来只有 38 次 kill，和 90 次对不上，也没有记录是哪几次运行得出的。带租约、由备用进程接管的那一档（`-lease 1500ms`）目前没有报告任何结果，接管延迟和接管期间的行为都还没有数字。v0.16.0 之后崩溃恢复也换了做法（没有单独的恢复流程，接手会话时把已开始、没有结果的调用记为被切断），这组数字说明不了新做法。
 
 | 项目 | 数值 | 条件 |
 |---|---|---|
@@ -125,6 +155,8 @@
 左半是唤醒耗时随历史长度的变化，右半是重启耗时。
 
 ### 长跑
+
+测于：v0.8.5，2026-11-04。
 
 256 个会话跑 8 分钟，1 s 模型调用，共 35,000 个轮次：
 
@@ -153,7 +185,7 @@
 | 3000 个轮次同时提交、配额 256 | 全部完成 | 2534 个失败 | 2181 个失败 | 2190 个失败 |
 | 运行中 `kill -9` 之后 | 全部继续，没有工具执行两次 | 进行中的轮次丢失 | 全部继续，没有工具执行两次 | 轮次标成中断 |
 
-版本：pi-coding-agent 1.4.0、pi-durable 1.4.0（实验性）、DeepSeek Harness 0.2.1-rc.5；原始输出在 `bench/compare/`。
+版本：pi-coding-agent 1.4.0、pi-durable 1.4.0（实验性）、DeepSeek Harness 0.2.1-rc.5；原始输出在 `bench/compare/`。Ollupi 一列分别来自上面的 `parked`、`steady`、`burst`、`crash`，引擎版本同上。
 
 读这张表时要知道几处口径不同：
 
@@ -162,7 +194,24 @@
 - **内存读法不同。** DeepSeek Harness 是独立进程，用 `ps` 和 `footprint` 读：同一次运行里 RSS 是每会话 30.6 KB，`phys_footprint` 是 181 KB。对照仓库选 footprint，理由是内存紧张时 macOS 会压缩页面，RSS 偏低，footprint 把压缩页也算进去。
 - **突发一行比的是并发控制，不只是调度。** Ollupi 在客户端按连接限制在途请求数，请求不会超过配额；另外三个都不限并发，只靠各自默认的重试（两个 pi 3 次、从 2 s 起指数退避，DeepSeek Harness 5 次、500 ms 到 10 s），重试用完的轮次以错误结束。
 
+## 写好但还没测的实验
+
+这几个实验的代码在 v0.17.1 里。`go test -tags sqlite_fts5 ./bench` 用秒级的规模把每个实验跑一遍，检查它要说明的事（轮次结束、没有失败、没有工具执行两次、重度用户旁边的用户没有收到 429），但不测任何数字。`bench/README.md` 把它们标成 "not yet measured"。
+
+| 实验 | 要回答的问题 | 输出 |
+|---|---|---|
+| `steady -command workspace-write`、`-command full-access` | 每次工具调用经 `run_command` 在该模式的沙箱里真跑一次 `sleep`，沙箱命令比假工具多花多少 | 和 `steady` 相同的一行 |
+| `users` | 一个分片上 32 个用户（默认）各用自己的密钥和配额、各占 8 个会话，旁边一个重度用户占着 1024 个会话，比他的密钥能服务的多；其他用户等到第一次模型请求要多久 | 其他用户与重度用户各自的等待和轮次耗时，其他用户之间的 Jain 指数，按用户分的 429 与失败轮次 |
+| `users -user-slots 64` | 每用户槽位上限（`host.Config.UserSlots`）能不能让其他用户的轮次不用等那个重度用户 | 同上 |
+| `users -user-slots 64 -heavy-calls 64 -heavy-limit 32` | 重度用户的密钥在服务商那里超额时，429 是否只落在他自己身上 | 同上 |
+| `conns -n 1000,2000,4000,8000 -storm` | 每条空闲连接（一个用户一条）给分片进程加多少常驻内存、堆、goroutine 和文件描述符，什么都不发生时心跳花多少 CPU；随后杀掉分片再拉起，客户端按协议规定的方式重连，多久全部回来 | 每档一行 `step`，最后一行 `storm` |
+| `conns -n 1000,2000,4000 -router -storm` | 同上，客户端经路由（`router.Router`）连到分片，路由和分片各是一个进程，两边的成本分别给出 | 同上，多出路由一边的数字 |
+
+`conns` 的客户端和分片在同一台机器上，先碰到的是操作系统的上限，而不是 ollupi 的：每条连接在客户端和分片各占一个文件描述符，经路由时路由再占两个；路由从同一个本地地址拨向分片，每条连接用掉一个临时端口。macOS 上一个进程最多 `kern.maxfilesperproc` 个描述符（测试机是 10,240），一个地址的临时端口是 `net.inet.ip.portrange.first` 到 `.last`（16,384 个）；Linux 上对应 `ulimit -n` 和 `net.ipv4.ip_local_port_range`。所以 run.sh 让直连测到 8000 条、经路由测到 4000 条。再多就要调高这些上限或换 Linux；`-sources` 把客户端分到更多本地地址上，macOS 上要先把这些地址加到 `lo0`。某一档被上限挡住时，输出 `stopped=not_all_connected` 和失败数，最后一个错误写到 stderr。
+
 ## 容量模型
+
+下面的推论来自 v0.8.5 的 `steady` 和 v0.8.4 的 `parked`、`burst`，对 v0.17.1 是否仍成立要等重测。
 
 能推出的：
 
@@ -179,68 +228,72 @@
 
 | 想知道的 | 为什么推不出 |
 |---|---|
+| v0.17.1 的任何数字 | 全部数字测于 v0.8.3 到 v0.8.5；之后的多用户、分片、沙箱接口和 v0.16.0 的日志重建都没有重测 |
 | 真实模型延迟下的容量 | 模拟延迟是常数加减抖动，只有 σ = 0.6 一档带长尾；首字延迟、限流窗口、按 token 计费的排队都没有 |
-| 真实工具耗时 | 工具固定 1 s（长跑 0.2 s）；文件、命令、MCP、浏览器、沙箱的耗时与阻塞不在负载里 |
+| 真实工具耗时 | 工具固定 1 s（长跑 0.2 s）；文件、命令、MCP、浏览器、沙箱的耗时与阻塞不在负载里。沙箱命令的实验写好了，还没测 |
 | 多分片下的表现 | 数字全部来自一个库、一条连接、一个进程；目录库、租约续租、备用进程接管没有测 |
-| 多用户下的开销 | 实验只用一个用户；每用户槽位计数、连接与事件推送没进负载 |
+| 多用户下的开销 | 已有结果只用一个用户；`users` 写好了，还没测 |
+| 连接的成本 | 已有结果不经网关；`conns` 写好了，还没测 |
 | 长对话的成本 | 容量表每个会话只有 3 轮历史；长跑到 138 轮时每轮 CPU 已是 34.8 ms，这部分不在容量表里 |
 
 ## 复现
 
-需要 Go 工具链，SQLite 用 `sqlite_fts5` 标签，命令在引擎仓库根目录执行：
+需要 Go 工具链，SQLite 用 `sqlite_fts5` 标签，命令在引擎仓库根目录执行。正式的测量用 `bench/run.sh`：
 
 ```bash
-go run -tags sqlite_fts5 ./bench parked -n 50000 -state waiting -latency 5s -rounds 3
-go run -tags sqlite_fts5 ./bench isolated -k 20
-go run -tags sqlite_fts5 ./bench steady -c 3072
-go run -tags sqlite_fts5 ./bench steady -c 1024 -fail 0.05 -others 256
-go run -tags sqlite_fts5 ./bench steady -c 1536 -sigma 0.6
-go run -tags sqlite_fts5 ./bench burst -n 3000 -slots 512 -calls 256 -latency 5s -jitter 2s -tool 1s
-go run -tags sqlite_fts5 ./bench resume
-go run -tags sqlite_fts5 ./bench crash -n 500 -kills 30
-go run -tags sqlite_fts5 ./bench crash -n 400 -kills 8 -lease 1500ms
-go run -tags sqlite_fts5 ./bench mix
-go run -tags sqlite_fts5 ./bench fanout
-go run -tags sqlite_fts5 ./bench soak -c 256 -d 8m -every 30s -latency 1s -jitter 200ms -tool 200ms
+bench/run.sh                     # 依次跑全部实验
+bench/run.sh -l                  # 列出实验名和各自的命令
+bench/run.sh steady-1024 crash   # 只跑这几个
 ```
 
-测量期间的纪律：
+run.sh 守着这些规则：
 
-- 一次只跑一个实验，不与其他实验、其他工程重叠；先退出 Docker Desktop 一类虚拟机，CPU 至少 60% 空闲。
-- 不合盖。合盖会让系统睡眠，`caffeinate` 拦不住，睡过的结果丢弃。
-- 每次实验在临时目录建库，跑完删掉；只有 `results/` 的文件留着。
+- 每个实验开始前，等到 Docker Desktop 没在运行、机盖开着、CPU 至少 60% 空闲、没有[对照实验](#与其他-harness-对照)在跑；条件不满足时每 30 秒再看一次，并在 stderr 说明在等什么。
+- 一次只跑一个实验，跑的时候留一个锁文件，对照实验的脚本见到它就等着；用 `caffeinate` 防止空闲睡眠。
+- 跑完查系统日志，期间睡过就丢掉结果重跑一次，两次都睡过就停下。合盖会让系统睡眠，`caffeinate` 拦不住。
+- 结果写到 `results/<实验名>.txt`，开头两行是命令，以及提交（工作区有未提交改动时注明）、开始时间和机器。
 
-耗时：`steady` 的 512、1024、1536、2048、3072、4096 六档分别 63.7 s、62.8 s、63.0 s、62.3 s、66.4 s、77.3 s（`total_s`）；`mix` 269 s（`run_s`）；`fanout` 301.2 s（`total_s`）；`soak -d 8m` 跑满 8 分钟，另有准备时间。`parked`、`isolated`、`resume`、`crash` 没留输出，耗时没有记录；`burst` 只留了时间线 `results/burst.csv`，按它是约 181 s。
+也可以直接调子命令，比如 `go run -tags sqlite_fts5 ./bench steady -c 3072`；这样不受上面的规则保护，结果也没有文件头。每次实验在临时目录建库，跑完删掉。
+
+耗时（来自已有输出）：`steady` 的 512、1024、1536、2048、3072、4096 六档分别 63.7 s、62.8 s、63.0 s、62.3 s、66.4 s、77.3 s（`total_s`）；`mix` 269 s（`run_s`）；`fanout` 301.2 s（`total_s`）；`soak -d 8m` 跑满 8 分钟，另有准备时间。`parked`、`isolated`、`resume`、`crash` 没留输出，耗时没有记录；`burst` 只留了时间线 `results/burst.csv`，按它是约 181 s。
+
+`go test -tags sqlite_fts5 ./bench` 不测数字，只用很小的规模把每个实验跑一遍；`-short` 跳过它。
 
 与其他 harness 的对照在 `bench/compare/`：`npm install --ignore-scripts`、`go build -tags sqlite_fts5 -o bench/compare/run/bench ./bench`、`./run-all.sh`（约一小时），需要 Node 22.19 或更高。
 
 ## 已知瓶颈
 
+这些现象都测于 v0.8.5（最后一行的 326 个失败测于加退避重试之前）。v0.16.0 重建了存储和运行之后没有重测，"状态"一列说的是测量当时。
+
 | 现象 | 数字 | 状态 |
 |---|---|---|
-| 库只有一条连接，读写都排队 | 4096 档每轮等连接 43.0 ms | 设计代价，不是变慢的原因 |
+| 库只有一条连接，读写都排队 | 4096 档每轮等连接 43.0 ms | 设计代价，不是变慢的原因；v0.17.1 仍是一条连接（`pkg/sqlitedb`） |
 | 活跃会话变多后一轮变慢，原因不明 | 4096 档比单独跑慢 3.9 s，在途峰值 3774（低于 4096） | **未解决**，README 写明瓶颈没找到 |
 | 历史变长拉高每轮 CPU | 12.1 ms 到 34.8 ms（8 轮到 138 轮） | **未解决**，主因是编码带完整历史的请求、每轮重读历史 |
 | 历史变长拉高常驻内存 | 99 MB 到 396 MB | **未解决**，同一现象的另一面 |
-| 每轮 68 次读、15 次写、约 11.6 KB | 三次模型调用、两次工具调用 | 设计代价（先落库再执行），未改 |
+| 每轮 68 次读、15 次写、约 11.6 KB | 三次模型调用、两次工具调用 | 设计代价（先落库再执行）；日志重建后的读写量未知 |
 | 模型请求失败导致整轮失败 | 加重试前同一负载失败 326 个轮次 | 已缓解：加重试后 0 失败 |
 
-前四项都没修，也没有提交；[设计决策](/zh/reference/decisions)第 2 条把写放大和成本随历史增长列为这条路线的代价，第 10 条记着分片改动之后没有重测。
+[设计决策](/zh/reference/decisions)第 2 条把写放大和成本随历史增长列为这条路线的代价，第 10 条记着分片改动之后没有重测。
 
 ## 代码位置
 
 | 仓库 | 路径 | 职责 |
 |---|---|---|
-| ollupi | `bench/README.md` | 实验方法、结果、局限 |
-| ollupi | `bench/main.go` | 入口、模拟模型、`parked`、CPU 与内存读取 |
-| ollupi | `bench/steady.go` | 容量实验，拉起模拟 provider 子进程 |
-| ollupi | `bench/burst.go` | 模拟 provider（配额与 429）、突发时间线 |
+| ollupi | `bench/README.md` | 实验方法、结果、局限，每个实验的原始输出在哪、测没测 |
+| ollupi | `bench/run.sh` | 按测量规则依次跑实验，给输出写文件头 |
+| ollupi | `bench/main.go` | 入口、模拟模型、经 `host.New` 装配引擎、`parked` |
+| ollupi | `bench/steady.go` | 容量实验，拉起模拟 provider 子进程；`-command` 改走 `run_command` |
+| ollupi | `bench/burst.go` | 模拟 provider（配额与 429）、假工具、突发时间线 |
 | ollupi | `bench/mix.go` | 混合负载等待统计、Jain 公平指数 |
 | ollupi | `bench/fanout.go` | 子 agent 发散、父轮次让出槽位 |
 | ollupi | `bench/crash.go` | `kill -9` 恢复、带租约的接管 |
 | ollupi | `bench/resume.go` | 唤醒与重启的计时 |
 | ollupi | `bench/soak.go` | 长跑采样：延迟、内存、goroutine、GC、库与 WAL |
 | ollupi | `bench/isolated.go` | 每会话一个进程的对照 |
+| ollupi | `bench/users.go` | 一个分片上的多个用户和一个重度用户 |
+| ollupi | `bench/conns.go` | 空闲连接的成本（直连或经路由）与重连风暴 |
 | ollupi | `bench/dbstats.go` | 每轮读写次数、读写耗时与连接等待统计 |
+| ollupi | `bench/bench_test.go` | 每个实验的冒烟测试 |
 | ollupi | `bench/results/`、`bench/compare/` | 保留的原始输出、其他 harness 的对照 |
 | ollupi | `docs/images/bench-*.svg`、`cli-vs-ollupi.svg` | 本页引用的图，构建时同步到 `/images/` |

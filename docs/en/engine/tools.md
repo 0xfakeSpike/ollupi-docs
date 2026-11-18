@@ -1,6 +1,6 @@
 # Tools
 
-Tools are the actions a model can take. The `tools` package defines what a tool is, who provides it, and which steps a call goes through. Every tool call is an item, written before it runs, so each stage of it can be read back after the process restarts.
+Tools are the actions a model can take. The `tool` package is the port a run calls tools through: how a user's set of tools is described, gives content to the permission rules, freezes what it will do, and runs. `tool/kit` is how the engine's own tools are built, with the built-in ones under `tool/builtin`. Every tool call is an item folded from the conversation log, written before it runs, so each stage of it can be read back after the process restarts.
 
 ::: info Full page in Chinese
 This page is being translated. The complete version, with every detail and code reference, is [in Chinese](/zh/engine/tools).
