@@ -90,7 +90,7 @@ skills_dir: skills
 | MCP 服务器 | **能力 → MCP**，见[技能、MCP 与工具](/zh/app/capabilities#mcp) |
 | 记忆开关、从会话中学习 | **记忆 → 全局**，见[定时任务与记忆](/zh/app/automation#设置) |
 
-从 0.7.53 之前的版本升级时，`config.yaml` 里的 `permissions`、`mcp`、`memory.use` 和 `memory.generate` 在第一次启动时自动搬进应用，再从文件里删掉，不用手改。`permissions` 只在你还没在应用里设过权限时才搬；`mcp` 里写成 `${NAME}` 的值，会换成那时登录 shell 里这个变量的值。
+0.7.53 之前的 `config.yaml` 里有 `permissions`、`mcp`、`memory.use` 和 `memory.generate`，0.7.53 第一次启动时把它们搬进了应用。跳过 0.7.53 直接升级的，后端会报这几个字段不认识：从文件里删掉它们，再到应用里重新设置。
 
 ## 字段
 
