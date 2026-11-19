@@ -155,7 +155,7 @@
 | `delete_scheduled_job` | `destructiveHint` 真 | 参数 `name` |
 | `list_scheduled_jobs` | 只读 | 这个会话的任务：`name`、`spec`、`prompt`、`times`、`runs`、`paused`、`nextRun`、`lastRun` |
 
-四个都标了 `OpenWorldHint` 为假。前三个不是只读，`on-request` 下规则没命中时会问用户，见[审批与权限](/zh/engine/permissions)。全局搜索也返回任务，协议字段仍叫 `tasks`，见[搜索](/zh/engine/search)。
+四个都标了 `OpenWorldHint` 为假。前三个不是只读，`on-request` 下规则没命中时会问用户，见[审批与权限](/zh/engine/permissions)。全局搜索也返回任务，协议字段是 `cronJobs`，见[搜索](/zh/engine/search)。
 
 ## 边界与已知问题
 

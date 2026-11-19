@@ -48,23 +48,28 @@ Ollupi 有三条互不相干的搜索路径：查自己的会话、消息、定�
 | 定时任务 | `cron_jobs.name \|\| ' ' \|\| cron_jobs.prompt` | 任务所属会话属于调用者（暂停的任务、归档会话的任务也在） | `created_at DESC, id` | `limit` |
 | 记忆 | `memories.topic` 与 `memories.text`，在 Go 里打分 | `status` 是 `active` | 分数降序，同分按 `updated_at DESC, id` | `limit` |
 
-`workspaceId` 非空时前三类都再加一条 `<列> = ?`：会话看 `threads.workspace_id`，消息和任务看所属会话的；不属于任何工作区（general）的会话、消息、任务在这个过滤下不出现。记忆换成只查这个工作区的记忆，全局记忆和 general 记忆都不查；不带 `workspaceId` 时查用户的全部记忆。
+`workspaceId` 非空时前三类都再加一条 `<列> = ?`：会话看 `threads.workspace_id`，消息和任务看所属会话的；不属于任何工作区（general）的会话、消息、任务在这个过滤下不出现。记忆查全局记忆加这个工作区的记忆，不查 general 记忆，和这个工作区的会话实际载入的一致；不带 `workspaceId` 时查用户的全部记忆。
+
+::: info 演进
+`d110977` 重写搜索时，带 `workspaceId` 的记忆只查这个工作区，漏掉了用户在哪里都看得到的全局记忆。`88fee2f` 让它同时查全局和这个工作区。
+:::
 
 ### 返回
 
-`SearchResult` 嵌入 `Found`，所以四个数组是平铺的：`threads`、`messages`、`tasks`、`memories`。定时任务在代码里叫 cron job（`store.Found.CronJobs`），协议字段仍叫 `tasks`。没有命中时是空数组，不是 `null`。
+`SearchResult` 嵌入 `Found`，所以四个数组是平铺的：`threads`、`messages`、`cronJobs`、`memories`。没有命中时是空数组，不是 `null`。
 
 | 数组 | 元素 | 带什么 |
 | --- | --- | --- |
 | `threads` | `ThreadRow` | 整行，含 `title`、`workspaceId`、归档时间；没有命中片段 |
 | `messages` | `MessageHit` | `threadId`、`title`（会话标题）、`itemId`、`turnId`、`seq`、`type`、`snippet`、`at` |
-| `tasks` | `CronJobRow` | 任务整行，加 `threadTitle`、`workspaceId`、`threadArchived`、`lastTurnId`、`lastRunAt` |
+| `cronJobs` | `CronJobRow` | 任务整行，加 `threadTitle`、`workspaceId`、`threadArchived`、`lastTurnId`、`lastRunAt` |
 | `memories` | `MemoryRow` | 记忆整行，含 `topic`、`text`、`kind`、`scope`、`status`、`sources` |
 
 `snippet` 由引擎生成，只围绕**第一个词**：在正文里按 Unicode 小写找到第一个词，取前后各 40 个字符（`snippetRunes`），把空白折叠成单个空格，两端被截断时加 `…`。所以片段一定含第一个词，其余词可能不在其中。高亮不在引擎里，引擎只返回原样的 `snippet`。字段的协议定义见[搜索协议](/zh/integrate/protocol/search)。
 
 ::: info 演进
-以前查询没有长度、词数和时间的上限，短词也走索引。`fdefa84` 加上 200 个字符、8 个词和 5 秒的上限，短于 3 个字符的词只扫调用者自己的消息。
+- 以前查询没有长度、词数和时间的上限，短词也走索引。`fdefa84` 加上 200 个字符、8 个词和 5 秒的上限，短于 3 个字符的词只扫调用者自己的消息。
+- 定时任务那一组的协议字段以前叫 `tasks`，代码里早已叫 cron job（`store.Found.CronJobs`）。`46545db`（v0.17.2）把字段改成 `cronJobs`，协议契约的 sha256 随之改变，客户端要读新名字。
 :::
 
 ## 索引与一致性
@@ -138,7 +143,7 @@ trigram 索引查不了短于 3 个字符的词，所以短词只靠第一个条
 
 `search` 的 `memories` 由 `memory.Search` 填；模型另有一个 `memory_search` 工具，上限 20 条，`query` 至少 2 个字符，查全局和本会话范围。两者共用 `searchTerms`：连续汉字切成相邻两字的重叠组合（`等待中的` → `等待`、`待中`、`中的`），其他字符按字母、数字、`_`、`-` 组词，至少 2 个字符，去重，最多 512 个。打分与排序见[记忆](/zh/engine/memory#搜索)。
 
-注意两者的范围不同：`memory_search` 总带上全局记忆；`search` 带 `workspaceId` 时只查那个工作区的记忆。
+两者都带上全局记忆，差别在另一半：`memory_search` 查本会话所在的范围（它的工作区，或 general）；`search` 带 `workspaceId` 时查那个工作区，不带时查用户的全部范围。
 
 ## 桌面端
 
@@ -157,7 +162,6 @@ trigram 索引查不了短于 3 个字符的词，所以短词只靠第一个条
 | 查询最多 200 个字符、8 个词，超过直接拒绝 | `app.MaxSearchRunes`、`app.MaxSearchTerms` |
 | 超过 5 秒返回 `searchTimedOut`，没有部分结果 | `searchTimeout` |
 | 没有分页、游标和命中总数 | `SearchParams` 只有 `query`、`workspaceId`、`limit` |
-| 带 `workspaceId` 时不查全局记忆 | `app.Search` 只把这个工作区交给 `Memories` |
 | 不做全角半角、繁简、拼音、变音符号归一化 | 代码里没有这类处理 |
 | 单个汉字查不到记忆，也调不通 `memory_search` | `searchTerms` 只产出两字以上的词；`memory_search` 的 `query` 至少 2 个字符 |
 
@@ -172,7 +176,7 @@ trigram 索引查不了短于 3 个字符的词，所以短词只靠第一个条
 | `store/sqlite/fts5.go` | 没有 FTS5 构建标签时让编译失败 |
 | `store/sqlite/owned_test.go` | 标题、消息、任务都能查到，大小写，别的用户查不到 |
 | `gateway/owned.go` | `search` 方法的处理函数 |
-| `gateway/protocol.go`、`gateway/wire.go` | 方法表、`SearchParams`、`SearchResult`、`Found`（`tasks`）、`MessageHit`、`limits`、错误码 |
+| `gateway/protocol.go`、`gateway/wire.go` | 方法表、`SearchParams`、`SearchResult`、`Found`（`cronJobs`）、`MessageHit`、`limits`、错误码 |
 | `gateway/server.go` | `defaultLimit`、`maxLimit` |
 | `memory/recall.go`、`tool/builtin/memory/memory.go` | `memory.Search`、切词与打分；`memory_search` |
 | `tool/builtin/workspace/read.go`、`walk.go`、`patterns.go` | `grep`、`glob`、walker、各项上限、`.gitignore` 和路径模式 |

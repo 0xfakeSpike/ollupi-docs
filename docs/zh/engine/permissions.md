@@ -106,7 +106,7 @@ v0.12.1 时判定在调用运行之前做（`agent/runtime/calls.go`），一批
 | `run_command(git status)` | 内容完全等于 `git status` |
 | `run_command(git:*)` | `git`，或 `git` 后接空格和任意内容 |
 | `run_command(git *)` | 同上 |
-| `read_file(src/*)` | 相对项目根的路径以 `src/` 开头，`*` 跨目录 |
+| `read_file(src/*)` | 相对项目根的路径以 `src/` 开头，`*` 跨目录。不在工作区的会话里路径是绝对路径，见[工作区](/zh/engine/workspace#工具怎样用工作区) |
 | `web_fetch(example.com)` | 主机名 |
 
 - `*` 编译成 `.*`，可以跨 `/` 和换行。结尾的 `:*` 或空格加 `*` 表示后面的部分可有可无。

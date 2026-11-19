@@ -73,10 +73,13 @@ Box 从两处来：
 - 工作区工具（`run_command`、文件工具）从 `workspace.Options` 拿：`BoxIn(caller)` 按会话开始时选的执行环境给 Box，返回 `nil` 时退回 `Box`；没配 `BoxIn` 时用 `BoxFor(user)`，每个用户一个；都没配就用 `Box`。`Box` 为空时，工作区工具按自己的配置用 `sandbox.New` 建一个本机 `Sandbox`，所有用户共用。`Box` 同时用来描述工具：工具描述里的目录和规则、`run_command` 的 schema 里有没有提权参数，都从它来。见[扩展点](/zh/integrate/extend#按会话选择环境)。
 - MCP 服务器、附件读取、工作区的增加和搬动用 `host.Config.Boxes(user)`，宿主必须提供。
 
-`Sandbox` 是本机实现，`sandbox.New(Config)` 创建。
+`Sandbox` 是本机实现，`sandbox.New(Config)` 创建。`New` 要求至少一个命令目录（`Roots`），没有就报错，所以本机 Box 的 `Roots()` 至少有一个，调用方可以直接取 `Roots()[0]`。
+
+`sandbox.Here()` 返回 `(Box, error)`：一个 `full-access` 模式、以当前用户主目录为唯一根目录的本机 Box，等于 `sandbox.New(Config{Mode: "full-access", Roots: []string{主目录}})`。它的 `Roots()` 是 `[主目录]`，`Enforced` 和 `CanEscalate` 都为假，`Summary` 写的是没有沙箱，命令以主目录为默认目录、不受限制地运行。取不到主目录时返回错误。它不是沙箱：它跑的命令在任何审批策略下都直接到达这台机器，所以只适合可以完全使用这台机器的用户（引擎 README）。引擎自带的 `bench`、`eval` 和测试给用户的就是它。
 
 ::: info 演进
-`BoxIn` 随 v0.12.0 加入（`5f64857`）。v0.16.0 起 `host.Config.Boxes` 必填，MCP 服务器和附件经它取得用户的 Box。
+- `BoxIn` 随 v0.12.0 加入（`5f64857`）。v0.16.0 起 `host.Config.Boxes` 必填，MCP 服务器和附件经它取得用户的 Box。
+- 以前 `sandbox.Here()` 返回一个空的 `Sandbox`：没有根目录，模式为空却算作受限，`Summary` 会 panic；在它里面启动的 stdio MCP 服务器取 `Roots()[0]` 时在连接的 goroutine 里 panic。`a7fda92`（v0.17.2）把它改成上面这样。
 :::
 
 ## 三种模式

@@ -2,7 +2,7 @@
 
 会话（thread）是一段连续的对话，客户端用 `thread/*` 方法新建、列出、读取、改名、标记已读、归档和删除它，用 `thread/changed` 跟上它的变化。会话里的每一轮（turn）和条目（item）见[一轮与条目](/zh/integrate/protocol/turns)。
 
-本页按引擎 v0.17.1 写。连接、认证、握手和错误码的通用规则见[网关协议](/zh/integrate/protocol)，怎样用 `seq` 把读到的一页和之后的通知对齐见[写一个客户端](/zh/integrate/client#本地状态)。
+本页按引擎 v0.17.2 写。连接、认证、握手和错误码的通用规则见[网关协议](/zh/integrate/protocol)，怎样用 `seq` 把读到的一页和之后的通知对齐见[写一个客户端](/zh/integrate/client#本地状态)。
 
 ## 概念与状态
 

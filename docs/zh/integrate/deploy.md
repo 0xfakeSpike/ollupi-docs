@@ -22,7 +22,7 @@
 
 ## 最小的多进程部署
 
-下面是一个二进制、三种角色：`-role router` 起路由器，`-role callout` 起负载均衡器的 callout，`-role shard` 起分片进程。同一个分片起两次就是一主一备。这段代码对着引擎 v0.17.1 编译并通过 `go vet`，并在一台机器上按下面的命令跑过：路由、放置、错分片拒绝、`kill -9` 后接管、正常退出后交接都和本页描述一致（callout 只编译过，没有接负载均衡器跑）。模型名和 limits 与[最小宿主](/zh/integrate/embed#最小宿主程序)相同。
+下面是一个二进制、三种角色：`-role router` 起路由器，`-role callout` 起负载均衡器的 callout，`-role shard` 起分片进程。同一个分片起两次就是一主一备。这段代码对着引擎 v0.17.2 编译并通过 `go vet`；v0.17.1 时在一台机器上按下面的命令跑过：路由、放置、错分片拒绝、`kill -9` 后接管、正常退出后交接都和本页描述一致（callout 只编译过，没有接负载均衡器跑）。模型名和 limits 与[最小宿主](/zh/integrate/embed#最小宿主程序)相同。
 
 ```go
 package main
@@ -153,7 +153,7 @@ func runShard(ctx context.Context, id, home, listen, advertise string, cat catal
 			}),
 		},
 		Permissions: policy.Settings{ApprovalPolicy: string(policy.OnRequest)},
-		Boxes:       func(string) (sandbox.Box, error) { return sandbox.Here(), nil },
+		Boxes:       func(string) (sandbox.Box, error) { return sandbox.Here() },
 		Gateway: &gateway.Options{
 			Authenticate: authenticate,
 			Admit:        member.Admit,

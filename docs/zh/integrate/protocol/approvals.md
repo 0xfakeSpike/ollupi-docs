@@ -4,7 +4,7 @@ agent 要做一件需要用户点头的事，或者要用户回答一个问题�
 
 审批策略和规则决定哪些调用要问，见[权限](/zh/integrate/protocol/permissions)；条目（`ItemRow`）本身的字段见[一轮与条目](/zh/integrate/protocol/turns#itemrow)；客户端怎样保存和去重待回答的请求，见[写一个客户端](/zh/integrate/client#审批和提问)。
 
-本页按引擎 v0.17.1 写。示例来自对着 v0.17.1 跑的一个最小宿主：`host.New` 配一个脚本化的假模型和一个非只读工具 `deploy`，审批策略为适中（`on-request`），标为"实测"。ID 和时间是当时的临时值，部分字段省略。
+本页按引擎 v0.17.2 写。示例来自对着 v0.17.1 跑的一个最小宿主：`host.New` 配一个脚本化的假模型和一个非只读工具 `deploy`，审批策略为适中（`on-request`），标为"实测"。ID 和时间是当时的临时值，部分字段省略。
 
 ## 概念与状态
 
@@ -354,11 +354,15 @@ ask 规则的意思是每次都问，所以规则触发时不给"总是允许"�
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `path` | string | 相对根目录的路径 |
+| `path` | string | 文件的路径。会话在工作区里时是相对工作区根目录的路径，客户端把它接到工作区现在的 `rootPath` 上；不在工作区时是绝对路径 |
 | `before?` | string | 原内容的 **sha256**，不是内容本身；新建文件时没有 |
 | `after` | string | 新内容的 sha256 |
 | `diff` | string | unified diff |
 | `added`、`removed` | integer | 增删的行数 |
+
+::: info 演进
+v0.17.1 及以前，不在工作区的会话里 `path` 也是相对路径（相对执行环境自己的某个根目录），客户端接不到任何目录上。`fc36bde`（v0.17.2）改成绝对路径；契约的形状没变。
+:::
 
 ### UserInputRequestParams
 

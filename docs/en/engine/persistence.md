@@ -18,5 +18,4 @@ The full page covers:
 - Tables and relations
 - Migrations
 - The migration list
-- Importing the old engine's database
 - Attachment storage

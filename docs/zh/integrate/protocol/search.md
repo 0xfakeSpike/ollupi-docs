@@ -2,7 +2,7 @@
 
 `search` 是一个方法、一次调用：按关键词同时查这个用户的会话标题、消息、定时任务和长期记忆，分四组返回。它只查引擎库里的数据，不查工作区文件（那是模型的 `grep`、`glob` 工具），也不查网页。索引、匹配的细节和全部限制见[搜索的实现](/zh/engine/search)，这里讲客户端怎样调用和解读结果。
 
-本页按引擎 v0.17.1 写，示例来自对 v0.17.1 网关的脚本试验（假模型、单用户，ID 缩短了）。
+本页按引擎 v0.17.2 写，示例来自对 v0.17.1 网关的脚本试验（假模型、单用户，ID 缩短了），任务组的字段名已按 v0.17.2 写成 `cronJobs`。
 
 ## 概念
 
@@ -21,7 +21,7 @@
 ← {"jsonrpc":"2.0","id":68,"result":{
   "threads":[{"id":"3f8c1952-…","workspaceId":"4dc76ecd-…","environmentId":"da29709a-…","title":"Deploy review","settings":{ … },"status":"active","createdAt":"2026-11-18T12:19:25.277559Z","updatedAt":"2026-11-18T12:19:27.287938Z"}],
   "messages":[{"threadId":"3f8c1952-…","title":"Deploy review","itemId":"64076a4b-…","turnId":"f92ad4cf-…","seq":2,"type":"userMessage","snippet":"Which deploy failed last week?","at":"2026-11-18T12:19:27.284544Z"}],
-  "tasks":[{"id":"81af1173-…","threadId":"bfbd192b-…","name":"deploy-report","spec":"0 9 * * 1","prompt":"Summarize last week's deploys", … ,"threadTitle":"general"}],
+  "cronJobs":[{"id":"81af1173-…","threadId":"bfbd192b-…","name":"deploy-report","spec":"0 9 * * 1","prompt":"Summarize last week's deploys", … ,"threadTitle":"general"}],
   "memories":[{"id":"m1","scope":"workspace","workspaceId":"4dc76ecd-…","topic":"deploy target","kind":"fact","text":"Deploys go to staging first, then production.", … }]}}
 ```
 
@@ -29,14 +29,14 @@
 
 ```json
 → {"jsonrpc":"2.0","id":69,"method":"search","params":{"query":"deploy week","limit":5}}
-← {"jsonrpc":"2.0","id":69,"result":{"threads":[],"messages":[ … ],"tasks":[ … ],"memories":[ … ]}}
+← {"jsonrpc":"2.0","id":69,"result":{"threads":[],"messages":[ … ],"cronJobs":[ … ],"memories":[ … ]}}
 ```
 
 再带上工作区。任务组变成空的，因为那个任务所在的会话不在这个工作区里：
 
 ```json
 → {"jsonrpc":"2.0","id":70,"method":"search","params":{"query":"deploy","workspaceId":"4dc76ecd-…"}}
-← {"jsonrpc":"2.0","id":70,"result":{"threads":[ … ],"messages":[ … ],"tasks":[],"memories":[ … ]}}
+← {"jsonrpc":"2.0","id":70,"result":{"threads":[ … ],"messages":[ … ],"cronJobs":[],"memories":[ … ]}}
 ```
 
 点一条消息命中时，客户端用 `threadId` 打开会话，再按 `seq` 定位条目：先 `thread/read` 读到包含这个 `seq` 的那一页（`beforeSeq` 传 `seq + 1`），见[会话](/zh/integrate/protocol/threads)。
@@ -55,10 +55,10 @@
 |---|---|---|---|
 | `threads` | 顶层会话的标题，包括已归档的 | 每个词都是标题的子串 | `updatedAt` 倒序 |
 | `messages` | 顶层会话里的 `userMessage` 和 `agentMessage` 的正文 | 每个词都是正文的子串 | 条目开始时间倒序 |
-| `tasks` | 定时任务的 `name` 加 `prompt` | 每个词都是子串 | `createdAt` 倒序 |
+| `cronJobs` | 定时任务的 `name` 加 `prompt` | 每个词都是子串 | `createdAt` 倒序 |
 | `memories` | `active` 记忆的 `topic` 加 `text` | 按记忆自己的切词，出现的词越多越长、分越高；`preference`、`decision` 加分 | 分数倒序，同分时新的在前 |
 
-`workspaceId` 对四组都起作用：会话、消息、任务按所属会话的工作区过滤；记忆只查这个工作区范围的记忆，不含全局记忆和不属于工作区的记忆。不给时，记忆查这个用户全部范围的。
+`workspaceId` 对四组都起作用：会话、消息、任务按所属会话的工作区过滤；记忆查全局记忆加这个工作区的记忆，和这个工作区的会话实际载入的一致，不含不属于工作区的记忆。不给时，记忆查这个用户全部范围的。
 
 记忆组不看用户的记忆开关：`memory` 关着时照样返回。
 
@@ -70,7 +70,7 @@
 | `-32017` `the search took too long; try longer or fewer words` | 5 秒内没查完 |
 
 ::: info 演进
-v0.12.1 的查询没有长度上限，也不会超时；带 `workspaceId` 时记忆组还包括全局记忆。`fdefa84` 加了 200 个字符、8 个词的上限，`bfcd398` 把这两个数写进契约，超时有了自己的错误码 `searchTimedOut`。`d110977` 重写搜索时，带工作区的记忆组只查这个工作区范围。`9b5b50b` 把 `MessageHit.threadTitle` 改名为 `title`，`tasks` 的元素换成 `CronJobRow`。
+v0.12.1 的查询没有长度上限，也不会超时；带 `workspaceId` 时记忆组还包括全局记忆。`fdefa84` 加了 200 个字符、8 个词的上限，`bfcd398` 把这两个数写进契约，超时有了自己的错误码 `searchTimedOut`。`d110977` 重写搜索时，带工作区的记忆组只查这个工作区范围，`88fee2f`（v0.17.2）把全局记忆加回来。`9b5b50b` 把 `MessageHit.threadTitle` 改名为 `title`，`tasks` 的元素换成 `CronJobRow`；`46545db`（v0.17.2）把 `tasks` 改名为 `cronJobs`，契约的 sha256 随之改变。
 :::
 
 ## 匹配的几处细节
@@ -87,7 +87,7 @@ v0.12.1 的查询没有长度上限，也不会超时；带 `workspaceId` 时记
 |---|---|---|
 | `threads` | `ThreadRow[]` | 命中的会话，字段见 [ThreadRow](/zh/integrate/protocol/threads#threadrow) |
 | `messages` | [`MessageHit[]`](#messagehit) | 命中的消息 |
-| `tasks` | `CronJobRow[]` | 命中的定时任务，字段见[定时任务](/zh/integrate/protocol/cron#cronjobrow)。字段名仍叫 `tasks` |
+| `cronJobs` | `CronJobRow[]` | 命中的定时任务，字段见[定时任务](/zh/integrate/protocol/cron#cronjobrow) |
 | `memories` | `MemoryRow[]` | 命中的记忆，字段见[记忆](/zh/integrate/protocol/memory#memoryrow) |
 
 参数类型 `SearchParams` 的字段就是上面的参数表。
@@ -108,7 +108,6 @@ v0.12.1 的查询没有长度上限，也不会超时；带 `workspaceId` 时记
 
 - **搜不到的东西。** 工具调用和它的结果、推理、压缩摘要、错误条目、附件内容、子 agent 会话都不在搜索范围内；会话只按标题匹配，不按内容。完整的限制表见[已知限制](/zh/engine/search#已知限制)。
 - **不能只搜不属于工作区的会话。** `workspaceId` 给空字符串等于不过滤，这和 `thread/list` 不同，那里空字符串表示"只列不属于工作区的"。
-- **带工作区时看不到全局记忆。** 一个工作区的会话实际会载入全局记忆，但带 `workspaceId` 的搜索不返回它们；要连全局记忆一起搜，就不给 `workspaceId`。
 - **没有分页。** 想看更多只能调大 `limit`，最多每组 100 条。
 - **只用于展示。** `search` 不和变更通知排序，结果可能比刚收到的通知旧一点，不要拿来更新本地状态。
 

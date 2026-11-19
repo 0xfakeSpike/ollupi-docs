@@ -2,7 +2,7 @@
 
 工作区（workspace）是会话（thread）挂靠的项目文件夹，执行环境（environment）是会话的命令和文件工具在哪台机器上运行。两者都在 `thread/start` 时选定，之后不再改变，客户端用 `workspace/*` 和 `environment/*` 管理它们。工作区和执行环境在引擎里怎样落到沙箱，见[工作区](/zh/engine/workspace)和[按会话选择环境](/zh/integrate/extend#按会话选择环境)。
 
-本页按引擎 v0.17.1 写。示例来自对 v0.17.1 网关的脚本试验（假模型、单用户、本机沙箱），路径和 ID 缩短了。
+本页按引擎 v0.17.2 写。示例来自对 v0.17.1 网关的脚本试验（假模型、单用户、本机沙箱），路径和 ID 缩短了。
 
 ## 概念与状态
 
@@ -266,7 +266,7 @@ v0.12.1 的 `environment/add` 遇到同名环境时返回已有的那一行，`e
 `EnvironmentRow` 不带地址或凭据。宿主要自己保存"哪个环境对应哪台机器"。
 
 ::: info 演进
-ID 和时间精度不一，是因为升级到 v0.12.0 时 migration 0007 在 SQL 里给已有用户各补了一个 `local` 环境：ID 用 `lower(hex(randomblob(16)))`，时间用 `strftime` 写到毫秒。v0.16.1 在第一次打开旧数据时把这些行原样导入新库（`28ffcc8`，代码在 `store/sqlite/legacy.go`）。
+ID 和时间精度不一，是因为升级到 v0.12.0 时 migration 0007 在 SQL 里给已有用户各补了一个 `local` 环境：ID 用 `lower(hex(randomblob(16)))`，时间用 `strftime` 写到毫秒。v0.16.1 到 v0.17.1 在第一次打开旧数据时把这些行原样导入新库（`28ffcc8`）。v0.17.2 删掉了导入（`46545db`），已经导入的行留在库里。
 :::
 
 ### EnvironmentKind

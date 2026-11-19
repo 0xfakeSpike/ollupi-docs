@@ -1,6 +1,6 @@
 # 持久化与崩溃恢复
 
-Ollupi 把每个会话（thread）存成一份只追加的日志：一条条记录写下后不再修改，轮次（turn）、条目（item）、会话在等什么、能不能运行，都由这份日志折叠得出。日志和它折叠出的结果放在一个 SQLite 库里，一个库就是一个分片（shard），分片上的用户共用它的表。每一步在执行之前先追加进日志，所以进程任何时刻退出，重启后读日志就知道"做到哪了"。这一页讲日志由哪些记录组成、怎样检查和折叠、写入和通知走哪条路、库里有哪些表、重启时怎样恢复、表结构怎样升级、旧库怎样导入，以及附件存在哪里。调度本身见[执行模型](/zh/engine/execution)。
+Ollupi 把每个会话（thread）存成一份只追加的日志：一条条记录写下后不再修改，轮次（turn）、条目（item）、会话在等什么、能不能运行，都由这份日志折叠得出。日志和它折叠出的结果放在一个 SQLite 库里，一个库就是一个分片（shard），分片上的用户共用它的表。每一步在执行之前先追加进日志，所以进程任何时刻退出，重启后读日志就知道"做到哪了"。这一页讲日志由哪些记录组成、怎样检查和折叠、写入和通知走哪条路、库里有哪些表、重启时怎样恢复、表结构怎样升级，以及附件存在哪里。调度本身见[执行模型](/zh/engine/execution)。
 
 ## 为什么这样设计
 
@@ -15,7 +15,7 @@ Ollupi 把每个会话（thread）存成一份只追加的日志：一条条记�
 代价：每一步都要写库，而且一次追加除了日志还要写物化的行；所有读写排在一条连接上；工具调用开始后进程退出，这次调用不会自动重做，生效与否交给模型和用户判断；日志只增不减，会话删除之前一直留着；migration 只能往前走。[基准](/zh/benchmarks/)里一轮约 68 次读、15 次写、11.6 KB 磁盘（三次模型调用、两次工具调用，模拟模型），是 2026-11-04 在日志重建之前测的，重建之后还没有重测。
 
 ::: info 演进
-- 以前每个条目是 `items` 表里的一行，执行过程中原地更新它的状态列；轮次也有自己的状态列。状态分散在多处写入，靠各处代码保持一致，恢复时要单独处理每种中断。v0.16.0 把引擎重建为以日志为中心：`89cbf7c` 加入 `conversation`（记录、`Check`、`View`），`6a64e78` 加入 `store` 和 `store/sqlite`，`8a8e43b` 把用户拥有的数据也放进 store，并让 feed 按提交编号。新库是 `data/store.sqlite`，旧库由 `28ffcc8` 在第一次打开时导入，见[导入旧库](#导入旧库)。
+- 以前每个条目是 `items` 表里的一行，执行过程中原地更新它的状态列；轮次也有自己的状态列。状态分散在多处写入，靠各处代码保持一致，恢复时要单独处理每种中断。v0.16.0 把引擎重建为以日志为中心：`89cbf7c` 加入 `conversation`（记录、`Check`、`View`），`6a64e78` 加入 `store` 和 `store/sqlite`，`8a8e43b` 把用户拥有的数据也放进 store，并让 feed 按提交编号。新库是 `data/store.sqlite`。`28ffcc8`（v0.16.1）让新库第一次打开时导入旧引擎的 `data/ollupi.sqlite`，`46545db`（v0.17.2）去掉了这个导入。
 - 以前调用从模型回答记下起就是 `inProgress`，崩溃后分不清没跑过和跑到一半，恢复时只能猜。`b52bde4` 拆成 `pending` 和 `inProgress`，现在的 `ToolStarted` 记录延续了这一区分。
 - 以前用 gorm 的 `AutoMigrate`，它只能加表加列，做不到的改动就得清库；`a885647` 换成编号的 SQL 步骤。
 :::
@@ -476,7 +476,7 @@ CREATE VIRTUAL TABLE items_search USING fts5(text, content='items', content_rowi
 
 ## Migration 机制
 
-表结构按编号的步骤升级，文件在 `store/sqlite/migrations/NNNN_<what>.sql`，用 `go:embed` 打进二进制。`sqlite.Open` 打开库时就执行，宿主拿到 store 时表结构已是最新。执行步骤的是 `sqlitedb.Migrate`，分片目录库和旧库导入也用它，各自带自己的一组步骤。
+表结构按编号的步骤升级，文件在 `store/sqlite/migrations/NNNN_<what>.sql`，用 `go:embed` 打进二进制。`sqlite.Open` 打开库时就执行，宿主拿到 store 时表结构已是最新。执行步骤的是 `sqlitedb.Migrate`，分片目录库也用它，带自己的一组步骤。
 
 规则：
 
@@ -515,25 +515,10 @@ flowchart TD
 | 0002 | `0002_task_runs_and_waits.sql` | `turns` 加 `cron_job` 列并从 `body` 回填，加 `turns_cron_job` 索引；`threads` 加 `own_status`，从原来的 `status` 复制，再按子会话的等待重算 `status` |
 | 0003 | `0003_learn.sql` | `settings` 加 `learn`，默认开 |
 
-::: info 演进
-0001 是 v0.16.0 新库的起点（`6a64e78`）；旧引擎的 `data/ollupi.sqlite` 有自己的二十个步骤，现在只在导入时使用。0002 随 v0.16.1 加入（`b02dbfd`），0003 随 v0.17.1 加入（`1681a3d`）。
-:::
-
-## 导入旧库
-
-`sqlite.Open` 打开一个 home 时，如果新库里还没有任何用户，而旁边有旧引擎的 `data/ollupi.sqlite`，就把它导入：
-
-1. 用 `VACUUM INTO` 从只读打开的旧库做一份快照 `data/ollupi-import.sqlite`。旧文件保持原样。
-2. 用旧引擎自己的 migration（`store/sqlite/legacy/`，0001 到 0020）把快照升到旧引擎的最后一版结构。版本为 0 的库来自 v0.8.0 之前，拒绝导入，要先用 v0.15.1 打开一次。
-3. 在新库的一个事务里写入：用户和设置（包括脱敏密钥）、执行环境、工作区、MCP 服务器、会话、定时任务、记忆，id 都保持不变。
-4. 每个会话的轮次和条目重写成日志：审批写成问过和决定过，提问写成问过和回答过，子 agent 的启动接上它的子会话。会话的时间保留旧值。
-5. 记忆提取的游标设在最后一个导入的轮次之后，所以旧会话不会被重新学习一遍。
-6. 删除快照。
-
-旧引擎没结束的轮次（比如在等审批）结束为 `interrupted`，原因是 `ended by the upgrade to ollupi v0.16.0`，它未结束的调用记为拒绝；什么都不会重跑。日志不接受的记录（`Check` 拒绝）直接跳过。导入失败时事务回滚，新库什么都没写，`Open` 返回错误，下次打开再试。
+这三步只把 v0.16.0 及以后的库往前升。`sqlite.Open` 只打开 `data/store.sqlite`，不看旧引擎（v0.16.0 之前）的 `data/ollupi.sqlite`：只有旧库的 home 打开后是空的。
 
 ::: info 演进
-v0.16.0 的发布说明写的是旧库不迁移、数据不带过来。`28ffcc8` 随 v0.16.1 加上导入。
+0001 是 v0.16.0 新库的起点（`6a64e78`），0002 随 v0.16.1 加入（`b02dbfd`），0003 随 v0.17.1 加入（`1681a3d`）。v0.16.1 到 v0.17.1 的 `sqlite.Open` 在新库还没有用户、旁边有旧引擎的 `data/ollupi.sqlite` 时把它导入（`28ffcc8`）：用旧引擎自己的二十个 migration（`store/sqlite/legacy/`）把只读快照升到最后一版结构，再在一个事务里把用户、设置、执行环境、工作区、MCP 服务器、会话、定时任务、记忆和每个会话的日志写进新库，没结束的轮次以 `interrupted` 结束。`46545db`（v0.17.2）连同那二十个步骤删掉了导入。
 :::
 
 ## 附件存储
@@ -557,8 +542,8 @@ v0.16.0 的发布说明写的是旧库不迁移、数据不带过来。`28ffcc8`
 - **流式文本会丢。** 模型输出到一半时退出，已推给界面的增量没有落库，恢复后整段重新生成。
 - **feed 不持久化。** 进程退出或连接断开期间的事件不会重发，客户端要重新读会话。事件在事务提交之后、不持有连接时发出，两个几乎同时提交的事务，事件交给订阅者的先后不一定和提交序号一致（从代码推断，没有测试覆盖），客户端按 `seq` 判断新旧。
 - **日志只增不减。** 会话删除之前，它的全部记录和物化的行一直留着，包括每次模型回答的原始记录。
-- **migration 只能往前走。** 没有回滚步骤；新版本升级过的库，旧版本拒绝打开。migration 和旧库导入在 `sqlite.Open` 里执行，早于拿分片租约，见[分片与租约](/zh/engine/sharding#边界与已知问题)。
-- **旧库导入失败会挡住启动。** `Open` 在导入失败时返回错误，修好或移走 `data/ollupi.sqlite` 之前 store 打不开。
+- **migration 只能往前走。** 没有回滚步骤；新版本升级过的库，旧版本拒绝打开。migration 在 `sqlite.Open` 里执行，早于拿分片租约，见[分片与租约](/zh/engine/sharding#边界与已知问题)。
+- **不读旧引擎的库。** v0.16.0 之前的 `data/ollupi.sqlite` 不会被读取。由此推断，要保留其中的数据，得先用 v0.16.1 到 v0.17.1 之间的版本打开一次这个 home，让它导入 `data/store.sqlite`，再换成当前版本。
 - **重建 `items` 之后要重建搜索索引。** 见 [items_search](#items-search)。
 - **附件和消息不在同一个事务里。** 文件先存、消息后提交，两者之间进程退出时，留下没有消息引用的文件，直到会话被删除才清掉。
 
@@ -576,7 +561,6 @@ v0.16.0 的发布说明写的是旧库不迁移、数据不带过来。`28ffcc8`
 | ollupi | `store/sqlite/conversations.go` | `Append`、物化、状态汇总、提交序号、视图和分页 |
 | ollupi | `store/sqlite/owned.go` | 用户、设置、工作区、执行环境、MCP 服务器、定时任务、搜索 |
 | ollupi | `store/sqlite/memories.go` | 记忆、提炼进度、已结束的轮次 |
-| ollupi | `store/sqlite/legacy.go`、`store/sqlite/legacy/` | 导入旧库，旧引擎的 migration |
 | ollupi | `store/sqlite/migrations/` | 编号的 migration，共三个 |
 | ollupi | `store/sqlite/fts5.go` | FTS5 构建检查 |
 | ollupi | `pkg/sqlitedb/sqlitedb.go` | 打开 SQLite、执行 migration |

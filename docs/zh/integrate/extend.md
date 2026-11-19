@@ -7,7 +7,7 @@
 | [每用户的模型客户端](#每用户的模型客户端) | `host.Config.ClientFor` | 所有用户共用 `Connections` 里的客户端和配额 |
 | [自己实现模型客户端](#自己实现模型客户端) | `llm.Client` 接口，放进 `Connections` 或由 `ClientFor` 返回 | 用内置的 OpenAI、Anthropic、Gemini 客户端 |
 | [自己的工具](#自己的工具) | `kit.Provider` 接口，放进 `host.Config.Tools` | 只有内置工具和用户自己的 MCP 服务器 |
-| [云沙箱](#云沙箱) | `host.Config.Boxes`，工作区工具的 `workspace.Options.BoxFor` 或 `BoxIn`；`sandbox.Machine` 接口 | `Boxes` 必填；只有本机时填 `sandbox.Here()` |
+| [云沙箱](#云沙箱) | `host.Config.Boxes`，工作区工具的 `workspace.Options.BoxFor` 或 `BoxIn`；`sandbox.Machine` 接口 | `Boxes` 必填；用户可以完全使用这台机器时填 `sandbox.Here()` |
 | [附件存储](#附件存储) | `app.Attachments` 接口 | `host.New` 固定用 `<Home>/attachments` 目录 |
 | [目录库](#目录库) | `catalog.Catalog` 接口，给 `shard.Member` 和 `router.NewLocator` | 用 `catalog.OpenSQL` 打开的 SQLite 文件 |
 | [认证](#认证) | `gateway.Options.Authenticate`，路由器的 `router.NewLocator` | 用 `Token`，只有 `default` 一个用户 |

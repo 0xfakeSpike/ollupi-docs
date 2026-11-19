@@ -2,7 +2,7 @@
 
 用户级的设置：发给模型之前要不要脱敏，记忆开不开，要不要从新的轮次里学新记忆，以及用户自己的一层权限。客户端用 `settings/read` 读、`settings/update` 改三个开关、`settings/updatePermissions` 改权限，用 `settings/changed` 跟上。脱敏识别什么、怎样替换和还原，见[脱敏](/zh/engine/redaction)；记忆怎样提炼和载入，见[记忆](/zh/integrate/protocol/memory)。
 
-本页按引擎 v0.17.1 写，示例来自对 v0.17.1 网关的脚本试验。
+本页按引擎 v0.17.2 写，示例来自对 v0.17.1 网关的脚本试验。
 
 ## 概念与状态
 

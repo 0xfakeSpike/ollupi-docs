@@ -2,7 +2,7 @@
 
 定时任务按调度表达式定时向一个会话发一条消息，到点时就是这个会话里普通的一轮。客户端用 `cron/*` 列出、新建、暂停和删除任务，用 `cron/changed` 跟上变化。调度表达式的语法和触发链路见[定时任务的实现](/zh/engine/cron)，这里只讲协议上看到的东西。
 
-本页按引擎 v0.17.1 写，示例来自对 v0.17.1 网关的脚本试验（时区 UTC，ID 缩短了）。
+本页按引擎 v0.17.2 写，示例来自对 v0.17.1 网关的脚本试验（时区 UTC，ID 缩短了）。
 
 ## 概念与状态
 
@@ -141,7 +141,7 @@ v0.12.1 里同名任务和"最多 64 个"这两种拒绝是普通错误，客户
 
 ### CronJobRow
 
-`cron/list`、`cron/create`、`cron/pause` 的结果，`cron/changed` 的 `job`，以及[搜索](/zh/integrate/protocol/search)结果的 `tasks` 都用它。
+`cron/list`、`cron/create`、`cron/pause` 的结果，`cron/changed` 的 `job`，以及[搜索](/zh/integrate/protocol/search)结果的 `cronJobs` 都用它。
 
 | 字段 | 类型 | 说明 |
 |---|---|---|

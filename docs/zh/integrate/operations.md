@@ -26,7 +26,7 @@ store: /srv/ollupi/data/store.sqlite: the database is at schema version 3, from 
 所以升级前先备份库，也别指望换回旧二进制能打开新库。分片部署时还要注意：`host.New` 在 `member.Run` 拿租约之前就打开库并迁移，新版本的备用进程一启动就会迁移持有者正在用的库。由此推断，升级一个分片时应先停掉它的全部进程，再起新版本，而不是先起新版本的备用。
 
 ::: info 演进
-v0.16.0 把引擎重建为以对话日志为中心，库换成 `data/store.sqlite`，不从旧库迁移。`b02dbfd`（v0.16.1）补上导入：一个 `Home` 第一次被新引擎打开、旁边有旧的 `data/ollupi.sqlite` 时，从它的只读快照里在一个事务中导入用户、设置、工作区、执行环境、MCP 服务器、定时任务、记忆和每个会话的日志，旧文件原样留着；旧引擎没结束的轮次以 interrupted 结束，不重跑。
+v0.16.0 把引擎重建为以对话日志为中心，库换成 `data/store.sqlite`，不从旧库迁移。`b02dbfd`（v0.16.1）补上导入：一个 `Home` 第一次被新引擎打开、旁边有旧的 `data/ollupi.sqlite` 时，从它的只读快照里在一个事务中导入用户、设置、工作区、执行环境、MCP 服务器、定时任务、记忆和每个会话的日志，旧文件原样留着；旧引擎没结束的轮次以 interrupted 结束，不重跑。`46545db`（v0.17.2）去掉了这个导入：现在只有旧库的 `Home` 打开后是空的，要带过旧数据得先用 v0.16.1 到 v0.17.1 之间的版本打开一次（从代码推断）。
 :::
 
 ## 日志
@@ -189,7 +189,7 @@ SELECT shard_id, count(*) FROM placements GROUP BY shard_id;
 | `schedule/schedule.go` | 关闭时等运行退出；运行失败或超时时把轮次判成失败 |
 | `shard/shard.go` | 续约、失去租约、`Release` |
 | `store/feed.go`、`store/store.go` | `Feed`、`Event`、`Change`、`ErrShardLost` |
-| `store/sqlite/sqlite.go`、`store/sqlite/migrations/`、`store/sqlite/legacy.go` | 打开、迁移、epoch 检查、旧库导入 |
+| `store/sqlite/sqlite.go`、`store/sqlite/migrations/` | 打开、迁移、epoch 检查 |
 | `run/run.go`、`run/model.go` | 被切断的调用、模型失败的条目和轮次失败的原因 |
 | `pkg/llm/connection.go`、`idle.go` | `safeRequestError`、3 分钟无响应 |
 | `pkg/wshub/wshub.go`、`pkg/jsonrpc/jsonrpc.go` | 准入、顶替、寿命、心跳；待发数据上限 16 MiB |

@@ -6,7 +6,7 @@ What the next round measures is on [What we measure next](/benchmarks/plan).
 
 ## Method and limits
 
-`bench` is a host program for the engine: real host assembly, a real SQLite database, real scheduling and persistence. Only the model and tools are simulated. In v0.17.1 it is assembled with `host.New` like any other host (`032b918`); the numbers below were measured on an earlier engine, assembled through the entry point of its day.
+`bench` is a host program for the engine: real host assembly, a real SQLite database, real scheduling and persistence. Only the model and tools are simulated. In v0.17.2 it is assembled with `host.New` like any other host (`032b918`); the numbers below were measured on an earlier engine, assembled through the entry point of its day.
 
 | Item | How |
 |---|---|
@@ -14,7 +14,7 @@ What the next round measures is on [What we measure next](/benchmarks/plan).
 | Tools | A fake tool, `bench__work`, that returns after a set time; no files, no commands. `steady -command` is the exception; see [Written but not yet measured](#written-but-not-yet-measured) |
 | One turn | 3 model calls and 2 tool calls; by default 5 s ± 2 s per model call and 1 s per tool call, about 17 s alone |
 | Machine | Apple M1, 8 cores, 8 GB, one SQLite database |
-| Engine version | See the table below; no number was measured on v0.17.1 |
+| Engine version | See the table below; no number was measured on v0.17.2 |
 
 | Numbers | Measured | Raw output |
 |---|---|---|
@@ -29,7 +29,7 @@ Three things to read together:
 2. **No number has been measured with run.sh yet.** `bench/run.sh` (`0fddf92`, 2026-11-12) runs the experiments one by one under fixed rules and heads each output with the command, commit, time and machine (the rules are under [Reproducing](#reproducing)). None of the files now in `results/` has that header; all of them are older. The README's table marks every experiment "not yet measured with run.sh" or "not yet measured".
 3. **Each number is one run, and the simulation costs nothing real.** No repeats, no error bars: connection wait is 15.2 ms at 1,536 sessions and 6.3 ms at 2,048, and inconsistency between neighbouring rows is of that size. No first-token delay, no token billing, no model differences; the fake tool touches no disk, processes or network.
 
-So the conclusions are about scheduling and storage only, and hold only for the version they were measured on: how many sessions fit, how much survives a kill, and whether queueing is fair. End-to-end response time needs its own measurement; whether any of this holds for v0.17.1 waits on a run.sh re-measurement.
+So the conclusions are about scheduling and storage only, and hold only for the version they were measured on: how many sessions fit, how much survives a kill, and whether queueing is fair. End-to-end response time needs its own measurement; whether any of this holds for v0.17.2 waits on a run.sh re-measurement.
 
 ## Experiments
 
@@ -54,7 +54,7 @@ Experiment names are those in `bench/run.sh`; `bench/run.sh -l` lists the comman
 
 ## Key numbers
 
-Every number in this section was measured on the version the table above gives, not on v0.17.1.
+Every number in this section was measured on the version the table above gives, not on v0.17.2.
 
 ### Memory and isolation
 
@@ -196,7 +196,7 @@ The table mixes some measures, and a reader should know where:
 
 ## Written but not yet measured
 
-The code for these experiments is in v0.17.1. `go test -tags sqlite_fts5 ./bench` runs each experiment at a size that ends in seconds and checks what it exists to show (turns end, none fail, no tool runs twice, the users beside a heavy one draw no 429), but measures nothing. `bench/README.md` marks them "not yet measured".
+The code for these experiments is in v0.17.2. `go test -tags sqlite_fts5 ./bench` runs each experiment at a size that ends in seconds and checks what it exists to show (turns end, none fail, no tool runs twice, the users beside a heavy one draw no 429), but measures nothing. `bench/README.md` marks them "not yet measured".
 
 | Experiment | Question | Output |
 |---|---|---|
@@ -211,7 +211,7 @@ The code for these experiments is in v0.17.1. `go test -tags sqlite_fts5 ./bench
 
 ## What the numbers support
 
-What follows is drawn from `steady` on v0.8.5 and `parked` and `burst` on v0.8.4; whether it still holds for v0.17.1 waits on re-measurement.
+What follows is drawn from `steady` on v0.8.5 and `parked` and `burst` on v0.8.4; whether it still holds for v0.17.2 waits on re-measurement.
 
 What follows from them:
 
@@ -228,7 +228,7 @@ What does not follow:
 
 | Question | Why the numbers cannot answer it |
 |---|---|
-| Any number for v0.17.1 | Every number was measured on v0.8.3 to v0.8.5; the multi-user, shard and sandbox interface changes and v0.16.0's log rebuild have not been re-measured |
+| Any number for v0.17.2 | Every number was measured on v0.8.3 to v0.8.5; the multi-user, shard and sandbox interface changes and v0.16.0's log rebuild have not been re-measured |
 | Capacity with real model latency | Simulated latency is a constant plus jitter, with a long tail in only one run (σ = 0.6); no first-token delay, rate-limit windows or token-billed queueing |
 | Real tool time | Tools take a fixed 1 s (0.2 s in the soak); files, commands, MCP, the browser and the sandbox are not in the load. The sandboxed-command experiment is written but not measured |
 | Behaviour across shards | Every number comes from one database, one connection and one process; the catalog, lease renewal and standby takeover were not measured |
@@ -267,7 +267,7 @@ All of these were measured on v0.8.5 (the 326 failures in the last row before ba
 
 | Symptom | Numbers | Status |
 |---|---|---|
-| The database has one connection, so reads and writes queue | 43.0 ms of connection wait per turn at 4,096 | A cost of the design; not the cause of the slowdown. v0.17.1 still opens one connection (`pkg/sqlitedb`) |
+| The database has one connection, so reads and writes queue | 43.0 ms of connection wait per turn at 4,096 | A cost of the design; not the cause of the slowdown. v0.17.2 still opens one connection (`pkg/sqlitedb`) |
 | Turns slow down with more active sessions, cause unknown | 3.9 s slower than alone at 4,096; in-flight peak 3,774 (below 4,096) | **Open**; the README states the bottleneck has not been found |
 | CPU per turn grows with history | 12.1 ms to 34.8 ms (8 to 138 turns) | **Open**; mainly encoding the request with its full history and re-reading history every turn |
 | Resident memory grows with history | 99 MB to 396 MB | **Open**; the other side of the same effect |

@@ -6,7 +6,7 @@ The rules are those of `bench/README.md`: simulated model and tools unless state
 
 | # | Experiment | Question | Status |
 |---|---|---|---|
-| 1 | Re-run on v0.17.1 with run.sh | Do the first-round numbers still hold after the log rebuild? | Script ready, not measured |
+| 1 | Re-run on v0.17.2 with run.sh | Do the first-round numbers still hold after the log rebuild? | Script ready, not measured |
 | 2 | The slowdown past 3,000 sessions | On v0.8.5, at 4,096 active sessions a turn took 3.9 s longer than alone, yet CPU, memory and connection waits did not explain it. Is it still slow after the re-run, and where does the time go? | Planned |
 | 3 | Lease takeover | When the process holding a shard is killed, how long until a standby serves it, and does any turn run a tool twice or get lost? | Written, not measured |
 | 4 | Noisy neighbours | When one user fills their key, or their key goes over its limit at the provider, how much do other users' waits and turn times change? | Written, not measured |

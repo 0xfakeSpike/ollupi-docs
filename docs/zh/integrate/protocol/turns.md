@@ -2,7 +2,7 @@
 
 一轮（turn）是交给 agent 的一件事：由一条用户消息开始，到 agent 给出回答为止。这一轮里的每一步，用户消息、回答、思考、工具调用、子 agent 的报告、压缩、记忆载入、运行时的提示、错误，都是一条条目（item）。客户端用 `turn/start`、`turn/steer`、`turn/interrupt` 驱动它，用 `turn/changed`、`item/changed` 和增量通知跟上它。
 
-本页按引擎 v0.17.1 写。会话本身见[会话](/zh/integrate/protocol/threads)，审批和提问这两种要用户回答的服务端请求见[审批与提问](/zh/integrate/protocol/approvals)，怎样把通知合进本地状态见[写一个客户端](/zh/integrate/client#本地状态)。
+本页按引擎 v0.17.2 写。会话本身见[会话](/zh/integrate/protocol/threads)，审批和提问这两种要用户回答的服务端请求见[审批与提问](/zh/integrate/protocol/approvals)，怎样把通知合进本地状态见[写一个客户端](/zh/integrate/client#本地状态)。
 
 ## 概念与状态
 

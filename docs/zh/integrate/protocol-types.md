@@ -1,6 +1,6 @@
 # 协议类型索引
 
-网关契约 `protocol.schema.json` 的全部 134 个命名类型（`$defs`，引擎 v0.17.1），以及讲它的模块页。字段、取值和例子在模块页里；所有模块共用的约定（可选字段、时间、ID）见[通用约定](/zh/integrate/protocol#通用约定)。
+网关契约 `protocol.schema.json` 的全部 134 个命名类型（`$defs`，引擎 v0.17.2），以及讲它的模块页。字段、取值和例子在模块页里；所有模块共用的约定（可选字段、时间、ID）见[通用约定](/zh/integrate/protocol#通用约定)。
 
 只做参数包装的类型（如 `ThreadRenameParams`）字段很少，模块页在对应方法的参数表里讲，没有单独的标题。几个类型的契约名和 Go 名不同，由生成器的 `defNames` 改名：`PermissionSettings`（`policy.Settings`）、`AgentRole`（`agent.Name`）、`PreparedExecution`（`workspace.Prepared`）、`UserInputRequest`（`ask.Request`）等，见[一张表分发和生成 schema](/zh/integrate/protocol#一张表分发和生成-schema)。
 

@@ -2,7 +2,7 @@
 
 客户端用 `model/list`、`tool/list`、`mcpServer/list` 知道这个用户能选哪些模型、agent 手上有哪些工具、他的 MCP 服务器配了什么、连上了没有，用 `mcpServer/set`、`mcpServer/delete` 增删改他的 MCP 服务器，用 `mcpServer/changed` 跟上。会话里的每条工具调用条目（item）按提供方和工具名解读，其中 10 个内置工具的参数或输出在契约里有类型，其余都是通用 JSON。模型怎样调用、工具怎样执行，见[模型接入](/zh/engine/models)、[工具](/zh/engine/tools)和[技能与 MCP](/zh/engine/skills-mcp)。
 
-本页按引擎 v0.17.1 写。示例来自对 v0.17.1 网关的脚本试验（假模型 `m`、单用户、本机沙箱），省略了 `"jsonrpc":"2.0"`。
+本页按引擎 v0.17.2 写。示例来自对 v0.17.1 网关的脚本试验（假模型 `m`、单用户、本机沙箱），省略了 `"jsonrpc":"2.0"`。
 
 ## 概念与状态
 
@@ -246,7 +246,7 @@ v0.12.1 只有一个子 agent 工具 `Agent`，输出不进契约。`d18618f` �
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `path` | string | 改的文件 |
+| `path` | string | 改的文件，写法同 [`FileChange.path`](/zh/integrate/protocol/approvals#filechange) |
 | `created?` | boolean | 新建的文件 |
 | `added`、`removed` | integer | 增删的行数 |
 
@@ -262,7 +262,7 @@ v0.12.1 只有一个子 agent 工具 `Agent`，输出不进契约。`d18618f` �
 
 | `ReadFileOutput` 字段 | 类型 | 说明 |
 |---|---|---|
-| `path` | string | 显示用的路径：根目录之内是相对路径 |
+| `path` | string | 显示用的路径：会话在工作区里时，工作区根目录之内是相对路径，之外是绝对路径；不在工作区时是绝对路径 |
 | `text?` | string | 带行号的文本，每行形如 `1\t# demo`；单行最多 2000 字符，总共读到约 256 KiB 为止 |
 | `startLine?`、`endLine?` | integer | 读到的行范围 |
 | `totalLines` | integer | 文件总行数 |
@@ -280,7 +280,7 @@ v0.12.1 只有一个子 agent 工具 `Agent`，输出不进契约。`d18618f` �
 
 | `GlobOutput` 字段 | 类型 | 说明 |
 |---|---|---|
-| `path` | string | 显示用的搜索目录 |
+| `path` | string | 显示用的搜索目录，写法同 `ReadFileOutput.path`；`files` 里的路径也一样 |
 | `files` | string[] | 按修改时间新的在前，最多 500 个 |
 | `truncated?` | boolean | 超过 500 个，或遍历被截断 |
 | `skipped?` | integer | 读不了或沙箱禁读而跳过的条目数 |
@@ -298,7 +298,7 @@ v0.12.1 只有一个子 agent 工具 `Agent`，输出不进契约。`d18618f` �
 
 | `GrepOutput` 字段 | 类型 | 说明 |
 |---|---|---|
-| `path` | string | 显示用的搜索路径 |
+| `path` | string | 显示用的搜索路径，写法同 `ReadFileOutput.path`；`GrepFile.path` 也一样 |
 | `files` | `GrepFile[]` | |
 | `matches` | integer | 总匹配数 |
 | `truncated?` | boolean | 显示的行超过 300 行（`files_only` 时文件超过 500 个），或遍历被截断 |
