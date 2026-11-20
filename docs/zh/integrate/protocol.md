@@ -61,7 +61,7 @@ v0.12.1 的单条入站上限是 32 MiB，一条超过 16 MiB 的回复无论队
 ## 连接模型
 
 - **每个用户最多四条连接。** 一个用户可以同时开四条连接（`Connections.PerKey`，默认 4），比如每台设备一条，每条都收到这个用户的全部变化和全部服务端请求。第五条连上时，最早的那条以 4000 `replaced by a newer connection` 关闭。
-- **心跳和寿命。** 网关每 30 秒 ping 一次，15 秒内没有 pong 就直接断开（客户端看到 1006）。每条连接在打开后 15 到 20 小时之间的随机时刻以 1001 `connection reached its age; reconnect` 关闭，低于 Google Cloud 负载均衡器保持 WebSocket 的 24 小时，同时连上的客户端也不会同时被切断。这些值都在 `Options.Connections` 里，零值时取 `gateway.DefaultConnections`。
+- **心跳和寿命。** 网关每 30 秒 ping 一次。从 ping 发出起网关一直在等这条连接的下一条消息、15 秒内却什么也没收到，就直接断开（客户端看到 1006）；网关因入站限速或积压暂停读取、或还在处理已读进来的消息时不算，这时 pong 排在没读的请求后面，客户端照旧被读得慢下来。每条连接在打开后 15 到 20 小时之间的随机时刻以 1001 `connection reached its age; reconnect` 关闭，低于 Google Cloud 负载均衡器保持 WebSocket 的 24 小时，同时连上的客户端也不会同时被切断。这些值都在 `Options.Connections` 里，零值时取 `gateway.DefaultConnections`。
 - **请求串行处理。** 网关在一个循环里按到达顺序同步执行方法，同一连接上的下一条请求要等上一条的回复写入出站队列。
 - **事件不缓存。** 连接在 `initialize` 回复之后才订阅这个用户的变化，只收到订阅之后提交的变化；断线期间的变化不补发。客户端重连后用 `thread/read` 或 `thread/resume` 读库里的状态，用回复里的 `seq` 对齐之后的通知，见[写一个客户端](/zh/integrate/client#本地状态)。
 - **通知可能先于回复。** 一次调用提交的变化在提交之后立刻进入每条连接的出站队列，而回复要等处理函数返回才入队，所以 `thread/start` 的 `thread/changed`、`turn/start` 的 `turn/changed` 和 `item/changed` 都排在各自的回复之前。客户端不能假设先收到回复。

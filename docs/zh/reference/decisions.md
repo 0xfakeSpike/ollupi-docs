@@ -35,6 +35,7 @@
 | 23 | 标识是月亮前的小狼 | 名字保留并赋予含义，标识换成可亲的小狼，图标是燕麦底 |
 | 24 | 浏览器由 Playwright 驱动 | 用成熟库读页面和操作，经进程内的 CDP 代理连到标签页，不开调试端口 |
 | 25 | 主题：石与苔之外的暮色 | 主题是一组 token；暮色的纸面光滑地浮在磨砂底色上，点缀只放空处 |
+| 27 | 存活检测走 WebSocket 心跳 | 经负载均衡器只有 ping/pong 是端到端的；读被限速或积压压住时不算失联 |
 
 ## 1. 池化 runtime
 
@@ -756,6 +757,31 @@ VS Code 的内置浏览器是同一结构：`WebContentsView` 由主进程拥有
 **依据**
 
 `packages/ui/src/theme.css`、`packages/ui/DESIGN.md` 的 2.1.2、`assets/brand/dusk.py`、`apps/desktop/src/main/appIcon.ts`、`apps/desktop/src/renderer/src/views/common/Wolf.tsx`。
+
+## 27. 存活检测走 WebSocket 心跳，读被压住时不算
+
+**背景**
+
+网关每 30 秒 ping 一次，`PongWithin`（15 秒）内没有 pong 就断开。网关又给每条连接的入站限速（每秒 50 条、突发 200），积压满 64 条时停止读取，而 pong 只在读取时才被处理。于是一个一下发来大量请求的客户端，pong 排在没读的请求后面，被当成失联用 `CloseNow` 断开，没有关闭原因。bench 的对比实验里，2048 个会话共用的一条连接就是这样被断开的。
+
+**决定**
+
+- 存活仍按 WebSocket ping/pong 判断：从 ping 发出起，网关一直在等这条连接的下一条消息、`PongWithin` 内什么也没收到，才断开（`jsonrpc.Conn.Silent`，`wshub.Serve` 的 `silent` 参数）。
+- 网关因入站限速或积压暂停读取、或还在处理已读进来的消息时，不判失联；客户端照旧被 TCP 拖慢。
+- 关闭码和协议契约不变。
+
+**放弃的方案**
+
+- 改用 TCP keepalive：云上的客户端经 Google Cloud 负载均衡器连到分片，TCP keepalive 只到负载均衡器，探不到客户端；WebSocket ping/pong 是唯一端到端的检查。
+- 读循环一直读、把限速放到读之后：只要还靠 TCP 让客户端慢下来，pong 就会排在请求后面晚到，光改读循环不够。
+
+**代价**
+
+- 读取被压住期间断掉的客户端，要等网关读完积压、重新开始等下一条消息之后，再过一个 ping 周期才被发现。
+
+**依据**
+
+`3e97634`、`cb7f93a`，`pkg/jsonrpc/jsonrpc.go`，`pkg/wshub/wshub.go`，`pkg/jsonrpc/serve_test.go`，引擎仓库的 `bench/compare/README.md`。
 
 ## 代码位置
 
