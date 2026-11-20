@@ -6,7 +6,7 @@ The [current results](/benchmarks/) were measured on v0.18.0. This page lists wh
 |---|---|---|---|
 | 1 | SQLite connection | Capacity and the long run both slow down waiting for the store's one SQLite connection. With reads on a connection of their own, or fewer reads per turn, how far does the knee above 1536 sessions move? | Planned |
 | 2 | Long history | The capacity table has 3 turns of history per session, and in the long run a turn already takes 15.7 s at 55. With 100 and 1000 turns of history filled in first, how do CPU, memory and latency grow? | Planned |
-| 3 | Scaling over shards | With 2 and 4 shard processes, does throughput grow in proportion? What does the router add? | Planned |
+| 3 | Shards on machines of their own | On one machine, 4 shards run 1.7 times the turns of 1, and the machine runs out first. With each shard on a machine of its own, does throughput grow in proportion? | Planned |
 | 4 | Real model sample | Run a small load against a real provider: how far are turn time and the ways turns fail from the simulation? | Planned |
 | 5 | Spread | Each experiment ran once. Run the same one five times: how widely do the numbers spread? | Planned |
 
@@ -16,7 +16,7 @@ The [current results](/benchmarks/) were measured on v0.18.0. This page lists wh
 
 **2. Long history.** Give `steady` an option to fill in history first, writing 100 or 1000 turns into each session before the run, and report CPU per turn, resident memory, reads and writes, and p50. `resume` already times waking a session with 10, 100 and 1000 turns of history (3.7, 8.6 and 89 ms).
 
-**3. Scaling over shards.** One process per shard, each with its own database, behind a router. Report throughput and p99 by the number of shards, and the latency the router adds. There is no experiment for this yet.
+**3. Shards on machines of their own.** `bench shards` already spreads the same sessions over several shards behind a router, runs the closed loop and reports each process's CPU, but every process runs on one machine. Next, give it an option to use shards already running on other machines (the router's `-shard` already takes any address), put each shard on a machine of its own, report throughput and p99 by the number of shards, and see how close they come to the 241 turns a second the load allows.
 
 **4. Real model sample.** Run a few dozen sessions against a real provider, to see how far the simulation's assumptions (fixed latency with jitter, no time to first token, no token limits) are from reality.
 
