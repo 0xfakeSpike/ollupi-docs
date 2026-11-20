@@ -99,7 +99,7 @@ v0.12.1 时宿主不配 `BoxFor` 就让所有用户共用 `sandbox.Here()`；v0.
 - **网络过滤靠本地代理，管不到不走代理的程序。** Seatbelt 不能按域名过滤，所以配了 `allowed_domains` 时内核只放行到本地代理端口，代理按域名放行。不读代理环境变量的程序连不上网，而不是绕过去。只开网络、不配 `allowed_domains` 时，外网完全放开。见[网络](/zh/engine/sandbox#网络)。
 - **工作区工具的本机沙箱可能不区分用户。** 工作区工具不配 `BoxFor`、`BoxIn` 时所有用户共用一个本机沙箱，读写规则对所有用户相同。多用户部署要给每个用户一台自己的机器。
 - **脱敏只认得出写好的模式。** `pkg/redact` 识别私钥、AWS 访问密钥、GitHub 令牌、`sk-` 开头的密钥、Google API 密钥、Slack 令牌、Bearer 令牌、JWT、身份证号、银行卡号、手机号、邮箱、IPv4 和 MAC 地址。其他形式的敏感值原样发给模型，比如姓名、地址、密码，以及格式不在表里的令牌。图片不处理。见[识别类型](/zh/engine/redaction#识别类型)。
-- **同分片用户的隔离靠代码。** 没有进程或库的边界，漏掉一处入口检查就能读到别人的数据。现有的保证来自入口检查和功能测试，比如 `store/sqlite/owned_test.go` 的 `TestWhatAUserOwnsIsTheirsAlone`、`tool/mcp/users_test.go` 的 `TestEachUsersServersRunInTheirMachine`；多用户下的调度公平性还没有测量，见[接下来要测的](/zh/benchmarks/plan)。
+- **同分片用户的隔离靠代码。** 没有进程或库的边界，漏掉一处入口检查就能读到别人的数据。现有的保证来自入口检查和功能测试，比如 `store/sqlite/owned_test.go` 的 `TestWhatAUserOwnsIsTheirsAlone`、`tool/mcp/users_test.go` 的 `TestEachUsersServersRunInTheirMachine`；多用户下的调度隔离靠 `UserSlots` 和每用户的模型密钥，测量见[多用户](/zh/benchmarks/#多用户)。
 - **提示注入没有专门的识别。** 工具结果、网页内容原样进入上下文（经脱敏），引擎不区分"数据"和"指令"，后果由权限和沙箱限制。
 
 ::: info 演进

@@ -25,13 +25,13 @@ Ollupi takes the approach backend services take with requests: many sessions sha
 
 The design has a price, and the manual states it rather than hiding it:
 
-- Writing every step first means more database work per turn: about 68 reads and 15 writes in the benchmark's turn.
+- Writing every step first means more database work per turn: about 126 reads and 44 writes in the benchmark's turn, all on one SQLite connection. Past about 1536 active sessions, turns slow down waiting for it.
 - Per-turn CPU grows with history, because each turn re-reads its history and encodes the full request.
 - Isolation between users on a shard is done by the engine, not by the operating system. Commands and files still go through a sandbox per user.
 
 ## What has been measured
 
-On one 8 GB M1, with a simulated model and tools: 50,000 parked sessions add about 14 MB of resident memory; each active session takes about 160 KB, against 20 MB for one process per session; 4,096 sessions are active at once with a median turn of 20.9 s against 17 s alone. The numbers, their conditions and what they do not show are on [Benchmarks](/benchmarks/). They predate the multi-user changes; the [second round](/benchmarks/plan) re-measures them and adds lease takeover, noisy neighbours and multi-shard scaling.
+On v0.18.0, on one 8 GB M1, with a simulated model and tools: 50,000 parked sessions hold 34 MB of resident memory; each active session takes about 112 KB, against 17.7 MB for one process per session; at 1536 sessions active at once a turn takes 5% longer than alone. After `kill -9` every turn finishes and no tool call runs twice. The numbers, the comparison with pi and DeepSeek Harness, their conditions and what they do not show are on [Benchmarks](/benchmarks/).
 
 ## Two projects
 
