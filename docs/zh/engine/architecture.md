@@ -50,7 +50,7 @@ Ollupi 引擎是一个 Go 库，模块路径 `github.com/0xfakeSpike/ollupi`。�
 - 记录（entry）：日志里的一条，`entries` 表的一行，写下后不再修改。
 - 轮次（turn，口语"一轮"）：交给 agent 的一件事，由 `TurnQueued` 记录开始、`TurnEnded` 记录结束，物化在 `turns` 表。
 - 条目（item）：轮次里的一步，比如一条消息、一段思考、一次工具调用，由一条或几条记录折叠而成，物化在 `items` 表。
-- 槽位（slot）：执行池里的一个运行名额，会话只有占着槽位才在运行。
+- 槽位（slot）：会话池里的一个运行名额，会话只有占着槽位才在运行。
 - 宿主（host）：导入引擎、负责装配和启动的程序；`host` 包是引擎替它写好的装配。
 
 日志、记录和投影的细节见[持久化](/zh/engine/persistence)。

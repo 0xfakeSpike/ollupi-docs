@@ -10,25 +10,26 @@ const download = `${desktopRepo}/releases/latest`
 
 const copy = {
   zh: {
-    title: '大规模个人 agent 服务的运行时',
-    lead: 'Ollupi 是一个 Go agent 框架。它不给每个 agent 开虚拟机或容器，而是池化 runtime，把每一步运行状态写进数据库。',
+    title: '池化调度 agent 的运行时',
+    lead: 'Ollupi 是一个 Go 运行时。交给它任意多个 agent 会话，它在固定的上限内调度执行，多出来的排队。每一步先写进数据库再执行，个人电脑和云上的服务都能用。',
     home: '/zh/',
-    actions: { docs: '为什么做 Ollupi', download: '下载桌面端', source: 'GitHub' },
+    actions: { docs: 'agent 需要一个池子', download: '下载桌面端', source: 'GitHub' },
     properties: [
-      { title: '随时可恢复', body: '每一步先落库再执行，调度状态不留在内存。发版、重启或崩溃之后，会话从停下的地方继续。' },
-      { title: '不活跃的会话没有成本', body: '等用户、等审批或等子 agent 的会话离开执行池，只剩数据库记录，不占内存和算力。' },
-      { title: '并发受控', body: '执行池按槽位调度，模型调用按连接限流，和服务商账户配额对齐，突发请求排队。' },
+      { title: '会话池化', body: '所有会话共享固定数量的槽位，每个用户可设上限，多出来的排队。等用户、审批或报告的会话让出槽位，只剩数据库记录。' },
+      { title: '工具调用池化', body: '下载、编译这类耗时长的调用转入后台，在工具池里执行，有自己的槽位和上限；会话不必干等，结果作为报告送回。模型调用另按服务商配额限流。' },
+      { title: '随时可恢复', body: '每一步先落库再执行。发版、重启或崩溃之后，会话从断点继续；中途断掉的工具调用标记为可能已生效，不会重复执行。' },
     ],
     compareTitle: '和逐个隔离有什么不同',
     compareHead: ['', '每个 agent 一个虚拟机或容器', 'Ollupi'],
     compare: [
       ['一个进程承载', '一个会话', '所有会话'],
       ['不活跃的会话', '进程留着，或冷启动重建', '只有数据库记录'],
-      ['等用户或审批', '进程挂起，仍占内存', '离开执行池，不占资源'],
+      ['等用户或审批', '进程挂起，仍占内存', '让出槽位，不占资源'],
       ['调度状态', '进程内存', 'SQLite'],
       ['重启之后', '进行中的工作中断', '从停下的地方继续'],
-      ['子 agent', '特殊机制或子进程', '普通会话，进同一个池'],
-      ['定时任务', '外部 cron 启动进程', '到点给会话发消息，进同一个池'],
+      ['长时间运行的工具', '占着进程等它跑完', '转入后台的工具池，不占会话的槽位'],
+      ['子 agent', '特殊机制或子进程', '普通会话，进同一个会话池'],
+      ['定时任务', '外部 cron 启动进程', '到点给会话发消息，进同一个会话池'],
     ],
     numbersTitle: '测出来的数字',
     numbers: [
@@ -41,7 +42,7 @@ const copy = {
     numbersLink: '方法和完整数据',
     productsTitle: '两个项目',
     products: [
-      { name: '引擎 ollupi', body: 'Go 库。执行池、持久化、多用户分片、沙箱、记忆、MCP，通过 WebSocket 上的 JSON-RPC 对外提供。', link: '/zh/engine/architecture', linkText: '引擎文档', source: engineRepo },
+      { name: '引擎 ollupi', body: 'Go 库。会话池和工具池、持久化、多用户分片、沙箱、记忆、MCP，通过 WebSocket 上的 JSON-RPC 对外提供。', link: '/zh/engine/architecture', linkText: '引擎文档', source: engineRepo },
       { name: '桌面端 ollupi-desktop', body: '基于引擎的 macOS 应用。内置浏览器、文件和改动面板、飞书机器人，状态存在本机。需要 macOS 12 或更新和 Apple 芯片。', link: '/zh/app/install', linkText: '上手指南', source: desktopRepo },
     ],
     notesTitle: '公开地做',

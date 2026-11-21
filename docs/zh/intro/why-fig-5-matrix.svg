@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+<defs><marker id="aS" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="24" markerHeight="24" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#64748b"/></marker><marker id="aI" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="24" markerHeight="24" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#4f46e5"/></marker><marker id="aR" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="24" markerHeight="24" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#e11d48"/></marker><marker id="aF" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="24" markerHeight="24" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#cbd5e1"/></marker></defs>
+<style>text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #1e1b4b; } .t { font-size: 56px; font-weight: 800; } .k { font-size: 44px; font-weight: 800; } .m { font-size: 34px; font-weight: 700; } .b { font-size: 30px; fill: #334155; } .s { font-size: 26px; fill: #64748b; } .f { font-size: 22px; fill: #94a3b8; }</style>
+<rect width="1600" height="900" fill="#ffffff"/>
+<text class="t" x="80" y="118" style="font-size:56.0px">各方案满足哪几个条件</text>
+<line x1="80" y1="828" x2="1520" y2="828" stroke="#e2e8f0" stroke-width="2"/>
+<text class="f" x="80" y="866">图 5 · 灰：未测、需自建或不适用。依据见正文</text>
+<text class="f" x="1520" y="866" text-anchor="end">agent 需要一个池子</text>
+<circle cx="486.0" cy="176.0" r="18" fill="#4f46e5" stroke="#ffffff" stroke-width="4"/>
+<text x="486.0" y="183.2" text-anchor="middle" style="font-size:21px;font-weight:800;fill:#ffffff">1</text>
+<text class="s" x="512.0" y="186.0" text-anchor="start" style="fill:#1e1b4b;font-weight:700">统一调度，</text>
+<text class="s" x="512.0" y="220.0" text-anchor="start" style="fill:#1e1b4b;font-weight:700">有资源上限？</text>
+<circle cx="751.0" cy="176.0" r="18" fill="#4f46e5" stroke="#ffffff" stroke-width="4"/>
+<text x="751.0" y="183.2" text-anchor="middle" style="font-size:21px;font-weight:800;fill:#ffffff">2</text>
+<text class="s" x="777.0" y="186.0" text-anchor="start" style="fill:#1e1b4b;font-weight:700">运行时共享，</text>
+<text class="s" x="777.0" y="220.0" text-anchor="start" style="fill:#1e1b4b;font-weight:700">只隔离命令？</text>
+<circle cx="1016.0" cy="176.0" r="18" fill="#4f46e5" stroke="#ffffff" stroke-width="4"/>
+<text x="1016.0" y="183.2" text-anchor="middle" style="font-size:21px;font-weight:800;fill:#ffffff">3</text>
+<text class="s" x="1042.0" y="186.0" text-anchor="start" style="fill:#1e1b4b;font-weight:700">状态在进程外，</text>
+<text class="s" x="1042.0" y="220.0" text-anchor="start" style="fill:#1e1b4b;font-weight:700">重启可恢复？</text>
+<circle cx="1281.0" cy="176.0" r="18" fill="#4f46e5" stroke="#ffffff" stroke-width="4"/>
+<text x="1281.0" y="183.2" text-anchor="middle" style="font-size:21px;font-weight:800;fill:#ffffff">4</text>
+<text class="s" x="1307.0" y="186.0" text-anchor="start" style="fill:#1e1b4b;font-weight:700">唤醒时不重复</text>
+<text class="s" x="1307.0" y="220.0" text-anchor="start" style="fill:#1e1b4b;font-weight:700">执行命令？</text>
+<text class="b" x="80.0" y="292.0" text-anchor="start" style="fill:#1e1b4b">每个 agent 一台虚拟机</text>
+<rect x="466.0" y="252.0" width="253.0" height="60.0" rx="12" fill="#fff1f2" stroke="#e11d48" stroke-width="3"/>
+<circle cx="566.5" cy="282.0" r="16" fill="#e11d48"/>
+<path d="M560.5,276.0 L572.5,288.0 M572.5,276.0 L560.5,288.0" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+<text class="b" x="594.5" y="292.0" text-anchor="start" style="fill:#334155;font-weight:700">否</text>
+<rect x="731.0" y="252.0" width="253.0" height="60.0" rx="12" fill="#fff1f2" stroke="#e11d48" stroke-width="3"/>
+<circle cx="831.5" cy="282.0" r="16" fill="#e11d48"/>
+<path d="M825.5,276.0 L837.5,288.0 M837.5,276.0 L825.5,288.0" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+<text class="b" x="859.5" y="292.0" text-anchor="start" style="fill:#334155;font-weight:700">否</text>
+<rect x="996.0" y="252.0" width="253.0" height="60.0" rx="12" fill="#fff1f2" stroke="#e11d48" stroke-width="3"/>
+<circle cx="1096.5" cy="282.0" r="16" fill="#e11d48"/>
+<path d="M1090.5,276.0 L1102.5,288.0 M1102.5,276.0 L1090.5,288.0" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+<text class="b" x="1124.5" y="292.0" text-anchor="start" style="fill:#334155;font-weight:700">否</text>
+<rect x="1261.0" y="252.0" width="253.0" height="60.0" rx="12" fill="#fff1f2" stroke="#e11d48" stroke-width="3"/>
+<circle cx="1361.5" cy="282.0" r="16" fill="#e11d48"/>
+<path d="M1355.5,276.0 L1367.5,288.0 M1367.5,276.0 L1355.5,288.0" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+<text class="b" x="1389.5" y="292.0" text-anchor="start" style="fill:#334155;font-weight:700">否</text>
+<text class="b" x="80.0" y="368.0" text-anchor="start" style="fill:#1e1b4b">每个会话一个进程</text>
+<rect x="466.0" y="328.0" width="253.0" height="60.0" rx="12" fill="#fff1f2" stroke="#e11d48" stroke-width="3"/>
+<circle cx="566.5" cy="358.0" r="16" fill="#e11d48"/>
+<path d="M560.5,352.0 L572.5,364.0 M572.5,352.0 L560.5,364.0" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+<text class="b" x="594.5" y="368.0" text-anchor="start" style="fill:#334155;font-weight:700">否</text>
+<rect x="731.0" y="328.0" width="253.0" height="60.0" rx="12" fill="#fff1f2" stroke="#e11d48" stroke-width="3"/>
+<circle cx="831.5" cy="358.0" r="16" fill="#e11d48"/>
+<path d="M825.5,352.0 L837.5,364.0 M837.5,352.0 L825.5,364.0" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+<text class="b" x="859.5" y="368.0" text-anchor="start" style="fill:#334155;font-weight:700">否</text>
+<rect x="996.0" y="328.0" width="253.0" height="60.0" rx="12" fill="#f1f5f9" stroke="none" stroke-width="3"/>
+<text class="s" x="1122.5" y="367.4" text-anchor="middle" style="fill:#64748b">未测</text>
+<rect x="1261.0" y="328.0" width="253.0" height="60.0" rx="12" fill="#f1f5f9" stroke="none" stroke-width="3"/>
+<text class="s" x="1387.5" y="367.4" text-anchor="middle" style="fill:#64748b">未测</text>
+<text class="b" x="80.0" y="444.0" text-anchor="start" style="fill:#1e1b4b">一个进程承载多个会话</text>
+<rect x="466.0" y="404.0" width="253.0" height="60.0" rx="12" fill="#fff1f2" stroke="#e11d48" stroke-width="3"/>
+<circle cx="566.5" cy="434.0" r="16" fill="#e11d48"/>
+<path d="M560.5,428.0 L572.5,440.0 M572.5,428.0 L560.5,440.0" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+<text class="b" x="594.5" y="444.0" text-anchor="start" style="fill:#334155;font-weight:700">否</text>
+<rect x="731.0" y="404.0" width="253.0" height="60.0" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="3"/>
+<circle cx="831.5" cy="434.0" r="16" fill="#0d9488"/>
+<path d="M824.8,434.0 L829.5,439.3 L838.8,428.7" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="b" x="859.5" y="444.0" text-anchor="start" style="fill:#334155;font-weight:700">是</text>
+<rect x="996.0" y="404.0" width="253.0" height="60.0" rx="12" fill="#fff1f2" stroke="#e11d48" stroke-width="3"/>
+<circle cx="1096.5" cy="434.0" r="16" fill="#e11d48"/>
+<path d="M1090.5,428.0 L1102.5,440.0 M1102.5,428.0 L1090.5,440.0" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+<text class="b" x="1124.5" y="444.0" text-anchor="start" style="fill:#334155;font-weight:700">否</text>
+<rect x="1261.0" y="404.0" width="253.0" height="60.0" rx="12" fill="#f1f5f9" stroke="none" stroke-width="3"/>
+<text class="s" x="1387.5" y="443.4" text-anchor="middle" style="fill:#64748b">不续跑</text>
+<text class="b" x="80.0" y="520.0" text-anchor="start" style="fill:#1e1b4b">pi-durable</text>
+<rect x="466.0" y="480.0" width="253.0" height="60.0" rx="12" fill="#fff1f2" stroke="#e11d48" stroke-width="3"/>
+<circle cx="566.5" cy="510.0" r="16" fill="#e11d48"/>
+<path d="M560.5,504.0 L572.5,516.0 M572.5,504.0 L560.5,516.0" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+<text class="b" x="594.5" y="520.0" text-anchor="start" style="fill:#334155;font-weight:700">否</text>
+<rect x="731.0" y="480.0" width="253.0" height="60.0" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="3"/>
+<circle cx="831.5" cy="510.0" r="16" fill="#0d9488"/>
+<path d="M824.8,510.0 L829.5,515.3 L838.8,504.7" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="b" x="859.5" y="520.0" text-anchor="start" style="fill:#334155;font-weight:700">是</text>
+<rect x="996.0" y="480.0" width="253.0" height="60.0" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="3"/>
+<circle cx="1096.5" cy="510.0" r="16" fill="#0d9488"/>
+<path d="M1089.8,510.0 L1094.5,515.3 L1103.8,504.7" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="b" x="1124.5" y="520.0" text-anchor="start" style="fill:#334155;font-weight:700">是</text>
+<rect x="1261.0" y="480.0" width="253.0" height="60.0" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="3"/>
+<circle cx="1361.5" cy="510.0" r="16" fill="#0d9488"/>
+<path d="M1354.8,510.0 L1359.5,515.3 L1368.8,504.7" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="b" x="1389.5" y="520.0" text-anchor="start" style="fill:#334155;font-weight:700">是</text>
+<text class="b" x="80.0" y="596.0" text-anchor="start" style="fill:#1e1b4b">持久化执行框架</text>
+<rect x="466.0" y="556.0" width="253.0" height="60.0" rx="12" fill="#f1f5f9" stroke="none" stroke-width="3"/>
+<text class="s" x="592.5" y="595.4" text-anchor="middle" style="fill:#64748b">需自建</text>
+<rect x="731.0" y="556.0" width="253.0" height="60.0" rx="12" fill="#f1f5f9" stroke="none" stroke-width="3"/>
+<text class="s" x="857.5" y="595.4" text-anchor="middle" style="fill:#64748b">需自建</text>
+<rect x="996.0" y="556.0" width="253.0" height="60.0" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="3"/>
+<circle cx="1096.5" cy="586.0" r="16" fill="#0d9488"/>
+<path d="M1089.8,586.0 L1094.5,591.3 L1103.8,580.7" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="b" x="1124.5" y="596.0" text-anchor="start" style="fill:#334155;font-weight:700">是</text>
+<rect x="1261.0" y="556.0" width="253.0" height="60.0" rx="12" fill="#fff1f2" stroke="#e11d48" stroke-width="3"/>
+<circle cx="1361.5" cy="586.0" r="16" fill="#e11d48"/>
+<path d="M1355.5,580.0 L1367.5,592.0 M1367.5,580.0 L1355.5,592.0" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+<text class="b" x="1389.5" y="596.0" text-anchor="start" style="fill:#334155;font-weight:700">否</text>
+<text class="b" x="80.0" y="672.0" text-anchor="start" style="fill:#1e1b4b">Cloudflare</text>
+<rect x="466.0" y="632.0" width="253.0" height="60.0" rx="12" fill="#f1f5f9" stroke="none" stroke-width="3"/>
+<text class="s" x="592.5" y="671.4" text-anchor="middle" style="fill:#64748b">需自建</text>
+<rect x="731.0" y="632.0" width="253.0" height="60.0" rx="12" fill="#f1f5f9" stroke="none" stroke-width="3"/>
+<text class="s" x="857.5" y="671.4" text-anchor="middle" style="fill:#64748b">需自建</text>
+<rect x="996.0" y="632.0" width="253.0" height="60.0" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="3"/>
+<circle cx="1096.5" cy="662.0" r="16" fill="#0d9488"/>
+<path d="M1089.8,662.0 L1094.5,667.3 L1103.8,656.7" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="b" x="1124.5" y="672.0" text-anchor="start" style="fill:#334155;font-weight:700">是</text>
+<rect x="1261.0" y="632.0" width="253.0" height="60.0" rx="12" fill="#f1f5f9" stroke="none" stroke-width="3"/>
+<text class="s" x="1387.5" y="671.4" text-anchor="middle" style="fill:#64748b">需自建</text>
+<text class="b" x="80.0" y="748.0" text-anchor="start" style="fill:#4f46e5;font-weight:700">Ollupi</text>
+<rect x="466.0" y="708.0" width="253.0" height="60.0" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="3"/>
+<circle cx="566.5" cy="738.0" r="16" fill="#0d9488"/>
+<path d="M559.8,738.0 L564.5,743.3 L573.8,732.7" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="b" x="594.5" y="748.0" text-anchor="start" style="fill:#334155;font-weight:700">是</text>
+<rect x="731.0" y="708.0" width="253.0" height="60.0" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="3"/>
+<circle cx="831.5" cy="738.0" r="16" fill="#0d9488"/>
+<path d="M824.8,738.0 L829.5,743.3 L838.8,732.7" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="b" x="859.5" y="748.0" text-anchor="start" style="fill:#334155;font-weight:700">是</text>
+<rect x="996.0" y="708.0" width="253.0" height="60.0" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="3"/>
+<circle cx="1096.5" cy="738.0" r="16" fill="#0d9488"/>
+<path d="M1089.8,738.0 L1094.5,743.3 L1103.8,732.7" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="b" x="1124.5" y="748.0" text-anchor="start" style="fill:#334155;font-weight:700">是</text>
+<rect x="1261.0" y="708.0" width="253.0" height="60.0" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="3"/>
+<circle cx="1361.5" cy="738.0" r="16" fill="#0d9488"/>
+<path d="M1354.8,738.0 L1359.5,743.3 L1368.8,732.7" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="b" x="1389.5" y="748.0" text-anchor="start" style="fill:#334155;font-weight:700">是</text>
+</svg>

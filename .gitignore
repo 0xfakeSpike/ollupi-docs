@@ -7,3 +7,6 @@ docs/.vitepress/cache
 docs/public/images
 docs/public/logo
 docs/.vitepress/drift.json
+# Locally installed agent skills; the repo tracks only the one it was built with.
+.claude/skills/*
+!.claude/skills/x-article/

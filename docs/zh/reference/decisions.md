@@ -6,7 +6,7 @@
 
 - 引擎（ollupi）的提交直接写哈希，如 `acfb8e4`。桌面端（ollupi-desktop）的提交写成 `desktop@729225b`。
 - 已删除的文档写成"文件名（提交）"，表示在该提交里还能读到，如 `docs/deepening-directions.md`（`05ef4b0` 的父提交）。
-- 引用的基准数字都来自 `bench/README.md`。这些数字是模拟模型和模拟工具跑出来的，在多用户、分片和沙箱接口改动之前测的，之后没有重测。
+- 引用的基准数字都来自 `bench/README.md`。这些数字是模拟模型和模拟工具跑出来的，在多用户、分片、沙箱接口和日志重建（第 26 条）之前测的，之后没有重测。
 
 | # | 决策 | 一句话 |
 |---|---|---|
@@ -35,6 +35,7 @@
 | 23 | 标识是月亮前的小狼 | 名字保留并赋予含义，标识换成可亲的小狼，图标是燕麦底 |
 | 24 | 浏览器由 Playwright 驱动 | 用成熟库读页面和操作，经进程内的 CDP 代理连到标签页，不开调试端口 |
 | 25 | 主题：石与苔之外的暮色 | 主题是一组 token；暮色的纸面光滑地浮在磨砂底色上，点缀只放空处 |
+| 26 | 以会话日志为中心重建 | 会话是只追加的日志，状态从日志折叠，变化经 feed 通知 |
 | 27 | 存活检测走 WebSocket 心跳 | 经负载均衡器只有 ping/pong 是端到端的；读被限速或积压压住时不算失联 |
 
 ## 1. 池化 runtime
@@ -97,6 +98,10 @@
 
 `acfb8e4`、`b52bde4`，`repo/db.go`，`repo/items.go`，`agent/runtime/execute.go`，`bench/README.md`。
 
+**之后**
+
+v0.16.0 起状态不再写在条目的状态列里，而是记在只追加的会话日志里：调用开始执行是一条 `ToolStarted` 记录，延续了 `pending` 与 `inProgress` 的区分。`RecoverItems` 没有了，一次运行开始时先关掉上一次运行留下的、已开始却没有结果的调用。上面写放大的数字测于重建之前。见第 26 条和[持久化与崩溃恢复](/zh/engine/persistence)。
+
 ## 3. 无内存调度状态
 
 **背景**
@@ -130,6 +135,10 @@
 **依据**
 
 `021777e`、`6fe9fcd`、`bca8b52`、`5a91c47`，`agent/loop.go`，`agent/schedule.go`，`repo/turns.go`。
+
+**之后**
+
+v0.16.0 起调度器只从 store 的 feed 得知哪些会话变得可以运行（`3c3ed62`），事件循环和 `reconcile` 都没有了。内存里仍只有哪个会话占着槽位；`admit` 按空闲槽位，从 `threads` 表上记下的"变为可运行的时刻"里取会话。见第 26 条和[执行模型](/zh/engine/execution)。
 
 ## 4. 两层并发
 
@@ -758,6 +767,47 @@ VS Code 的内置浏览器是同一结构：`WebContentsView` 由主进程拥有
 
 `packages/ui/src/theme.css`、`packages/ui/DESIGN.md` 的 2.1.2、`assets/brand/dusk.py`、`apps/desktop/src/main/appIcon.ts`、`apps/desktop/src/renderer/src/views/common/Wolf.tsx`。
 
+## 26. 以会话日志为中心重建
+
+**背景**
+
+v0.15 时，一个会话的状态分写在几处：轮次和条目在 `turns`、`items` 表里各有状态列，执行中原地更新；谁改了状态，谁自己发事件（`agent/event` 的 `OnEvent` 回调，11-17 上午 `a9026ed` 改成每个连接订阅的事件总线）；重启时 `RecoverItems` 按条目状态逐类处理，再走调度器的 `recover`（第 2、3 条）。
+
+重建之前几天的改动都朝"一轮的状态从条目读出来"推：`fdefa84`（11-16）让一轮按条目一步步运行、每步之后重读条目和权限；11-14 有一次无状态 runtime 的重写（`766cbfa` 到 `ca51712`），当天由 `4b3ae71` 撤回，提交里没写撤回的原因。
+
+仓库里没有一份专门写重建动机的文字。上面的背景是从重建前后的提交推出来的。
+
+**决定**
+
+- **会话是一份只追加的日志**（`89cbf7c`）。日志由 `conversation.Entry` 组成：轮次排队和结束、消息、推理、模型回答和失败、工具调用的每一步（提出、请求审批、决定、开始、提问、回答、结果）、子 agent 的派生和报告、压缩、召回的记忆。记录写下后不再修改。
+- **状态是折叠出来的。** 轮次、条目、当前轮次在等什么、会话能不能运行，都由 `conversation.View.Apply` 从日志算出来。`turns`、`items` 表和 `threads` 的几列只是物化，为了查询，在追加的同一个事务里写下。
+- **一条写路径。** 所有写入都在 `store.Update` 的一个事务里，每条记录先过 `conversation.Check`，接不上就整个事务失败（`6a64e78`）。
+- **一条通知路径。** 提交之后，变化作为事件发到 store 的 feed 上，按提交编号（`8a8e43b`）。调度器（`3c3ed62`）、网关（`9b5b50b`）和记忆提取只从 feed 得知变化，写的一方不通知任何人。
+- **规则是纯函数。** `conversation`、`agent`（`Next`，`6b1c5cb`）、`policy`（`d1b1463`）只读传进来的视图，不导入 `store`。
+- **恢复不是另一条路径。** 一次运行开始时，先关掉上一次运行留下的、已开始却没有结果的调用。`3c3ed62` 的提交说明写明这就是全部的崩溃恢复。
+- 新库 `data/store.sqlite` 从新的表结构开始，旧引擎在 `13a3637` 整个删除。
+
+**放弃的方案**
+
+| 方案 | 存在于 | 移除 |
+|---|---|---|
+| 状态写在各自的表里，原地更新；写的一方自己发事件 | v0.15.1 及以前 | `13a3637` |
+| 在旧结构上逐步收拾：事件总线、`permission.Manager`、精简 `agent/service` | 11-17 上午的 `a9026ed`、`5a09546`、`eafc057` 等 | 同日由 `13a3637` 随旧引擎删除 |
+
+**代价**
+
+- 每次追加除了日志本身，还要写物化的行；所有读写仍排在一条连接上。
+- 每一步都把整个会话的投影重读一遍，历史越长，每一步读得越多。
+- feed 的订阅回调在提交者的 goroutine 上同步执行，回调一慢，写的一方跟着慢。
+- 日志只增不减，会话删除之前一直留着。
+- 协议的通知全部换掉（`thread/changed`、`turn/changed`、`item/changed`，各带提交序号），客户端必须跟着改。
+- 旧库：v0.16.0 的 tag 说明写明不迁移；第二天 `28ffcc8` 改为第一次打开时整份导入，没结束的轮次记为被升级中断，不重跑。
+- 基准数字全部早于这次重建。v0.16.0 的 tag 说明写明要重测，到 v0.17.1 还没有重测。
+
+**依据**
+
+`89cbf7c`、`d1b1463`、`6b1c5cb`、`6a64e78`、`8a8e43b`、`cf4141e`、`3c3ed62`、`d110977`、`9b5b50b`、`18d6757`、`13a3637`、`28ffcc8`，v0.16.0 的 tag 说明，`conversation/`，`store/store.go`，`store/sqlite/`，`schedule/schedule.go`，`run/run.go`，引擎仓库的 `docs/lifecycle.md`。
+
 ## 27. 存活检测走 WebSocket 心跳，读被压住时不算
 
 **背景**
@@ -787,24 +837,25 @@ VS Code 的内置浏览器是同一结构：`WebContentsView` 由主进程拥有
 
 | 仓库 | 路径 | 职责 |
 |---|---|---|
-| ollupi | `agent/loop.go` | 事件循环、槽位占用表 |
-| ollupi | `agent/schedule.go` | `reconcile`、`admit`、`recover` |
-| ollupi | `agent/run.go` | 一轮的执行、停下后的判定、结束 |
-| ollupi | `agent/lease.go` | 抢占和续租分片 |
-| ollupi | `agent/subagents.go` | 派生子 agent、写回报告 |
-| ollupi | `agent/runtime/` | 单轮 ReAct 循环、工具执行 |
-| ollupi | `agent/contextmanager/manager.go` | 输入预算、压缩阈值、精简模式门槛 |
-| ollupi | `agent/systemprompt/systemprompt.go` | 系统提示词的组装顺序 |
-| ollupi | `repo/db.go`、`repo/items.go`、`repo/turns.go` | 连接、条目恢复、一轮的状态和索引条件 |
-| ollupi | `repo/migrate.go`、`repo/migrations/` | 编号 migration |
-| ollupi | `repo/shard.go`、`repo/catalog.go` | 租约、fence、用户放置 |
+| ollupi | `conversation/` | 日志记录、`Check`、`View` 折叠 |
+| ollupi | `store/store.go`、`store/feed.go`、`store/sqlite/` | 一条写路径、feed、SQLite 存储和物化 |
+| ollupi | `store/sqlite/migrations/`、`catalog/migrations/` | 编号 migration |
+| ollupi | `store/sqlite/legacy.go` | 第一次打开时导入旧引擎的库 |
+| ollupi | `schedule/schedule.go` | 槽位占用、按 feed 取可运行的会话 |
+| ollupi | `run/` | 一步步跑一轮、关掉上次留下的调用、结束一轮 |
+| ollupi | `agent/agent.go` | 角色和 `Next` |
+| ollupi | `prompt/` | 上下文窗口、系统提示词、压缩 |
+| ollupi | `policy/` | 权限判定 |
+| ollupi | `app/` | 用户的每个操作：检查加一个事务 |
+| ollupi | `host/host.go` | 宿主装配 |
+| ollupi | `shard/shard.go`、`catalog/` | 租约、fence、用户放置 |
 | ollupi | `gateway/protocol.go`、`gateway/protocol.schema.json` | 分发表和生成的契约 |
-| ollupi | `gateway/router.go` | 无状态路由 |
+| ollupi | `router/`、`router/extproc/` | 路由器和负载均衡器的外部处理 |
 | ollupi | `pkg/llm/` | 三种模型客户端、并发上限、重试 |
 | ollupi | `pkg/redact/redact.go` | 检测、占位符、还原 |
 | ollupi | `pkg/sandbox/` | `Box`、`Machine`、Seatbelt |
-| ollupi | `tools/cron/cron.go` | 定时检查和发送 |
-| ollupi | `tools/subagent/subagent.go` | `Agent` 工具 |
+| ollupi | `cron/`、`tool/builtin/cronjobs/` | 定时任务的日历和工具 |
+| ollupi | `tool/builtin/subagent/subagent.go` | 派生子 agent 的工具 |
 | ollupi | `.cursor/rules/coding-rules.mdc` | 编码规则 |
 | ollupi | `bench/README.md` | 基准方法和结果 |
 | ollupi-desktop | `sidecar/cmd/ollupid/main.go` | 后端入口和校验模式 |

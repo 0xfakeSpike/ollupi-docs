@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+<defs><marker id="aS" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="24" markerHeight="24" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#64748b"/></marker><marker id="aI" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="24" markerHeight="24" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#4f46e5"/></marker><marker id="aR" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="24" markerHeight="24" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#e11d48"/></marker><marker id="aF" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="24" markerHeight="24" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#cbd5e1"/></marker></defs>
+<style>text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #1e1b4b; } .t { font-size: 56px; font-weight: 800; } .k { font-size: 44px; font-weight: 800; } .m { font-size: 34px; font-weight: 700; } .b { font-size: 30px; fill: #334155; } .s { font-size: 26px; fill: #64748b; } .f { font-size: 22px; fill: #94a3b8; }</style>
+<rect width="1600" height="900" fill="#ffffff"/>
+<text class="t" x="80" y="118" style="font-size:56.0px">Ollupi 胜在单机效率，Cloudflare 胜在扩展与可靠性</text>
+<line x1="80" y1="828" x2="1520" y2="828" stroke="#e2e8f0" stroke-width="2"/>
+<text class="f" x="80" y="866">图 7 · 按原理比较，未实测</text>
+<text class="f" x="1520" y="866" text-anchor="end">agent 需要一个池子</text>
+<line x1="800.0" y1="190" x2="800.0" y2="770" stroke="#e2e8f0" stroke-width="4"/>
+<text class="m" x="760.0" y="200.0" text-anchor="end" style="fill:#4f46e5">Ollupi 占优</text>
+<text class="m" x="840.0" y="200.0" text-anchor="start" style="fill:#1e1b4b">Cloudflare 占优</text>
+<rect x="200.0" y="240.0" width="560.0" height="72.0" rx="14" fill="#eef2ff" stroke="#4f46e5" stroke-width="3"/>
+<text class="b" x="480.0" y="286.8" text-anchor="middle" style="fill:#1e1b4b">每步写库的延迟</text>
+<rect x="200.0" y="332.0" width="560.0" height="72.0" rx="14" fill="#eef2ff" stroke="#4f46e5" stroke-width="3"/>
+<text class="b" x="480.0" y="378.8" text-anchor="middle" style="fill:#1e1b4b">等模型时的成本</text>
+<rect x="840.0" y="240.0" width="560.0" height="72.0" rx="14" fill="#f1f5f9" stroke="#64748b" stroke-width="3"/>
+<text class="b" x="1120.0" y="286.8" text-anchor="middle" style="fill:#1e1b4b">长会话每步的读取</text>
+<rect x="840.0" y="332.0" width="560.0" height="72.0" rx="14" fill="#f1f5f9" stroke="#64748b" stroke-width="3"/>
+<text class="b" x="1120.0" y="378.8" text-anchor="middle" style="fill:#1e1b4b">单实例的会话容量</text>
+<rect x="840.0" y="424.0" width="560.0" height="72.0" rx="14" fill="#f1f5f9" stroke="#64748b" stroke-width="3"/>
+<text class="b" x="1120.0" y="470.8" text-anchor="middle" style="fill:#1e1b4b">数据可靠性</text>
+<rect x="840.0" y="516.0" width="560.0" height="72.0" rx="14" fill="#f1f5f9" stroke="#64748b" stroke-width="3"/>
+<text class="b" x="1120.0" y="562.8" text-anchor="middle" style="fill:#1e1b4b">用户之间的隔离</text>
+<rect x="840.0" y="608.0" width="560.0" height="72.0" rx="14" fill="#f1f5f9" stroke="#64748b" stroke-width="3"/>
+<text class="b" x="1120.0" y="654.8" text-anchor="middle" style="fill:#1e1b4b">运维</text>
+<rect x="520.0" y="720.0" width="560.0" height="72.0" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="3"/>
+<text class="b" x="800.0" y="766.8" text-anchor="middle" style="fill:#334155">等待用户时的成本：相当，均只剩存储</text>
+</svg>

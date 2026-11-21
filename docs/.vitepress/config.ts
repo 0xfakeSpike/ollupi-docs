@@ -17,7 +17,7 @@ const sections: Record<string, Group[]> = {
       en: 'About Ollupi',
       zh: '了解 Ollupi',
       items: [
-        { en: 'Why Ollupi', zh: '为什么做 Ollupi', link: 'intro/why' },
+        { en: 'Why Ollupi', zh: 'agent 需要一个池子', link: 'intro/why' },
         { en: 'Overview', zh: '项目概览', link: 'intro/overview' },
         { en: 'Core concepts', zh: '核心概念', link: 'intro/concepts' },
       ],
