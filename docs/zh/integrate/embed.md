@@ -131,7 +131,7 @@ func run() error {
 - **网关只认允许的 Host 和 Origin。** 默认只接受 `Host` 为 `localhost`、`127.0.0.1`、`::1` 的请求；经反向代理或用域名访问时，把对外域名写进 `AllowedHosts`，否则一律 403 `host not allowed`。浏览器客户端的来源写进 `AllowedOrigins`，写法是 `coder/websocket` 的 Origin 模式（`app.example.com`、`*.example.com`，或带协议的 `app://support`）。
 - **`Token` 属于用户 `default`**（`gateway.DefaultUser`）。多用户换成 `Authenticate`，见[扩展点](/zh/integrate/extend#认证)。
 - **`Serve` 自己建 `http.Server`**（`ReadHeaderTimeout` 5 秒、`IdleTimeout` 2 分钟），挂在 `GET /`。`gateway.Server` 也实现了 `http.Handler`，可以装进自己的服务器，但路径不能加前缀。`GET /healthz` 不要令牌，回 200。
-- **这个示例没有命令和文件工具。** `sandbox.Here()` 是这台机器、不设限制：工作区校验、附件和 stdio MCP 服务器都从这台机器读、在这台机器起，stdio 服务器的工作目录是主目录。要让 agent 跑命令、改文件，把 `workspace.New` 建的工作区工具放进 `Tools`；它在本机默认以 `workspace-write` 模式跑命令，要用 macOS 的 Seatbelt，其他系统上要把 `workspace.Options` 里 `Config.SandboxMode` 设成 `full-access` 或者接云沙箱，见[扩展点](/zh/integrate/extend#云沙箱)和[沙箱](/zh/engine/sandbox)。引擎 README 提醒：在服务器自己机器上的沙箱里跑用户命令的服务不该提供宽松（`never`）策略，那时要离开沙箱的命令不经询问就在宿主机上运行；`sandbox.Here` 根本不是沙箱，它跑的命令在任何策略下都到达宿主机，只适合可以完全使用这台机器的用户。
+- **这个示例没有命令和文件工具。** `sandbox.Here()` 是这台机器、不设限制：工作区校验、附件和 stdio MCP 服务器都从这台机器读、在这台机器起，stdio 服务器的工作目录是主目录。要让 agent 跑命令、改文件，把 `workspace.New` 建的工作区工具放进 `Tools`；它在本机默认以 `workspace-write` 模式跑命令，要用 macOS 的 Seatbelt，其他系统上要把 `workspace.Options` 里 `Config.SandboxMode` 设成 `full-access` 或者接云沙箱，见[扩展点](/zh/integrate/extend#云沙箱)和[沙箱](/zh/engine/sandbox)。引擎 README 提醒：在服务器自己机器上的沙箱里跑用户命令的服务不该提供宽松（`never`）策略，那时需要完全访问的命令不经询问就以完全访问运行；`sandbox.Here` 不设任何限制，它跑的命令在任何策略下都能做用户在这台机器上能做的一切，只适合可以完全使用这台机器的用户。
 - **`llm.NewGemini` 返回 `(*Gemini, error)`**，没有 API key 时报错；`NewOpenAI` 和 `NewAnthropic` 不返回错误。
 
 ## 上线之前

@@ -9,7 +9,7 @@ The three policies, by what the agent may do on its own:
 | Read and search files | Runs | Runs | Runs |
 | Edit project files, run commands inside the sandbox | Asks | Runs | Runs |
 | Fetch web pages, change scheduled jobs, use MCP tools | Asks | Asks | Runs |
-| Run a command outside the sandbox | Asks | Asks | Runs |
+| Run a command with full access | Asks | Asks | Runs |
 
 Rules (allow, ask, deny) are checked before the policy at every level. Settings stack in layers, deployment, user, workspace and conversation, and a lower layer can add rules but not lift a deny above it. Under Relaxed, a command too complex for the rules to read is refused when a deny rule might apply to it, rather than let through.
 

@@ -14,7 +14,7 @@ The approval policy has three levels. If unsure, keep Balanced: everyday coding 
 | Read and search files | Runs | Runs | Runs |
 | Edit project files, run commands inside the sandbox | Asks | Runs | Runs |
 | Fetch web pages, click or type in the browser, use external tools that change things | Asks | Asks | Runs |
-| Run a command outside the sandbox | Asks | Asks | Runs |
+| Run a command with full access | Asks | Asks | Runs |
 
 ::: info Full page in Chinese
 This page is being translated. The complete version, with every detail and code reference, is [in Chinese](/zh/app/install).

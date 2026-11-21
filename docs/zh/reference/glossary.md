@@ -66,7 +66,7 @@
 - **沙箱**（sandbox）—— 限制模型的命令和文件操作能碰到什么的机制。代码：`sandbox.New`、`sandbox.Box`。见 [沙箱](/zh/engine/sandbox)
 - **Box** —— 一个用户的命令运行与文件所在的地方，工具只经它访问系统。代码：`sandbox.Box`、`sandbox.Here`、`host.Config.Boxes`。见 [沙箱](/zh/engine/sandbox)
 - **Machine** —— 云沙箱的最小接口：跑一条命令，按路径读写。代码：`sandbox.Machine`、`sandbox.Remote`。见 [沙箱](/zh/engine/sandbox)
-- **提权**（escalation）—— 让一条命令离开沙箱、在宿主上运行。`untrusted` 和 `on-request` 下必须单独批准，`never` 下直接运行，只有 deny 规则能拦住它。代码：`workspace.Prepared.Escalated`、`sandbox.Command.Unsandboxed`。见 [沙箱](/zh/engine/sandbox)
+- **提权**（escalation）—— 让一条命令以完全访问运行：解除沙箱对它的限制（本机是 Seatbelt 规则），仍在同一个沙箱里；远程沙箱不能提权。`untrusted` 和 `on-request` 下必须单独批准，`never` 下直接运行，只有 deny 规则能拦住它。代码：`workspace.Prepared.Escalated`、`sandbox.Command.FullAccess`。见 [沙箱](/zh/engine/sandbox)
 - **脱敏**（redaction）—— 发给模型前把敏感值换成占位符，回答回来再换回。代码：`redact.Redactor`（`pkg/redact`）。见 [脱敏](/zh/engine/redaction)
 - **占位符**（placeholder）—— 敏感值的替身，形如 `<PHONE:a1b2c3d4>`。代码：`Redactor.placeholder`（未导出）、`settings.redaction_key`。见 [脱敏](/zh/engine/redaction)
 

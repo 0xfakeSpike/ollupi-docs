@@ -9,10 +9,10 @@
 - **工具只经 `Box` 碰机器。** 命令、文件工具、附件读取、工作区的增加和搬动、stdio MCP 服务器都经 `sandbox.Box` 访问，本机 Seatbelt 和云沙箱是同一个接口的两种实现，一个进程能同时服务两类用户。池化之后用户之间没有进程边界，这是代码守住隔离的方式之一，见[设计决策 1](/zh/reference/decisions#_1-池化-runtime)。
 - **用 Seatbelt，不用虚拟机或另开用户账号。** 调研文档列过这两类方案，对虚拟机的评语是隔离最强，但里面是 Linux，用不了 macOS 工具链。基础规则取自 OpenAI Codex，网络代理、拒绝日志和保护名主要参照 Anthropic 的 sandbox-runtime。见[设计决策 20](/zh/reference/decisions#_20-seatbelt-沙箱)。
 - **网络走本地代理。** Seatbelt 不能按域名过滤网络，所以配了域名名单时，内核只放行到本地代理的那个端口，域名由代理判断，连接时再跳过解析到内网的地址。
-- **挡住"之后会被别的程序运行"的文件。** 调研时参考的是 2026 年 7 月一批 agent 沙箱逃逸：多数案例没有攻破沙箱本身，而是写下一个之后会被沙箱外的程序执行的文件，比如钩子配置、git config。所以 `.vscode`、`.envrc`、shell 启动文件这类名字在可写目录的任意层级都不可写。
+- **挡住"之后会被别的程序运行"的文件。** 调研时参考的是 2026 年 7 月一批 agent 沙箱逃逸：多数案例没有攻破沙箱本身，而是写下一个之后会被不受沙箱限制的程序执行的文件，比如钩子配置、git config。所以 `.vscode`、`.envrc`、shell 启动文件这类名字在可写目录的任意层级都不可写。
 - **`.git` 是有意留的例外。** 整个 `.git` 可写。`git init`、`git clone` 是项目目录里最普通的命令，`.git` 禁写的话它们在沙箱里一定失败，只能每次提权；换来的代价是 `.git/hooks` 这个已知的口子。调研文档记录 Codex 把 `.git` 设为只读。
 
-代价：本机沙箱只有 macOS，Linux 和 Windows 还在路线图上，非 macOS 只能用 `full-access`；读取几乎不设限，靠禁读名单挡凭据；`.git/hooks` 写进去的代码会在用户自己运行 git 时在沙箱外执行；不读代理环境变量的程序在域名名单模式下连不上网。
+代价：本机沙箱只有 macOS，Linux 和 Windows 还在路线图上，非 macOS 只能用 `full-access`；读取几乎不设限，靠禁读名单挡凭据；`.git/hooks` 写进去的代码会在用户自己运行 git 时执行，不受沙箱限制；不读代理环境变量的程序在域名名单模式下连不上网。
 
 ::: info 演进
 - 所有访问都经 `Box` 来自 `aecfb63`、`f1ff694`。
@@ -75,7 +75,7 @@ Box 从两处来：
 
 `Sandbox` 是本机实现，`sandbox.New(Config)` 创建。`New` 要求至少一个命令目录（`Roots`），没有就报错，所以本机 Box 的 `Roots()` 至少有一个，调用方可以直接取 `Roots()[0]`。
 
-`sandbox.Here()` 返回 `(Box, error)`：一个 `full-access` 模式、以当前用户主目录为唯一根目录的本机 Box，等于 `sandbox.New(Config{Mode: "full-access", Roots: []string{主目录}})`。它的 `Roots()` 是 `[主目录]`，`Enforced` 和 `CanEscalate` 都为假，`Summary` 写的是没有沙箱，命令以主目录为默认目录、不受限制地运行。取不到主目录时返回错误。它不是沙箱：它跑的命令在任何审批策略下都直接到达这台机器，所以只适合可以完全使用这台机器的用户（引擎 README）。引擎自带的 `bench`、`eval` 和测试给用户的就是它。
+`sandbox.Here()` 返回 `(Box, error)`：一个 `full-access` 模式、以当前用户主目录为唯一根目录的本机 Box，等于 `sandbox.New(Config{Mode: "full-access", Roots: []string{主目录}})`。它的 `Roots()` 是 `[主目录]`，`Enforced` 和 `CanEscalate` 都为假，`Summary` 写的是不限制命令（`No limits on commands`），命令以主目录为默认目录、以完全访问运行。取不到主目录时返回错误。它是一个不设限制的沙箱：它跑的命令在任何审批策略下都能做用户在这台机器上能做的一切，所以只适合可以完全使用这台机器的用户（引擎 README）。引擎自带的 `bench`、`eval` 和测试给用户的就是它。
 
 ::: info 演进
 - `BoxIn` 随 v0.12.0 加入（`5f64857`）。v0.16.0 起 `host.Config.Boxes` 必填，MCP 服务器和附件经它取得用户的 Box。
@@ -92,7 +92,7 @@ Box 从两处来：
 | `workspace-write` | 同上 | 命令目录、`extra_writable`、临时目录，保护路径除外 | Seatbelt |
 | `full-access` | 全部 | 全部 | 不用 Seatbelt，直接运行 |
 
-非 macOS 上 `read-only` 和 `workspace-write` 报错，提示改用 `full-access`；macOS 上找不到 `/usr/bin/sandbox-exec` 也报错。`full-access` 下 `Enforced` 为假，`CanEscalate` 也为假，因为没有沙箱可离开。
+非 macOS 上 `read-only` 和 `workspace-write` 报错，提示改用 `full-access`；macOS 上找不到 `/usr/bin/sandbox-exec` 也报错。`full-access` 下 `Enforced` 为假，`CanEscalate` 也为假，因为沙箱本来就不限制命令，没有可解除的限制。
 
 Seatbelt 模式下，`/`、用户主目录、`~/Library`，以及任何包含它们的目录都不能作为命令目录（`validateRoot`），`New` 时和每条命令带来的命令目录都要过这一关。这样一来命令目录不会大到把保护路径包进去。找不到用户主目录时 `New` 报错，因为规则要用到它。
 
@@ -120,7 +120,7 @@ Seatbelt 模式下，`/`、用户主目录、`~/Library`，以及任何包含它
 
 ### 保护名
 
-保护名是一组文件或目录名，写规则对每个可写目录的任意层级生效。它们是其他程序之后会自动运行的配置，写进去等于留下一段在沙箱外运行的代码。
+保护名是一组文件或目录名，写规则对每个可写目录的任意层级生效。它们是其他程序之后会自动运行的配置，写进去等于留下一段之后不受沙箱限制地运行的代码。
 
 | 类别 | 名字 |
 | --- | --- |
@@ -308,24 +308,24 @@ v0.12.1 的代理是手写的 HTTP 和 SOCKS5 解析。`8ac5f3c` 改用 `httputi
 
 ## 提权
 
-提权指让一条命令离开沙箱运行。模型在 `run_command` 里传 `sandbox_permissions: "require_escalated"`（另一个取值是默认的 `use_default`）和一句 `justification`，说明命令需要沙箱不允许的什么，比如写 `/usr/local` 或连某个主机。工具描述告诉模型：只有命令因为沙箱失败时才这样做，不要用它绕过有意的禁止，不要给在沙箱里能跑的命令提权。
+提权指让一条命令以完全访问运行：命令仍在同一个沙箱（`Box`）里，只是解除沙箱对它的限制，本机上就是不加 Seatbelt 规则。模型在 `run_command` 里传 `sandbox_permissions: "require_escalated"`（另一个取值是默认的 `use_default`）和一句 `justification`，说明命令需要沙箱不允许的什么，比如写 `/usr/local` 或连某个主机。工具描述告诉模型：只有命令因为沙箱失败时才这样做，不要用它绕过有意的禁止，不要给在沙箱里能跑的命令提权。
 
 `escalation` 的前提：
 
 | 情况 | 结果 |
 | --- | --- |
-| `Enforced` 为假 | 报错，本来就没有沙箱 |
-| `CanEscalate` 为假 | 报错，这个沙箱不能离开 |
+| `Enforced` 为假 | 报错，沙箱本来就不限制命令 |
+| `CanEscalate` 为假 | 报错，这个沙箱不能给命令完全访问 |
 | 没有 `justification` | 报错 |
 
 `CanEscalate` 为假时这两个参数根本不出现在工具的 schema 里。`claude` 工具不带这两个参数：在既受限又能提权的 Box 上它总是提权，理由是固定的一句（Claude Code 要网络和主目录里自己的设置）。
 
-通过后 `Prepared.Escalated` 为真，`Sandboxed` 为假，进入权限判定：`untrusted` 和 `on-request` 下必须问用户，allow 规则不算数，也不提供"总是允许"，`acceptForSession` 只对完全相同的调用生效；`never` 下没有人可问，命令直接在沙箱外运行。`never` 下拦得住提权的只有 deny 规则。带说明符的 deny 读不懂某条命令时（比如 `sh -c "$X"`），这条命令被拒绝，而不是放行，见[审批与权限](/zh/engine/permissions#看不清的命令)。
+通过后 `Prepared.Escalated` 为真，`Sandboxed` 为假，进入权限判定：`untrusted` 和 `on-request` 下必须问用户，allow 规则不算数，也不提供"总是允许"，`acceptForSession` 只对完全相同的调用生效；`never` 下没有人可问，命令直接以完全访问运行。`never` 下拦得住提权的只有 deny 规则。带说明符的 deny 读不懂某条命令时（比如 `sh -c "$X"`），这条命令被拒绝，而不是放行，见[审批与权限](/zh/engine/permissions#看不清的命令)。
 
-批准后（`never` 下不经批准，直接这样执行）`Command.Unsandboxed` 为真，本机 `Sandbox` 不加 Seatbelt、不起代理，直接运行，环境变量白名单仍然生效。`run_command` 的结果带 `sandbox: "escalated: ran on the host without the sandbox"`。云沙箱的 `Remote` 拒绝 `Unsandboxed` 的命令。
+批准后（`never` 下不经批准，直接这样执行）`Command.FullAccess` 为真，本机 `Sandbox` 不加 Seatbelt、不起代理，直接运行，环境变量白名单仍然生效。`run_command` 的结果带 `sandbox: "escalated: ran with full access, without the sandbox's limits"`。云沙箱的 `Remote` 拒绝 `FullAccess` 的命令。
 
 ::: info 演进
-`never` 下提权直接运行来自 `7b6e720`。`4dde704` 起提权的审批不再带英文的理由，界面从冻结的执行内容自己说明；要模型写的说明也从"为什么必须在沙箱外"改成"需要沙箱不允许的什么"。
+`never` 下提权直接运行来自 `7b6e720`。`4dde704` 起提权的审批不再带英文的理由，界面从冻结的执行内容自己说明；要模型写的说明也从"为什么必须提权"改成"需要沙箱不允许的什么"。
 :::
 
 ## 云沙箱接入点
@@ -351,7 +351,7 @@ type Machine interface {
 | 方法 | 行为 |
 | --- | --- |
 | `Enforced` | 真，机器本身就是限制 |
-| `CanEscalate` | 假，`Unsandboxed` 的命令报错 |
+| `CanEscalate` | 假，`FullAccess` 的命令报错 |
 | `CheckRead`、`Check` | 总是通过 |
 | `CheckWrite` | 只要求在命令目录内 |
 | `Canonical` | 只做路径清理，要求绝对路径 |
@@ -370,8 +370,8 @@ type Machine interface {
 - **只有 macOS。** 非 macOS 上 `read-only` 和 `workspace-write` 报错，只能用 `full-access`，这时命令不受限制，`on-request` 下每条命令都要问。
 - **云沙箱只有接口。** 仓库里 `Machine` 的实现只在测试里，没有接入任何服务商，见[云沙箱接入点](#云沙箱接入点)。
 - **读取几乎不设限。** Seatbelt 规则是 `(allow file-read*)` 加禁读路径，`CheckRead` 只查禁读路径。不在[禁读名单](#禁读路径)里的文件，命令和读取工具都能读，而且不问用户。
-- **`.git/hooks` 可写。** 写进去的钩子会在用户之后自己运行 git 时在沙箱外执行，见[保护名](#保护名)。
-- **`never` 档下提权不问。** 离开沙箱的命令直接运行，能拦住它的只有 deny 规则，见[提权](#提权)。
+- **`.git/hooks` 可写。** 写进去的钩子会在用户之后自己运行 git 时执行，不受沙箱限制，见[保护名](#保护名)。
+- **`never` 档下提权不问。** 需要完全访问的命令直接运行，能拦住它的只有 deny 规则，见[提权](#提权)。
 - **不走代理的程序连不上网；只开网络时外网全开。** 域名名单模式下，不读代理环境变量的程序被内核挡住。`network: true` 但没配 `allowed_domains` 时，命令可以连任何地址，包括内网。
 - **本机的 `Transport` 不拦内网。** 本机 `Sandbox.Transport` 返回 `http.DefaultTransport`，HTTP MCP 服务器的请求能到内网地址；只有云沙箱用 `PublicTransport`。
 - **MCP 服务器不一定在沙箱里。** stdio 服务器经宿主给的 `Box` 启动，受不受限由那个 Box 决定，见[权限与沙箱](/zh/engine/skills-mcp#权限与沙箱)。

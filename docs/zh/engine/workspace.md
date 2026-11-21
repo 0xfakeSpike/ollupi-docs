@@ -182,9 +182,9 @@ flowchart TD
 4. `Box.Executable(program, cwd)` 把程序名解析成可执行文件的真实路径。
 5. 写下冻结内容：目录、设置摘要、参数摘要、程序路径、参数、环境变量、超时、是否在沙箱里（沙箱生效且没有提权）、是否提权和理由。
 
-执行时（`execute`）重新算 Box 和根目录，核对冻结内容（见[审批前冻结的内容](#审批前冻结的内容)），再把模型给的程序名重新解析一遍，和冻结的路径不同就报 `approved executable now resolves to a different path`，不执行。通过后经 `Box.Run` 运行：提权的命令不进沙箱（`Unsandboxed`）。
+执行时（`execute`）重新算 Box 和根目录，核对冻结内容（见[审批前冻结的内容](#审批前冻结的内容)），再把模型给的程序名重新解析一遍，和冻结的路径不同就报 `approved executable now resolves to a different path`，不执行。通过后经 `Box.Run` 运行：提权的命令以完全访问运行（`FullAccess`）。
 
-结果是 `CommandOutput`：`stdout`、`stderr`、`exit_code`、`work_dir`、`signal`、`truncated`、`sandbox_denials`（沙箱拦下了什么），提权运行时 `sandbox` 写明 `escalated: ran on the host without the sandbox`。退出码非 0 不算工具失败，和输出一起返回，由模型判断。stdout 和 stderr 各自超过 `max_output_bytes` 时保留头尾，中间换成 `[… N bytes omitted …]`。
+结果是 `CommandOutput`：`stdout`、`stderr`、`exit_code`、`work_dir`、`signal`、`truncated`、`sandbox_denials`（沙箱拦下了什么），提权运行时 `sandbox` 写明 `escalated: ran with full access, without the sandbox's limits`。退出码非 0 不算工具失败，和输出一起返回，由模型判断。stdout 和 stderr 各自超过 `max_output_bytes` 时保留头尾，中间换成 `[… N bytes omitted …]`。
 
 工具描述会随 Box 变化：写明默认目录和可用目录、沙箱的规则摘要；沙箱生效时说明命令在沙箱里运行、不问用户；能提权时说明 `sandbox_denials` 的意思、什么时候该带 `require_escalated` 重试、不要为了绕开故意禁止的路径而提权。审批策略怎样对待沙箱内和提权的命令见[审批策略](/zh/engine/permissions#审批策略)，提权见[沙箱](/zh/engine/sandbox#提权)。
 
@@ -288,7 +288,7 @@ type Prepared struct {
 - **同一个文件夹的判定依赖 Box。** 本机按文件身份判断，云沙箱的 `Same` 只比较路径字符串，同一台机器里经过链接到达的同一个文件夹会被当成两个。
 - **工具描述按描述用的 Box 写。** `run_command` 和文件工具的描述里写的目录和沙箱规则来自 `Options.Box`，不是每个用户自己的 Box。用户的 Box 根目录和它不同时，模型看到的描述和实际规则对不上。
 - **命令里的文件改动没有 diff。** 只有 `edit_file`、`write_file` 冻结 diff 和哈希；`run_command` 冻结的是命令本身，命令会改哪些文件审批时看不到。
-- **`claude` 在能提权的沙箱里总是离开沙箱。** 它的限制来自 Claude Code 自己的参数（只许改文件和 `go test`、2 美元上限），不来自沙箱。
+- **`claude` 在能提权的沙箱里总是以完全访问运行。** 它的限制来自 Claude Code 自己的参数（只许改文件和 `go test`、2 美元上限），不来自沙箱。
 - **大文件改不了。** 超过 2 MiB 的文件 `edit_file`、`write_file` 都拒绝，只能用命令。
 - **没有删除。** 工作区只能归档，归档后的记录一直留在库里。
 - **工作区属于这台机器上的环境。** 会话可以在别的执行环境里运行，但 `workspace/add` 和 `workspace/move` 仍经 `host.Config.Boxes` 校验路径，也就是用户在这台机器上的 Box。会话在云沙箱环境里时，它的工作区路径要在那台机器上也解析到它自己，否则每次调用都按上面的流程报错。执行环境见[网关协议](/zh/integrate/protocol/workspaces#执行环境的方法)。

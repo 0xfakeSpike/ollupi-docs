@@ -182,7 +182,7 @@ v0.12.1 的插话代替回答时，等着的调用以 `declined` 结束，`error
 | 情况 | 可选决定 |
 |---|---|
 | 由 ask 规则触发（`approval.rule` 非空） | `accept`、`decline` |
-| 没有建议规则（命令看不清、申请在沙箱外运行、含 `*`） | `accept`、`acceptForSession`、`decline` |
+| 没有建议规则（命令看不清、申请完全访问、含 `*`） | `accept`、`acceptForSession`、`decline` |
 | 有建议规则 | `accept`、`acceptForSession`、`acceptAlways`、`decline` |
 
 ask 规则的意思是每次都问，所以规则触发时不给"总是允许"。
@@ -344,7 +344,7 @@ ask 规则的意思是每次都问，所以规则触发时不给"总是允许"�
 | `env?` | object | 命令额外的环境变量 |
 | `timeoutSec?` | integer | 命令超时 |
 | `sandboxed?` | boolean | 在强制沙箱里运行 |
-| `escalated?` | boolean | 申请在沙箱外运行（提权） |
+| `escalated?` | boolean | 申请完全访问（提权） |
 | `justification?` | string | 模型给的提权理由 |
 | `files?` | [`FileChange`](#filechange)[] | 改文件：要写的变化 |
 

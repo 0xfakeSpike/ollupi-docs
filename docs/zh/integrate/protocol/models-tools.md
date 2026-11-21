@@ -240,7 +240,7 @@ v0.12.1 只有一个子 agent 工具 `Agent`，输出不进契约。`d18618f` �
 | `signal?` | string | 被信号终止时的信号名 |
 | `truncated?` | boolean | 输出被截过 |
 | `sandbox_denials?` | string[] | 沙箱拦下的操作，见[拒绝原因报告](/zh/engine/sandbox#拒绝原因报告) |
-| `sandbox?` | string | 关于沙箱的说明；在沙箱外运行时是 `escalated: ran on the host without the sandbox` |
+| `sandbox?` | string | 关于沙箱的说明；提权运行时是 `escalated: ran with full access, without the sandbox's limits` |
 
 ### FileOutput
 

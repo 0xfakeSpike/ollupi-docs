@@ -556,7 +556,7 @@ var _ sandbox.Machine = container{}
 
 **引擎保证：**
 
-- `Remote` 包出来的 Box 里，命令不能提权（`Unsandboxed` 的命令直接报错 `sandbox: a command cannot leave this sandbox`）；写文件只要求在根目录内；HTTP 请求（比如 HTTP MCP 服务器）从引擎进程发出，只连公网地址。
+- `Remote` 包出来的 Box 里，命令不能提权（`FullAccess` 的命令直接报错 `sandbox: this sandbox cannot give a command full access`）；写文件只要求在根目录内；HTTP 请求（比如 HTTP MCP 服务器）从引擎进程发出，只连公网地址。
 - 机器慢或卡住时，只卡住用到它的那一次调用；附件在写进日志之前、在调度之外读完。
 - 工具调用里 `BoxFor` 返回错误时，这次调用失败，错误以 `workspace: the sandbox of the user:` 开头，交给模型；`Boxes` 返回错误时，`workspace/add` 和带附件的消息返回错误，这个用户的 MCP 服务器连不上（`mcp: the sandbox of the user: ...`）。
 
