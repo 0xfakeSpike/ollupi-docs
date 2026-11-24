@@ -11,18 +11,47 @@ type Group = { en: string; zh: string; items: Entry[] }
 
 // One sidebar per reader group. The key is the URL folder; every page of a
 // group lives in that folder, so the sidebar follows the reader around.
+// `shared` gives a folder or page outside these the sidebar of a group.
+const about: Group[] = [
+  {
+    en: 'About Ollupi',
+    zh: '了解 Ollupi',
+    items: [
+      { en: 'Overview', zh: '项目概览', link: 'intro/overview' },
+      { en: 'Core concepts', zh: '核心概念', link: 'intro/concepts' },
+      { en: 'Why Ollupi', zh: 'agent 需要一个池子', link: 'intro/why' },
+    ],
+  },
+  {
+    en: 'Benchmarks',
+    zh: '基准',
+    items: [
+      { en: 'Benchmarks', zh: '性能基准', link: 'benchmarks/' },
+      { en: 'What we measure next', zh: '接下来要测的', link: 'benchmarks/plan' },
+    ],
+  },
+]
+
+const more: Group[] = [
+  {
+    en: 'Plans',
+    zh: '计划',
+    items: [{ en: 'Roadmap', zh: '路线图', link: 'roadmap' }],
+  },
+  {
+    en: 'Reference',
+    zh: '参考',
+    items: [
+      { en: 'Glossary', zh: '术语表', link: 'reference/glossary' },
+      { en: 'Design decisions', zh: '设计决策', link: 'reference/decisions' },
+      { en: 'History', zh: '开发历程', link: 'reference/history' },
+      { en: 'Feature list', zh: '功能清单', link: 'reference/features', zhOnly: true },
+    ],
+  },
+]
+
 const sections: Record<string, Group[]> = {
-  intro: [
-    {
-      en: 'About Ollupi',
-      zh: '了解 Ollupi',
-      items: [
-        { en: 'Why Ollupi', zh: 'agent 需要一个池子', link: 'intro/why' },
-        { en: 'Overview', zh: '项目概览', link: 'intro/overview' },
-        { en: 'Core concepts', zh: '核心概念', link: 'intro/concepts' },
-      ],
-    },
-  ],
+  intro: about,
   app: [
     {
       en: 'Desktop app guide',
@@ -31,7 +60,7 @@ const sections: Record<string, Group[]> = {
         { en: 'Install and get started', zh: '安装与上手', link: 'app/install' },
         { en: 'Workspaces and sessions', zh: '工作区与会话', link: 'app/sessions' },
         { en: 'Approvals and permissions', zh: '审批与权限', link: 'app/permissions' },
-        { en: 'Browser, files, terminal', zh: '浏览器、文件、终端等面板', link: 'app/panels' },
+        { en: 'Browser, files, terminal', zh: '浏览器、文件、环境与终端', link: 'app/panels' },
         { en: 'Skills, MCP and tools', zh: '技能、MCP 与工具', link: 'app/capabilities' },
         { en: 'Scheduled tasks and memory', zh: '定时任务与记忆', link: 'app/automation' },
         { en: 'Feishu bot', zh: '飞书机器人', link: 'app/feishu', zhOnly: true },
@@ -57,7 +86,15 @@ const sections: Record<string, Group[]> = {
       en: 'Gateway protocol',
       zh: '网关协议',
       items: [
-        { en: 'Overview', zh: '总览', link: 'integrate/protocol' },
+        { en: 'Gateway protocol', zh: '网关协议', link: 'integrate/protocol' },
+        { en: 'Writing a client', zh: '写一个客户端', link: 'integrate/client' },
+        { en: 'Protocol type index', zh: '协议类型索引', link: 'integrate/protocol-types' },
+      ],
+    },
+    {
+      en: 'Protocol methods',
+      zh: '协议方法',
+      items: [
         { en: 'Sessions', zh: '会话', link: 'integrate/protocol/threads' },
         { en: 'Turns and items', zh: '一轮与条目', link: 'integrate/protocol/turns' },
         { en: 'Approvals and questions', zh: '审批与提问', link: 'integrate/protocol/approvals' },
@@ -68,17 +105,17 @@ const sections: Record<string, Group[]> = {
         { en: 'Memory', zh: '记忆', link: 'integrate/protocol/memory' },
         { en: 'Search', zh: '搜索', link: 'integrate/protocol/search' },
         { en: 'Settings', zh: '设置', link: 'integrate/protocol/settings' },
-        { en: 'Type index', zh: '类型索引', link: 'integrate/protocol-types' },
-        { en: 'Writing a client', zh: '写一个客户端', link: 'integrate/client' },
+        { en: 'Todos', zh: '待办', link: 'integrate/protocol/todos' },
+        { en: 'Usage', zh: '用量', link: 'integrate/protocol/usage' },
       ],
     },
   ],
   engine: [
     {
-      en: 'Core',
-      zh: '内核',
+      en: 'Runtime',
+      zh: '运行时',
       items: [
-        { en: 'Architecture', zh: '架构总览', link: 'engine/architecture' },
+        { en: 'Engine architecture', zh: '引擎架构', link: 'engine/architecture' },
         { en: 'Execution model', zh: '执行模型', link: 'engine/execution' },
         { en: 'Persistence and recovery', zh: '持久化与崩溃恢复', link: 'engine/persistence' },
         { en: 'Shards and leases', zh: '分片与租约', link: 'engine/sharding' },
@@ -86,25 +123,26 @@ const sections: Record<string, Group[]> = {
       ],
     },
     {
-      en: 'Model and tools',
-      zh: '模型与工具',
+      en: 'What the agent can do',
+      zh: 'agent 能力',
       items: [
         { en: 'Context management', zh: '上下文管理', link: 'engine/context' },
         { en: 'Models', zh: '模型接入', link: 'engine/models' },
-        { en: 'Tools', zh: '工具', link: 'engine/tools' },
-        { en: 'Workspaces', zh: '工作区', link: 'engine/workspace' },
+        { en: 'Tools', zh: '工具系统', link: 'engine/tools' },
         { en: 'Skills and MCP', zh: '技能与 MCP', link: 'engine/skills-mcp' },
         { en: 'Memory', zh: '记忆', link: 'engine/memory' },
         { en: 'Scheduled tasks', zh: '定时任务', link: 'engine/cron' },
         { en: 'Search', zh: '搜索', link: 'engine/search' },
+        { en: 'Hub', zh: '中枢', link: 'engine/hub' },
       ],
     },
     {
-      en: 'Safety',
-      zh: '安全',
+      en: 'Workspaces and safety',
+      zh: '工作区与安全',
       items: [
         { en: 'Security overview', zh: '安全总览', link: 'engine/security' },
-        { en: 'Permissions and approvals', zh: '权限与审批', link: 'engine/permissions' },
+        { en: 'Workspaces', zh: '工作区', link: 'engine/workspace' },
+        { en: 'Approvals and permissions', zh: '审批与权限', link: 'engine/permissions' },
         { en: 'Sandbox', zh: '沙箱', link: 'engine/sandbox' },
         { en: 'Redaction', zh: '脱敏', link: 'engine/redaction' },
       ],
@@ -112,30 +150,32 @@ const sections: Record<string, Group[]> = {
   ],
   desktop: [
     {
-      en: 'Desktop app design',
-      zh: '桌面端设计',
+      en: 'Structure',
+      zh: '结构',
       items: [
-        { en: 'Architecture', zh: '架构总览', link: 'desktop/architecture' },
-        { en: 'Sidecar', zh: 'Sidecar', link: 'desktop/sidecar' },
+        { en: 'Desktop architecture', zh: '桌面端架构', link: 'desktop/architecture' },
+        { en: 'Sidecar backend', zh: 'Sidecar', link: 'desktop/sidecar' },
         { en: 'Main process', zh: '主进程', link: 'desktop/main-process' },
-        { en: 'Renderer', zh: '界面', link: 'desktop/renderer' },
+        { en: 'Renderer', zh: '渲染进程', link: 'desktop/renderer' },
         { en: 'Configuration internals', zh: '配置的实现', link: 'desktop/config' },
-        { en: 'Side panels', zh: '侧边面板的实现', link: 'desktop/side-panels' },
-        { en: 'Built-in browser', zh: '内置浏览器的实现', link: 'desktop/browser' },
-        { en: 'Feishu bot', zh: '飞书机器人的实现', link: 'desktop/feishu-bot' },
+      ],
+    },
+    {
+      en: 'Features',
+      zh: '功能',
+      items: [
+        { en: 'Side panels', zh: '侧边面板', link: 'desktop/side-panels' },
+        { en: 'Built-in browser', zh: '内置浏览器', link: 'desktop/browser' },
+        { en: 'Feishu bot', zh: '飞书机器人', link: 'desktop/feishu-bot' },
+      ],
+    },
+    {
+      en: 'Brand and release',
+      zh: '品牌与发布',
+      items: [
         { en: 'Brand', zh: '品牌', link: 'desktop/brand' },
         { en: 'Design language', zh: '设计语言', link: 'desktop/design' },
         { en: 'Build and release', zh: '构建与发布', link: 'desktop/release' },
-      ],
-    },
-  ],
-  benchmarks: [
-    {
-      en: 'Benchmarks',
-      zh: '性能基准',
-      items: [
-        { en: 'Results', zh: '结果', link: 'benchmarks/' },
-        { en: 'What we measure next', zh: '接下来要测的', link: 'benchmarks/plan' },
       ],
     },
   ],
@@ -150,54 +190,54 @@ const sections: Record<string, Group[]> = {
       ],
     },
   ],
-  reference: [
-    {
-      en: 'Reference',
-      zh: '参考',
-      items: [
-        { en: 'Glossary', zh: '术语表', link: 'reference/glossary' },
-        { en: 'Design decisions', zh: '设计决策', link: 'reference/decisions' },
-        { en: 'History', zh: '开发历程', link: 'reference/history' },
-        { en: 'Feature list', zh: '功能清单', link: 'reference/features', zhOnly: true },
-        { en: 'Desktop backlog', zh: '桌面端待办', link: 'reference/backlog', zhOnly: true },
-      ],
-    },
-  ],
+  reference: more,
+}
+
+// Pages outside a section folder that show a section's sidebar.
+const shared: Record<string, Group[]> = {
+  'benchmarks/': about,
+  roadmap: more,
 }
 
 function sidebar(lang: 'en' | 'zh'): DefaultTheme.SidebarMulti {
   const prefix = lang === 'en' ? '/' : '/zh/'
-  const result: DefaultTheme.SidebarMulti = {}
-  for (const [section, groups] of Object.entries(sections)) {
-    result[prefix + section + '/'] = groups.map((group) => ({
+  const build = (groups: Group[]) =>
+    groups.map((group) => ({
       text: group[lang],
       items: group.items
         .filter((item) => lang === 'zh' || !item.zhOnly)
         .map((item) => ({ text: item[lang], link: prefix + item.link })),
     }))
-  }
+  const result: DefaultTheme.SidebarMulti = {}
+  for (const [section, groups] of Object.entries(sections)) result[prefix + section + '/'] = build(groups)
+  for (const [path, groups] of Object.entries(shared)) result[prefix + path] = build(groups)
   return result
 }
 
 function nav(lang: 'en' | 'zh'): DefaultTheme.NavItem[] {
   const p = lang === 'en' ? '/' : '/zh/'
   const t = (en: string, zh: string) => (lang === 'en' ? en : zh)
+  const more: DefaultTheme.NavItemWithLink[] = [
+    { text: t('Roadmap', '路线图'), link: p + 'roadmap' },
+    { text: t('Glossary', '术语表'), link: p + 'reference/glossary' },
+    { text: t('Design decisions', '设计决策'), link: p + 'reference/decisions' },
+    { text: t('History', '开发历程'), link: p + 'reference/history' },
+  ]
+  if (lang === 'zh') more.push({ text: '功能清单', link: p + 'reference/features' })
   return [
-    { text: t('About', '了解'), link: p + 'intro/why', activeMatch: `^${p}intro/` },
+    { text: t('About', '了解'), link: p + 'intro/overview', activeMatch: `^${p}(intro|benchmarks)/` },
+    { text: t('Desktop app', '使用'), link: p + 'app/install', activeMatch: `^${p}app/` },
+    { text: t('Integrate', '接入'), link: p + 'integrate/embed', activeMatch: `^${p}integrate/` },
     {
-      text: t('Docs', '文档'),
-      activeMatch: `^${p}(app|integrate|engine|desktop)/`,
+      text: t('Internals', '原理'),
+      activeMatch: `^${p}(engine|desktop)/`,
       items: [
-        { text: t('Desktop app guide', '桌面端使用手册'), link: p + 'app/install' },
-        { text: t('Integration guide', '引擎集成指南'), link: p + 'integrate/embed' },
         { text: t('Engine design', '引擎设计'), link: p + 'engine/architecture' },
         { text: t('Desktop app design', '桌面端设计'), link: p + 'desktop/architecture' },
       ],
     },
-    { text: t('Benchmarks', '基准'), link: p + 'benchmarks/', activeMatch: `^${p}benchmarks/` },
     { text: t('Articles', '文章'), link: p + 'articles/', activeMatch: `^${p}articles/` },
-    { text: t('Roadmap', '路线图'), link: p + 'roadmap', activeMatch: `^${p}roadmap` },
-    { text: t('Reference', '参考'), link: p + 'reference/glossary', activeMatch: `^${p}reference/` },
+    { text: t('More', '更多'), activeMatch: `^${p}(reference/|roadmap)`, items: more },
   ]
 }
 

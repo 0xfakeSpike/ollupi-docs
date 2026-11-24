@@ -13,7 +13,7 @@ const copy = {
     title: '池化调度 agent 的运行时',
     lead: 'Ollupi 是一个 Go 运行时。交给它任意多个 agent 会话，它在固定的上限内调度执行，多出来的排队。每一步先写进数据库再执行，个人电脑和云上的服务都能用。',
     home: '/zh/',
-    actions: { docs: 'agent 需要一个池子', download: '下载桌面端', source: 'GitHub' },
+    actions: { start: '了解 Ollupi', why: '为什么需要池子', download: '下载桌面端' },
     properties: [
       { title: '会话池化', body: '所有会话共享固定数量的槽位，每个用户可设上限，多出来的排队。等用户、审批或报告的会话让出槽位，只剩数据库记录。' },
       { title: '工具调用池化', body: '下载、编译这类耗时长的调用转入后台，在工具池里执行，有自己的槽位和上限；会话不必干等，结果作为报告送回。模型调用另按服务商配额限流。' },
@@ -33,16 +33,16 @@ const copy = {
     ],
     numbersTitle: '测出来的数字',
     numbers: [
-      { value: '14 MB', label: '5 万个闲置会话增加的常驻内存' },
-      { value: '2.3 KB', label: '每个闲置会话占用的数据库空间' },
-      { value: '160 KB', label: '每个活跃会话的内存；每会话一个进程时是 20.0 MB' },
-      { value: '4096', label: '一台 8 GB 的 M1 上同时活跃的会话，p50 20.9 秒，单独运行约 17 秒' },
+      { value: '34 MB', label: '5 万个停放会话的常驻内存，每个约 7 KB 磁盘' },
+      { value: '5%', label: '1536 个会话同时跑时，一轮比单独跑慢的幅度' },
+      { value: '3000', label: '同时提交 3000 个轮次、配额 256：全部完成，没有 429；pi 完成 483 个' },
+      { value: '1.3 s', label: '进程被 kill -9 后备用进程接管；每一轮都完成，没有工具执行两次' },
     ],
-    numbersNote: '模型和工具都是模拟的，测的是调度和持久化，不是模型质量。这些数字测于 v0.8.3 到 v0.8.5，早于多用户、分片、沙箱接口和日志重建，之后还没有重测。',
+    numbersNote: '模型和工具都是模拟的，测的是调度和持久化，不是模型质量。测于 v0.18.0，一台 8 GB 内存的 Apple M1，一个 SQLite 数据库。',
     numbersLink: '方法和完整数据',
     productsTitle: '两个项目',
     products: [
-      { name: '引擎 ollupi', body: 'Go 库。会话池和工具池、持久化、多用户分片、沙箱、记忆、MCP，通过 WebSocket 上的 JSON-RPC 对外提供。', link: '/zh/engine/architecture', linkText: '引擎文档', source: engineRepo },
+      { name: '引擎 ollupi', body: 'Go 库。会话池和工具池、持久化、多用户分片、沙箱、记忆、MCP，通过 WebSocket 上的 JSON-RPC 对外提供。', link: '/zh/integrate/embed', linkText: '接入指南', source: engineRepo },
       { name: '桌面端 ollupi-desktop', body: '基于引擎的 macOS 应用。内置浏览器、文件和改动面板、飞书机器人，状态存在本机。需要 macOS 12 或更新和 Apple 芯片。', link: '/zh/app/install', linkText: '上手指南', source: desktopRepo },
     ],
     notesTitle: '公开地做',
@@ -55,14 +55,14 @@ const copy = {
     ],
   },
   en: {
-    title: 'A runtime for personal agent services at scale',
-    lead: 'Ollupi is a Go agent framework. Instead of isolating each agent in its own VM or container, it pools the runtime and persists every step of each run.',
+    title: 'A runtime that schedules agents in a pool',
+    lead: 'Ollupi is a Go runtime. Give it any number of agent sessions: it runs them within a fixed limit and queues the rest. Every step is written to the database before it runs. It serves a personal computer and a cloud service alike.',
     home: '/',
-    actions: { docs: 'Why Ollupi', download: 'Download for macOS', source: 'GitHub' },
+    actions: { start: 'About Ollupi', why: 'Why a pool', download: 'Download for macOS' },
     properties: [
-      { title: 'Recoverable at any moment', body: 'Every step is written to the database before it runs, and no scheduling state lives in memory. After a release, restart or crash, sessions continue from where they stopped.' },
-      { title: 'Inactive sessions cost nothing', body: 'A session waiting on a user, an approval or a subagent leaves the execution pool and remains only as database records.' },
-      { title: 'Controlled concurrency', body: 'The execution pool schedules by slot, and model calls are limited per connection to match the provider\'s account quota. Bursts queue.' },
+      { title: 'A pool of sessions', body: 'All sessions share a fixed number of slots, each user can have a limit, and the rest queue. A session waiting on a user, an approval or a report gives up its slot and remains only as database records.' },
+      { title: 'A pool of tool calls', body: 'Long calls such as downloads and builds move to the background and run in the tool pool, with its own slots and limit. The session does not sit waiting; the result comes back as a report. Model calls are limited separately to each provider\'s quota.' },
+      { title: 'Recoverable at any moment', body: 'Every step is written to the database before it runs. After a release, restart or crash, sessions continue from where they stopped; a tool call cut off midway is marked as possibly done and never runs twice.' },
     ],
     compareTitle: 'How it differs from per-agent isolation',
     compareHead: ['', 'One VM or container per agent', 'Ollupi'],
@@ -72,21 +72,22 @@ const copy = {
       ['Waiting on a user or approval', 'Process sits suspended, still holding memory', 'Leaves the execution pool, using no resources'],
       ['Scheduling state', 'Process memory', 'SQLite'],
       ['After a restart', 'In-progress work is interrupted', 'Continues from where it stopped'],
+      ['Long-running tools', 'Hold the process until they finish', 'Move to the background tool pool, outside the session\'s slot'],
       ['Subagents', 'Special mechanism or child process', 'Ordinary sessions, queued in the same pool'],
       ['Scheduled tasks', 'External cron starts a process', 'A message to the session when due, queued in the same pool'],
     ],
     numbersTitle: 'Measured',
     numbers: [
-      { value: '14 MB', label: 'resident memory added by 50,000 parked sessions' },
-      { value: '2.3 KB', label: 'database space per parked session' },
-      { value: '160 KB', label: 'memory per active session, against 20.0 MB with one process per session' },
-      { value: '4096', label: 'active sessions on one 8 GB M1, p50 20.9 s against about 17 s alone' },
+      { value: '34 MB', label: 'resident memory for 50,000 parked sessions, about 7 KB of disk each' },
+      { value: '5%', label: 'how much longer a turn takes with 1536 sessions running than alone' },
+      { value: '3000', label: 'turns submitted at once with a quota of 256: all complete, no 429; pi finishes 483' },
+      { value: '1.3 s', label: 'for a standby to take over after kill -9; every turn completes, no tool call runs twice' },
     ],
-    numbersNote: 'The model and tools are simulated, so these measure scheduling and persistence, not model quality. They were measured on v0.8.3 to v0.8.5, before multi-user, shards, the sandbox interface and the log rebuild, and have not been re-measured since.',
+    numbersNote: 'The model and tools are simulated, so these measure scheduling and persistence, not model quality. Measured on v0.18.0, one Apple M1 with 8 GB, one SQLite database.',
     numbersLink: 'Method and full data',
     productsTitle: 'Two projects',
     products: [
-      { name: 'Engine: ollupi', body: 'A Go library: execution pool, persistence, multi-user shards, sandbox, memory and MCP, served as JSON-RPC over WebSocket.', link: '/engine/architecture', linkText: 'Engine manual', source: engineRepo },
+      { name: 'Engine: ollupi', body: 'A Go library: session and tool pools, persistence, multi-user shards, sandbox, memory and MCP, served as JSON-RPC over WebSocket.', link: '/integrate/embed', linkText: 'Integration guide', source: engineRepo },
       { name: 'Desktop: ollupi-desktop', body: 'A macOS app built on the engine, with a built-in browser, file and diff panels and a Feishu bot. State stays on your Mac. Needs macOS 12 or later on Apple silicon.', link: '/app/install', linkText: 'Getting started', source: desktopRepo },
     ],
     notesTitle: 'Built in public',
@@ -106,14 +107,24 @@ const t = computed(() => copy[props.locale])
 <template>
   <div class="landing">
     <section class="hero">
-      <img class="logo logo-light" :src="withBase('/logo/logo.svg')" alt="Ollupi" />
-      <img class="logo logo-dark" :src="withBase('/logo/logo-dark.svg')" alt="Ollupi" />
       <h1>{{ t.title }}</h1>
       <p class="lead">{{ t.lead }}</p>
       <div class="actions">
-        <a class="action primary" :href="withBase(t.home + 'intro/why')">{{ t.actions.docs }}</a>
+        <a class="action primary" :href="withBase(t.home + 'intro/overview')">{{ t.actions.start }}</a>
+        <a class="action" :href="withBase(t.home + 'intro/why')">{{ t.actions.why }}</a>
         <a class="action" :href="download">{{ t.actions.download }}</a>
-        <a class="action" :href="engineRepo">{{ t.actions.source }}</a>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-title">{{ t.productsTitle }}</h2>
+      <div class="products">
+        <div v-for="item in t.products" :key="item.name">
+          <h3>{{ item.name }}</h3>
+          <p>{{ item.body }}</p>
+          <a :href="withBase(item.link)">{{ item.linkText }}</a>
+          <a :href="item.source">GitHub</a>
+        </div>
       </div>
     </section>
 
@@ -160,17 +171,6 @@ const t = computed(() => copy[props.locale])
       </p>
     </section>
 
-    <section>
-      <h2 class="section-title">{{ t.productsTitle }}</h2>
-      <div class="products">
-        <div v-for="item in t.products" :key="item.name">
-          <h3>{{ item.name }}</h3>
-          <p>{{ item.body }}</p>
-          <a :href="withBase(item.link)">{{ item.linkText }}</a>
-          <a :href="item.source">GitHub</a>
-        </div>
-      </div>
-    </section>
 
     <section class="notes">
       <h2 class="section-title">{{ t.notesTitle }}</h2>
@@ -196,18 +196,8 @@ section {
   padding-top: 72px;
 }
 
-.logo {
-  width: 260px;
-  height: auto;
-  margin-left: -12px;
-}
-
-.logo-dark {
-  display: none;
-}
-
 h1 {
-  margin-top: 28px;
+  margin-top: 0;
   max-width: 760px;
   font-size: 44px;
   line-height: 1.2;
@@ -428,14 +418,6 @@ td:last-child {
 </style>
 
 <style>
-.dark .landing .logo-light {
-  display: none;
-}
-
-.dark .landing .logo-dark {
-  display: block;
-}
-
 .dark .landing .action.primary {
   background: #cfe0c9;
   color: #18241d;
