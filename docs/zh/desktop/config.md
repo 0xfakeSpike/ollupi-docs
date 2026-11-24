@@ -42,11 +42,6 @@
 | `workspace.command_blacklist` | 禁止执行的命令名 | |
 | `memory.model` | 从结束的轮次里学记忆的模型，写 `provider/name`。和那个模型共用客户端与 `calls` | 省略则不学 |
 | `skills_dir` | 技能文件夹，相对本文件所在目录 | 省略即关闭技能 |
-| `feishu` | 飞书（Lark）机器人，见[飞书机器人](/zh/desktop/feishu-bot) | 省略则不跑 |
-| `feishu.app_id` / `app_secret` | 自建应用的 ID 和密钥，密钥明文写在文件里 | 都必填 |
-| `feishu.domain` | `feishu`（`open.feishu.cn`）或 `lark`（`open.larksuite.com`） | 省略为 `feishu` |
-| `feishu.users` | 机器人代为行动的 `open_id` | |
-| `feishu.workspace` | 飞书里新会话所属的工作区 | 省略则不属于任何工作区 |
 
 `config.yaml` 里没有 MCP 字段，也没有记忆的开关：MCP 服务器在引擎的 store 里（`mcpServer/list`），记忆的 `use`、`generate` 在设置里（`settings/read`）。
 
@@ -61,7 +56,7 @@
 | 层 | 在哪 | 查什么 |
 |---|---|---|
 | 解析 | `config.Parse` | YAML 语法；转成 JSON 后用 `DisallowUnknownFields` 解码，拼错的键报错而不是被忽略；类型 |
-| 文件形状 | `Config.Validate` | `name` 必填；提供方名字唯一且不带 `/`；`type` 在三种之内；每个提供方至少一个模型、模型名不重复；`calls`、`slots` 不为负；`limits` 不能是零值；`memory.model` 指向列出的模型；飞书的 ID、密钥和 `domain` |
+| 文件形状 | `Config.Validate` | `name` 必填；提供方名字唯一且不带 `/`；`type` 在三种之内；每个提供方至少一个模型、模型名不重复；`calls`、`slots` 不为负；`limits` 不能是零值；`memory.model` 指向列出的模型 |
 | 能否启动 | `host.Check` | 完整装配一遍后端：模型客户端的 `limits` 取值、技能目录、工作区沙箱、记忆模型 |
 
 前两层只看文件，第三层真的装配。`host.Check` 建一个临时数据目录（前缀 `ollupid-check-`），用和真实启动同一个 `New` 装配，然后关掉、删掉目录；它不走 `Serve`，所以不启动引擎、不开会话、不连 MCP 服务器。

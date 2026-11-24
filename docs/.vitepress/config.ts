@@ -63,7 +63,6 @@ const sections: Record<string, Group[]> = {
         { en: 'Browser, files, terminal', zh: '浏览器、文件、环境与终端', link: 'app/panels' },
         { en: 'Skills, MCP and tools', zh: '技能、MCP 与工具', link: 'app/capabilities' },
         { en: 'Scheduled tasks and memory', zh: '定时任务与记忆', link: 'app/automation' },
-        { en: 'Feishu bot', zh: '飞书机器人', link: 'app/feishu', zhOnly: true },
         { en: 'Configuration and data', zh: '配置与数据', link: 'app/config' },
         { en: 'Troubleshooting', zh: '常见问题', link: 'app/troubleshooting' },
       ],
@@ -166,7 +165,6 @@ const sections: Record<string, Group[]> = {
       items: [
         { en: 'Side panels', zh: '侧边面板', link: 'desktop/side-panels' },
         { en: 'Built-in browser', zh: '内置浏览器', link: 'desktop/browser' },
-        { en: 'Feishu bot', zh: '飞书机器人', link: 'desktop/feishu-bot' },
       ],
     },
     {

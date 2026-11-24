@@ -1,6 +1,6 @@
 # Sidecar
 
-`ollupid` 是桌面端的后端。它是一个 Go 可执行文件，把 ollupi 引擎装配起来，在回环端口上提供网关。引擎是库，没有入口，也不读配置文件和飞书，这些由 sidecar 负责。Electron 主进程启动它，读一行握手，然后把地址交给界面。sidecar 的 `go.mod` 钉住引擎版本，当前是 `v0.26.2`。
+`ollupid` 是桌面端的后端。它是一个 Go 可执行文件，把 ollupi 引擎装配起来，在回环端口上提供网关。引擎是库，没有入口，也不读配置文件，这些由 sidecar 负责。Electron 主进程启动它，读一行握手，然后把地址交给界面。sidecar 的 `go.mod` 钉住引擎版本，当前是 `v0.26.2`。
 
 除了常驻运行，`ollupid` 还有几个一次性模式，主进程用它们校验配置和技能。校验规则只有一份，就是后端自己的，界面不重写一遍。
 
@@ -63,11 +63,11 @@ flowchart TD
   G --> H["host.Serve 服务到上下文结束"]
 ```
 
-退出信号有三种：SIGINT、SIGTERM、stdin 关闭。它们取消同一个上下文。`Serve` 里用 `errgroup` 并行跑引擎的常驻流程、网关和各个 `Client`，任何一个返回就取消其余；返回前按相反顺序关闭组件，数据库最后释放。
+退出信号有三种：SIGINT、SIGTERM、stdin 关闭。它们取消同一个上下文。`Serve` 里用 `errgroup` 并行跑引擎的常驻流程和网关，任何一个返回就取消另一个；返回前按相反顺序关闭组件，数据库最后释放。
 
 ## 装配引擎
 
-装配出来的组件大部分在引擎的 host 里。`ollupi.New` 一次建好 store、附件、内置工具、调度器、记忆提炼和用量记录，桌面端只补上引擎不知道的几样：模型客户端、这台机器的运行环境、工作区工具、内置浏览器、飞书。`host.New` 只构建，不启动，任何一步失败都会把已打开的组件按相反顺序关掉。
+装配出来的组件大部分在引擎的 host 里。`ollupi.New` 一次建好 store、附件、内置工具、调度器、记忆提炼和用量记录，桌面端只补上引擎不知道的几样：模型客户端、这台机器的运行环境、工作区工具、内置浏览器。`host.New` 只构建，不启动，任何一步失败都会把已打开的组件按相反顺序关掉。
 
 | 顺序 | 组件 | 说明 |
 |---|---|---|
@@ -77,7 +77,6 @@ flowchart TD
 | 4 | 工作区工具 | `workspace.enabled` 为真时才有。`DenyRead` 加上 `config.yaml`，命令读不到里面的 API 密钥；`EnvMarker` 是 `OLLUPI_SANDBOX` |
 | 5 | 浏览器工具 | 只有 `OLLUPI_BROWSER_URL` 存在时注册 |
 | 6 | 引擎 | `ollupi.New`，带模型、工具、技能目录、槽位和网关选项 |
-| 7 | 飞书 | 配置了 `feishu` 时创建飞书机器人，会话和话题的对应关系存在 `<home>/data/feishu.json` |
 
 `ollupi.New` 的两个参数是桌面端特有的：
 
@@ -85,20 +84,8 @@ flowchart TD
 - `Hub: true`。应用的 Super Agent 就是引擎的中枢，用户的唯一中枢工作区把活分给项目工作区。中枢本身见 [中枢](/zh/engine/hub)。
 
 ::: info 演进
-早期 store、定时任务、MCP 连接、记忆提炼和网关都由 `host.New` 自己逐个构造，事件还要靠 `agent.Config.OnEvent` 手动分发给网关和各个客户端。现在这些都是引擎 host 的一部分，分发改走 store 的事件流，sidecar 只剩上面七步。
+早期 store、定时任务、MCP 连接、记忆提炼和网关都由 `host.New` 自己逐个构造，事件还要靠 `agent.Config.OnEvent` 手动分发给网关和各个客户端。现在这些都是引擎 host 的一部分，分发改走 store 的事件流，sidecar 只剩上面六步。
 :::
-
-### 客户端
-
-`Client` 是网关之外的前端，目前只有飞书机器人。它不再是事件的接收者，而是自己去订阅 store 的事件流：
-
-```go
-type Client interface {
-	Run(ctx context.Context)
-}
-```
-
-飞书机器人在 `Run` 里调 `store.Feed().Subscribe(owner, b.hear)`，只收会话所有者 `default` 的变更，收到后推进队列，由自己的工作循环去回消息。订阅回调在提交事务的 goroutine 里执行，所以 `hear` 不能阻塞。会话和话题的对应关系记在 `feishu.json`，重启后仍能对上。
 
 ### MCP 服务器
 
@@ -161,7 +148,7 @@ type skillsResult struct {
 解析分两步走：
 
 1. `Parse` 把 YAML 转成 JSON 再解码，这样文件用的就是引擎在工作区类型上定义的 json 标签。未知字段报错，拼错的键不会被静默忽略。
-2. `Validate` 只检查这份文件的形状能出的错：`name` 必填，提供方名字唯一且不带 `/`，`type` 在 `openai`/`anthropic`/`gemini` 之内，模型名不重复，`calls` 和 `slots` 不为负，`limits` 不能是零值，`memory.model` 指向列出的模型，飞书的 ID、密钥和 `domain`。策略、规则和 `limits` 的取值留给引擎在启动时校验。
+2. `Validate` 只检查这份文件的形状能出的错：`name` 必填，提供方名字唯一且不带 `/`，`type` 在 `openai`/`anthropic`/`gemini` 之内，模型名不重复，`calls` 和 `slots` 不为负，`limits` 不能是零值，`memory.model` 指向列出的模型。策略、规则和 `limits` 的取值留给引擎在启动时校验。
 
 `config.yaml` 只放"启动时取一次"的部署参数：模型和提供它们的 API、工作区工具、记忆用什么模型学、槽位。用户运行中改的东西（权限、MCP 服务器、记忆开不开）存在引擎的 store 里，通过网关改，所以改这些不用重启。逐键说明见 [配置](/zh/app/config)。
 
@@ -174,7 +161,6 @@ type skillsResult struct {
 | `internal/config` | `config.yaml` 的类型、模板、解析和校验 | [配置](/zh/app/config) |
 | `internal/handshake` | stdout 握手行 | 本页 |
 | `internal/browser` | 把内置浏览器作为工具提供方，请求转发到主进程 | [内置浏览器](/zh/desktop/browser) |
-| `internal/feishu` | 飞书机器人，一个 `host.Client` | [飞书机器人](/zh/desktop/feishu-bot) |
 
 ## 代码位置
 
@@ -185,7 +171,6 @@ type skillsResult struct {
 | ollupi-desktop | `sidecar/internal/handshake/handshake.go` | 握手行 |
 | ollupi-desktop | `sidecar/internal/config/config.go` | 配置类型、解析、`Validate`、首次写入、内置技能复制 |
 | ollupi-desktop | `sidecar/internal/config/template.go` | 首次启动写入的模板 |
-| ollupi-desktop | `sidecar/internal/feishu/feishu.go` | 飞书机器人，订阅 store 的事件流 |
 | ollupi-desktop | `sidecar/internal/browser/` | 把主进程的浏览器端点包成工具提供方 |
 | ollupi-desktop | `sidecar/skills/` | 随应用发布的技能 |
 | ollupi | `host/host.go` | `New` 装配、`Run` 跑常驻流程、`Close` |

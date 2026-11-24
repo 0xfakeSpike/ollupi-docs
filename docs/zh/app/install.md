@@ -71,7 +71,6 @@ agent 工作时你可以继续输入，或者停下它，见[工作区与会话]
 - [配置与数据](/zh/app/config)：设置里每一项在哪、用量在哪看、数据存在哪。
 - [技能、MCP 与工具](/zh/app/capabilities)：加技能、接 MCP 服务器。
 - [定时任务与记忆](/zh/app/automation)：让 agent 按时做事、记住你的习惯。
-- [飞书机器人](/zh/app/feishu)：离开电脑时在手机上处理。
 - [常见问题](/zh/app/troubleshooting)：后端起不来、模型报错、命令被拦。
 
 ## 代码位置

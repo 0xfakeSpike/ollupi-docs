@@ -119,7 +119,7 @@ React 19 写的界面，运行在沙箱里。它把引擎的状态镜像到本�
 
 ## 设置页
 
-设置在一页（`SettingsScreen`），左侧列表按 `sections` 顺序：`general`、`redaction`、`notifications`、`appearance`、`language`、`permissions`、`models`、`usage`、`feishu`。等后端回答的几节排在后面，免得到位时把上方内容顶下去。
+设置在一页（`SettingsScreen`），左侧列表按 `sections` 顺序：`general`、`redaction`、`notifications`、`appearance`、`language`、`permissions`、`models`、`usage`。等后端回答的几节排在后面，免得到位时把上方内容顶下去。
 
 ### 用量
 

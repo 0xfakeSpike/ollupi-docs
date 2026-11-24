@@ -7,7 +7,7 @@ Ollupi is two projects: a Go agent engine, and a macOS desktop app built on it.
 | What | A Go library, an agent runtime | An Electron app with a Go backend, `ollupid` |
 | For | Cloud providers building personal agent services at scale | People using an agent on their own Mac |
 | Shape | One process hosts every user and session of one shard | One local user; the backend runs as a sidecar hosted by the app |
-| Interface | JSON-RPC 2.0 over WebSocket | The desktop interface and a Feishu bot |
+| Interface | JSON-RPC 2.0 over WebSocket | The desktop interface |
 | Repository | [0xfakeSpike/ollupi](https://github.com/0xfakeSpike/ollupi) | [0xfakeSpike/ollupi-desktop](https://github.com/0xfakeSpike/ollupi-desktop) |
 
 Why the engine is built this way is on [Why Ollupi](/intro/why).
@@ -19,7 +19,7 @@ Why the engine is built this way is on [Why Ollupi](/intro/why).
 The desktop app sits downstream of the engine. Its `sidecar/go.mod` depends on a released engine version, and the app only presents and assembles:
 
 - The engine provides sessions, scheduling, persistence, tools, permissions, the sandbox, memory, scheduled tasks, search and the protocol.
-- The sidecar assembles the engine and adds what only a local machine has: the configuration file, the built-in browser tools, the Feishu bot.
+- The sidecar assembles the engine and adds what only a local machine has: the configuration file and the built-in browser tools.
 - The interface talks to the backend only through the protocol, with types generated from the engine's `protocol.schema.json`.
 
 The rule is that logic lives in the layer that owns it. What the engine can do, the app does not do again.

@@ -43,7 +43,7 @@ const copy = {
     productsTitle: '两个项目',
     products: [
       { name: '引擎 ollupi', body: 'Go 库。会话池和工具池、持久化、多用户分片、沙箱、记忆、MCP，通过 WebSocket 上的 JSON-RPC 对外提供。', link: '/zh/integrate/embed', linkText: '接入指南', source: engineRepo },
-      { name: '桌面端 ollupi-desktop', body: '基于引擎的 macOS 应用。内置浏览器、文件和改动面板、飞书机器人，状态存在本机。需要 macOS 12 或更新和 Apple 芯片。', link: '/zh/app/install', linkText: '上手指南', source: desktopRepo },
+      { name: '桌面端 ollupi-desktop', body: '基于引擎的 macOS 应用。内置浏览器、文件和改动面板，状态存在本机。需要 macOS 12 或更新和 Apple 芯片。', link: '/zh/app/install', linkText: '上手指南', source: desktopRepo },
     ],
     notesTitle: '公开地做',
     notesBody: '接下来做什么、每一步怎样算做完，写在路线图里；做过哪些决定、放弃了什么、走过哪些弯路，按提交记录写了下来。',
@@ -88,7 +88,7 @@ const copy = {
     productsTitle: 'Two projects',
     products: [
       { name: 'Engine: ollupi', body: 'A Go library: session and tool pools, persistence, multi-user shards, sandbox, memory and MCP, served as JSON-RPC over WebSocket.', link: '/integrate/embed', linkText: 'Integration guide', source: engineRepo },
-      { name: 'Desktop: ollupi-desktop', body: 'A macOS app built on the engine, with a built-in browser, file and diff panels and a Feishu bot. State stays on your Mac. Needs macOS 12 or later on Apple silicon.', link: '/app/install', linkText: 'Getting started', source: desktopRepo },
+      { name: 'Desktop: ollupi-desktop', body: 'A macOS app built on the engine, with a built-in browser and file and diff panels. State stays on your Mac. Needs macOS 12 or later on Apple silicon.', link: '/app/install', linkText: 'Getting started', source: desktopRepo },
     ],
     notesTitle: 'Built in public',
     notesBody: 'What comes next and how each step will be judged done is on the roadmap. The decisions made, the options dropped and the wrong turns taken are written down from the commit history.',

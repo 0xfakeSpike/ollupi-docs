@@ -7,7 +7,7 @@ Ollupi 是一个池化调度 agent 的运行时，由两个项目组成：Go 引
 | 定位 | agent 运行时（Go 库） | macOS 桌面应用（Electron 界面与 Go 后端） |
 | 适用场景 | 个人设备上的单用户部署，或服务商的多用户部署 | 个人在本机使用 agent |
 | 部署形态 | 单个进程承载一个分片内的全部用户与会话 | 单用户；后端作为 sidecar 由应用托管 |
-| 对外接口 | 基于 WebSocket 的 JSON-RPC 2.0 | 桌面界面、飞书机器人 |
+| 对外接口 | 基于 WebSocket 的 JSON-RPC 2.0 | 桌面界面 |
 | 仓库 | [0xfakeSpike/ollupi](https://github.com/0xfakeSpike/ollupi) | [0xfakeSpike/ollupi-desktop](https://github.com/0xfakeSpike/ollupi-desktop) |
 
 设计动机与取舍见[agent 需要一个池子](/zh/intro/why)。
@@ -19,7 +19,7 @@ Ollupi 是一个池化调度 agent 的运行时，由两个项目组成：Go 引
 桌面端是引擎的下游，依赖引擎的发布版本，自身只负责展示与装配：
 
 - **引擎**：会话、调度、持久化、工具、权限、沙箱、记忆、定时任务、搜索与协议。
-- **后端（sidecar）**：装配引擎，并提供本机特有的部分：配置文件、内置浏览器工具、飞书机器人。
+- **后端（sidecar）**：装配引擎，并提供本机特有的部分：配置文件、内置浏览器工具。
 - **界面**：仅通过协议与后端通信，类型定义由引擎导出的协议描述文件生成。
 
 分层原则：逻辑归属于拥有它的那一层；引擎已实现的能力，桌面端不重复实现。

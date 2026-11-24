@@ -6,7 +6,7 @@ Ollupi 桌面端把 ollupi 引擎包成一个 macOS 应用。引擎是 Go 库，
 
 | 进程 | 代码 | 做什么 | 生命周期 |
 |---|---|---|---|
-| Go sidecar（`ollupid`） | `sidecar/` | 嵌入引擎，装配模型、工具、记忆、定时任务、中枢、飞书机器人，在回环端口上提供网关 | 主进程启动它；SIGTERM 或 stdin 关闭时退出 |
+| Go sidecar（`ollupid`） | `sidecar/` | 嵌入引擎，装配模型、工具、记忆、定时任务、中枢，在回环端口上提供网关 | 主进程启动它；SIGTERM 或 stdin 关闭时退出 |
 | Electron 主进程 | `apps/desktop/src/main` | 托管 sidecar，拥有 `config.yaml` 和技能文件夹的写入、窗口、内置浏览器、终端、git 操作、更新、通知 | 应用的生命周期，窗口关闭后仍在 |
 | 渲染进程 | `apps/desktop/src/renderer` | 界面。沙箱内运行，只能通过 `window.desktop` 和网关 WebSocket 与外界说话 | 窗口的生命周期；隐藏窗口不销毁它 |
 
@@ -60,7 +60,7 @@ flowchart TD
 
 ## 数据从引擎事件到界面
 
-引擎把状态写进自己的 store，提交后再把变化发到 store 的 feed 上。网关按用户订阅这份 feed，转成 JSON-RPC 通知；飞书机器人订阅同一份 feed。
+引擎把状态写进自己的 store，提交后再把变化发到 store 的 feed 上。网关按用户订阅这份 feed，转成 JSON-RPC 通知。
 
 ```mermaid
 sequenceDiagram
@@ -84,7 +84,7 @@ sequenceDiagram
 一轮（turn）是用户发一条消息后 agent 的一次完整运行，条目（item）是一轮里的一条记录：一段回复、一次工具调用、一段思考。
 
 1. 引擎在一轮里写 store。`store/sqlite` 在事务提交后调 `feed.Publish(e)`，事件带着它属于哪个用户。
-2. 网关连接在 `initialize` 之后调 `feed.Subscribe(user, fn)`，只收这个用户的事件，再转成 JSON-RPC 通知。飞书机器人也照这个办法订阅它负责的那个用户。
+2. 网关连接在 `initialize` 之后调 `feed.Subscribe(user, fn)`，只收这个用户的事件，再转成 JSON-RPC 通知。
 3. `RpcPeer` 解析消息。带 `method` 无 `id` 的是通知，带 `method` 和 `id` 的是网关发来的请求（审批和提问），只带 `id` 的是调用的回应。
 4. `OllupiClient.on` 把通知派发给监听器。渲染进程的每个域（domain）在 `bind` 里订阅自己关心的通知。
 5. `conversation` 域调用 `@ollupi/core` 的 `applyEvent`，得到一个新的 `Timeline` 放进 Zustand。没打开的会话的通知直接丢弃，打开时再读当前状态。
@@ -93,7 +93,7 @@ sequenceDiagram
 审批走的是反方向的请求：网关发 `item/toolCall/requestApproval`，渲染进程把 JSON-RPC 的 resolve 存进 `requests` 域，用户点按钮时调用它，回应就发回去了。
 
 ::: info 演进
-以前宿主在 `agent.Config.OnEvent` 里把每个事件逐个交给网关和每个 `Client`，投递函数不许阻塞，新前端要自己接这条线。现在引擎只把事件发进 `store.Feed`，网关、飞书各订阅自己需要的用户，宿主不再转发。
+以前宿主在 `agent.Config.OnEvent` 里把每个事件逐个交给网关和每个 `Client`，投递函数不许阻塞，新前端要自己接这条线。现在引擎只把事件发进 `store.Feed`，网关按用户订阅，宿主不再转发。
 :::
 
 ## 中枢（Super Agent）
@@ -112,7 +112,7 @@ sequenceDiagram
 渲染进程的 `todos` 域连上后读一次 `todo/list`，`limit` 取 `LIMIT` = 2000；之后按 `todo/changed` 增量替换，顺序按 `todo/list` 的排法（未结束的在前，结束的按 `endedAt` 倒序），所以一条变化落在重新读一遍会放的位置。读不出来时面板显示原因，不伪装成空列表。界面细节见 [侧边面板](/zh/desktop/side-panels)，协议见 [待办](/zh/integrate/protocol/todos)。
 
 ::: info 演进
-以前待办是工作区里的 `TODO.md`，界面读文件、agent 写文件，两边靠文件内容对齐。现在它和别的引擎状态一样存在 store 里，桌面和飞书看到同一份，中枢的轮次写它，界面跟着通知更新。
+以前待办是工作区里的 `TODO.md`，界面读文件、agent 写文件，两边靠文件内容对齐。现在它和别的引擎状态一样存在 store 里，中枢的轮次写它，界面跟着通知更新。
 :::
 
 ## 逻辑放在哪一层
@@ -124,7 +124,7 @@ sequenceDiagram
 | 这份 `config.yaml` 能不能启动 | sidecar 的 `--check-config`，它用临时目录完整装配一遍引擎 | 引擎才知道模型、技能目录、工作区沙箱和记忆模型是否合法，桌面端不重写校验 |
 | 这个文件夹里的技能能不能加载 | sidecar 的 `--check-skills`，用 agent 启动时同一份目录逻辑 | 同上 |
 | 一个工具调用现在在等什么 | 引擎网关的 `ItemRow`（`gateway/wire.go`），`@ollupi/core` 的 `waitsForApproval` 照抄它的判定 | 界面只读状态，判定跟着协议里那个类型走 |
-| 待办现在的状态 | 引擎的 `todos` 表，渲染进程只读镜像 | 中枢、飞书和桌面要看到同一份 |
+| 待办现在的状态 | 引擎的 `todos` 表，渲染进程只读镜像 | 中枢和桌面要看到同一份 |
 | 哪些事件值得通知 | 渲染进程的 `notifications` 域 | 它跟着网关，有用户的通知偏好 |
 | 现在要不要弹系统通知 | 主进程的 `showNotice` | 它才知道窗口是否在前台 |
 | 后端失败的文案 | 渲染进程按 `BackendFailure` 的 `kind` 用界面语言写 | 主进程只报种类；只有 ollupi 自己报的 `reported.message` 原样显示 |
@@ -135,7 +135,7 @@ sequenceDiagram
 
 ## 单用户
 
-引擎是多用户的，桌面端只有一个用户 `gateway.DefaultUser`，值是 `default`。网关的令牌就是这个用户，中枢和飞书机器人也以它的身份调用引擎，所以桌面和飞书看到的是同一批会话和同一份待办。网关给每个用户保留一条连接，新连接会顶掉旧的，这也是渲染进程在同步完成之前不开第二条重连循环的原因。引擎的多用户和分片见 [分片](/zh/engine/sharding)。
+引擎是多用户的，桌面端只有一个用户 `gateway.DefaultUser`，值是 `default`。网关的令牌就是这个用户，中枢也以它的身份调用引擎，所以中枢和桌面看到的是同一批会话和同一份待办。网关给每个用户保留一条连接，新连接会顶掉旧的，这也是渲染进程在同步完成之前不开第二条重连循环的原因。引擎的多用户和分片见 [分片](/zh/engine/sharding)。
 
 ## 代码位置
 

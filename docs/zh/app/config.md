@@ -20,16 +20,13 @@ Ollupi 的配置和数据都在本机的 `~/.ollupi`。大多数设置在应用�
 
 后端起不来时，界面会显示原因和后端日志，改好配置后点 **重启后端**。
 
-想在手机上用，看[飞书机器人](/zh/app/feishu)。
-
 ## 目录结构
 
 ```
 ~/.ollupi/
 ├── config.yaml        配置，权限 0600
 ├── data/
-│   ├── store.sqlite   会话和记忆的数据库，旁边有 -shm 和 -wal
-│   └── feishu.json    飞书话题和会话的对应
+│   └── store.sqlite   会话和记忆的数据库，旁边有 -shm 和 -wal
 ├── attachments/       随消息发送的图片和文件的副本
 ├── skills/            技能文件夹，skills_dir 指向这里
 └── scratch/           不属于工作区的会话的命令在这里执行
@@ -108,7 +105,6 @@ skills_dir: skills
 | `workspace` | object | `enabled` 为假 | 见下 | 命令和文件工具 |
 | `memory` | object | 不学习新记忆 | 注释掉 | 学习记忆用的模型 |
 | `skills_dir` | string | 空，关闭技能 | `skills` | 技能文件夹，相对路径基于 home |
-| `feishu` | object | 不启用 | 注释掉 | 飞书机器人 |
 
 未知字段一律报错，比如写错的键，或旧版本的 `settings`。
 
@@ -167,16 +163,3 @@ skills_dir: skills
 | `model` | string | 空，不学习新记忆 | 注释掉 | 从结束的轮次学习记忆的模型，`provider/name`，必须是 `models` 里的一个。它和这个模型共用 `calls` |
 
 记忆和学习的开关在记忆页，任一个关着时这个模型都不学习。在记忆页换模型会改写这一项并重启后端，见[定时任务与记忆](/zh/app/automation#设置)。
-
-### feishu
-
-存在这一节就启用机器人。行为见 [飞书机器人](/zh/desktop/feishu-bot)，开放平台的步骤见 [飞书配置](/zh/app/feishu)。
-
-| 字段 | 类型 | 默认值 | 含义 |
-|---|---|---|---|
-| `app_id` | string | 必填 | 自建应用的 App ID |
-| `app_secret` | string | 必填 | App Secret，写在文件里 |
-| `domain` | string | `feishu` | `feishu`（open.feishu.cn）或 `lark`（open.larksuite.com） |
-| `users` | string list | 空 | 机器人为谁操作，`open_id` 名单 |
-| `workspace` | string | 空 | 飞书开始的会话所在工作区的文件夹 |
-

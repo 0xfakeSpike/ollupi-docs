@@ -103,7 +103,6 @@
 - **时间线**（timeline）—— 一个会话的条目按轮次归并后的界面模型。代码：`@ollupi/core` 的 `Timeline`。见 [渲染进程](/zh/desktop/renderer)
 - **后端状态**（backend state）—— 主进程对 sidecar 的四态描述：启动中、就绪、失败、已停止。代码：`BackendState`。见 [主进程](/zh/desktop/main-process)
 - **内置浏览器**（built-in browser）—— 应用自带的 Chromium 标签页，agent 和用户共用。代码：`AgentBrowser`、`Strip`。见 [内置浏览器](/zh/desktop/browser)
-- **聊天机器人客户端**（client）—— 网关之外跟着事件的前端，飞书机器人是一个。代码：`host.Client`。见 [Sidecar](/zh/desktop/sidecar)
 
 ## 相关页面
 
