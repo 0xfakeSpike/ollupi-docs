@@ -10,7 +10,6 @@ The full page covers:
 
 - The window shows only "the backend cannot start"
 - The configuration has an error and the backend refuses to start
-- The skill folder has an error and the backend refuses to start
 - A change to the configuration or a skill has not taken effect
 - Model call errors: a turn that stops at "this turn failed"; 429s, server errors and dropped connections; a model list that cannot be fetched
 - A command stopped by the sandbox

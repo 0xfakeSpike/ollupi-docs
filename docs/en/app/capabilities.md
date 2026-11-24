@@ -8,7 +8,7 @@ This page is being translated. The complete version is [in Chinese](/zh/app/capa
 
 The full page covers:
 
-- Skills: turning them on and off and where they are kept, skills kept separately for each agent, creating and editing
+- Skills: each profile's own, which agents a skill is given to, creating and editing, importing a folder
 - MCP: adding a server, secrets, connection states, renaming and deleting, where servers run
 - Built-in tools and what their marks mean
 - MCP tools and approvals

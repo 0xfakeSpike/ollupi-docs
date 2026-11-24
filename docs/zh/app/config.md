@@ -11,9 +11,8 @@ Ollupi 的配置和数据都在本机的 `~/.ollupi`。大多数设置在应用�
 | 位置 | 内容 |
 |---|---|
 | `~/.ollupi/config.yaml` | 配置，API 密钥也在这里 |
-| `~/.ollupi/data` | 会话和记忆的数据库 |
+| `~/.ollupi/data` | 会话、记忆和技能的数据库 |
 | `~/.ollupi/attachments` | 随消息发送的文件的副本 |
-| `~/.ollupi/skills` | 技能 |
 | `~/Library/Logs/Ollupi/backend.log` | 后端日志 |
 
 这些路径都能在 **设置 → 通用** 里打开。
@@ -26,13 +25,12 @@ Ollupi 的配置和数据都在本机的 `~/.ollupi`。大多数设置在应用�
 ~/.ollupi/
 ├── config.yaml        配置，权限 0600
 ├── data/
-│   └── store.sqlite   会话和记忆的数据库，旁边有 -shm 和 -wal
+│   └── store.sqlite   会话、记忆和技能的数据库，旁边有 -shm 和 -wal
 ├── attachments/       随消息发送的图片和文件的副本
-├── skills/            技能文件夹，skills_dir 指向这里
 └── scratch/           不属于工作区的会话的命令在这里执行
 ```
 
-沙箱对这个目录有专门的规则：`config.yaml` 和 `data/` 不可读，命令读不到 API 密钥和数据库；技能文件夹只读。
+沙箱对这个目录有专门的规则：`config.yaml` 和 `data/` 不可读，命令读不到 API 密钥和数据库。
 
 应用自己的数据在 macOS 的标准位置，不在这个目录：
 
@@ -49,7 +47,7 @@ Ollupi 的配置和数据都在本机的 `~/.ollupi`。大多数设置在应用�
 
 ## 首次启动
 
-`config.yaml` 不存在时，sidecar 先写入自带技能，再写入模板。模板是可运行的最小配置，带注释说明。权限、MCP 服务器和记忆、学习两个开关不在这个文件里，见[在应用里设置的](#在应用里设置的)。
+`config.yaml` 不存在时，sidecar 写入模板。模板是可运行的最小配置，带注释说明。权限、MCP 服务器、技能和记忆、学习两个开关不在这个文件里，见[在应用里设置的](#在应用里设置的)。
 
 ```yaml
 name: ollupi
@@ -71,8 +69,6 @@ workspace:
   command_timeout_sec: 60
   network: false
 
-skills_dir: skills
-
 # memory:
 #   model: openai/gpt-5.2
 ```
@@ -85,9 +81,12 @@ skills_dir: skills
 |---|---|
 | 所有会话默认的审批策略和例外规则 | **设置 → 权限**，见[审批与权限](/zh/app/permissions#选一档审批策略) |
 | MCP 服务器 | **能力 → MCP**，见[技能、MCP 与工具](/zh/app/capabilities#mcp) |
+| 技能和给哪些 agent | **能力 → 技能**，见[技能、MCP 与工具](/zh/app/capabilities#技能) |
 | 记忆开关、从会话中学习 | **记忆 → 全局**，见[定时任务与记忆](/zh/app/automation#设置) |
 
 0.7.53 之前的 `config.yaml` 里有 `permissions`、`mcp`、`memory.use` 和 `memory.generate`，0.7.53 第一次启动时把它们搬进了应用。跳过 0.7.53 直接升级的，后端会报这几个字段不认识：从文件里删掉它们，再到应用里重新设置。
+
+旧版的 `config.yaml` 里有 `skills_dir`，指向一个按 agent 分文件夹的技能文件夹。升级后第一次启动时，应用把里面的技能给每个已有身份，同名的合成一个、给原来有它的所有 agent（内容不同时以主 agent 那份为准），再从文件里去掉这一行；那个文件夹原样留在磁盘上，可以自己删。
 
 ## 字段
 
@@ -104,7 +103,6 @@ skills_dir: skills
 | `slots` | int | `0`，取引擎默认的 32 | 注释掉 | 同时运行的轮次数，不能为负 |
 | `workspace` | object | `enabled` 为假 | 见下 | 命令和文件工具 |
 | `memory` | object | 不学习新记忆 | 注释掉 | 学习记忆用的模型 |
-| `skills_dir` | string | 空，关闭技能 | `skills` | 技能文件夹，相对路径基于 home |
 
 未知字段一律报错，比如写错的键，或旧版本的 `settings`。
 

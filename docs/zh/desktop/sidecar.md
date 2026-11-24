@@ -1,8 +1,8 @@
 # Sidecar
 
-`ollupid` 是桌面端的后端。它是一个 Go 可执行文件，把 ollupi 引擎装配起来，在回环端口上提供网关。引擎是库，没有入口，也不读配置文件，这些由 sidecar 负责。Electron 主进程启动它，读一行握手，然后把地址交给界面。sidecar 的 `go.mod` 钉住引擎版本，当前是 `v0.26.2`。
+`ollupid` 是桌面端的后端。它是一个 Go 可执行文件，把 ollupi 引擎装配起来，在回环端口上提供网关。引擎是库，没有入口，也不读配置文件，这些由 sidecar 负责。Electron 主进程启动它，读一行握手，然后把地址交给界面。sidecar 的 `go.mod` 钉住引擎版本，当前是 `v0.31.0`。
 
-除了常驻运行，`ollupid` 还有几个一次性模式，主进程用它们校验配置和技能。校验规则只有一份，就是后端自己的，界面不重写一遍。
+除了常驻运行，`ollupid` 还有几个一次性模式，主进程用它们校验配置、导入时读技能文件夹、把旧配置搬到现在的样子。规则只有一份，就是后端自己的，界面不重写一遍。
 
 ## 启动参数
 
@@ -14,9 +14,9 @@
 | `--watch-stdin` | `false` | stdin 关闭时退出。主进程总是传，父进程死掉后 sidecar 跟着退 |
 | `--check-config FILE` | | 检查这份配置能否启动，打印结果后退出 |
 | `--config-schema` | | 打印 `--check-config` 输出的 JSON Schema 后退出 |
-| `--list-skills` | | 列出 `config.yaml` 的 `skills_dir` 里每个角色的技能后退出 |
-| `--check-skills DIR` | | 按 agent 加载的方式列出 DIR 里每个角色的技能后退出 |
-| `--skills-schema` | | 打印技能模式输出的 JSON Schema 后退出 |
+| `--import-config` | | 拆开旧版的 `config.yaml`（按身份声明模型，或写着 `skills_dir`）后退出，见[技能](#旧配置里的-skills-dir) |
+| `--read-skill DIR` | | 把技能文件夹 DIR 读成 `skill/set` 要的字段，打印后退出。主进程导入文件夹时用 |
+| `--skill-schema` | | 打印 `--read-skill` 输出的 JSON Schema 后退出 |
 
 一次性模式都只打印一行 JSON（Schema 模式是缩进的 JSON），失败时退出码为 1。
 
@@ -76,7 +76,7 @@ flowchart TD
 | 3 | 运行环境 | `userBox`：`sandbox.New` 的 `full access` 模式，根目录是 home |
 | 4 | 工作区工具 | `workspace.enabled` 为真时才有。`DenyRead` 加上 `config.yaml`，命令读不到里面的 API 密钥；`EnvMarker` 是 `OLLUPI_SANDBOX` |
 | 5 | 浏览器工具 | 只有 `OLLUPI_BROWSER_URL` 存在时注册 |
-| 6 | 引擎 | `ollupi.New`，带模型、工具、技能目录、槽位和网关选项 |
+| 6 | 引擎 | `ollupi.New`，带模型、工具、槽位和网关选项 |
 
 `ollupi.New` 的两个参数是桌面端特有的：
 
@@ -98,7 +98,7 @@ MCP 服务器由用户在界面里添加，存在引擎的 store 里，`config.y
 `--check-config` 先用 `config.LoadFile` 解析文件，再调 `host.Check`：
 
 1. `os.MkdirTemp("", "ollupid-check-")` 建一个临时数据目录，真正的数据库不打开。
-2. 用 `New` 完整装配，和真实启动同一个函数：模型客户端、技能目录、工作区沙箱、记忆模型都在这一步校验。
+2. 用 `New` 完整装配，和真实启动同一个函数：模型客户端、工作区沙箱、记忆模型都在这一步校验。
 3. `h.close()` 关掉装配出来的东西，`RemoveAll` 删临时目录。
 
 它不走 `Serve`，所以不启动引擎的常驻流程，不开会话，也不连 MCP 服务器。
@@ -114,43 +114,57 @@ type checkResult struct {
 }
 ```
 
-`Config` 是后端解码后的样子：默认值已应用，`skills_dir` 这类相对路径已解析成绝对路径。API 密钥保留在输出里，界面要像编辑 Base URL 一样编辑它。
+`Config` 是后端解码后的样子：默认值已应用，`workspace_dirs` 这类相对路径已解析成绝对路径。API 密钥保留在输出里，界面要像编辑 Base URL 一样编辑它。
 
 ## 技能
 
-技能是一个带 `SKILL.md` 的文件夹，agent 按需加载。`sidecar/skills/` 用 `go:embed` 打进可执行文件，这个目录里每个子文件夹是一个随应用发布的技能。目前只有 `zhou-shenghua-woodcut-style`，内含风格规则、Python 渲染库和生图提示词。
+技能是每个用户自己的，存在引擎的 store 里，给一个或几个角色，经网关的 `skill/list`、`skill/read`、`skill/set`、`skill/delete` 读写，改动用 `skill/changed` 推给每个客户端。sidecar 不管技能的存放，只在三个地方把一个技能文件夹（`SKILL.md` 加旁边的文件）变成引擎要的 `skill.Package`，三处共用 `internal/skillmd` 的 `Read`：
 
-引擎按角色分目录加载技能，所以 `writeStarterSkills` 把内置技能复制到 `<home>/skills/<role>/<skill>`，角色是 `agent.FullMain` 和 `agent.CompactMain`：同一个主 agent 的两个角色都有，会话换到另一种大小的模型时技能还在。规则是：
+- 文件夹名必须等于 frontmatter 里的 `name`；`metadata.version` 是版本。
+- 以 `.` 开头的文件和文件夹跳过；链接、非 UTF-8 的文件、扩展名不在引擎收的文本类型里的文件不带上，记在 `skipped` 里。
+- 结果不带角色，给哪些角色由调用的一方决定；名称、描述、大小这些规则留给引擎在 `SetSkill` 时检查。
 
-- 只在 `config.yaml` 还不存在时运行，也就是首次启动。之后这个文件夹归用户管理，升级不覆盖。
-- 目标文件夹已存在时跳过。
-- 复制到一半失败时删掉残留，下次重试不会把半个技能当成已存在。
+### 随应用发布的技能
 
-模板里写的 `skills_dir: skills` 让技能默认开启。去掉这一行就关闭技能。
+`sidecar/skills/` 用 `go:embed` 打进可执行文件，每个子文件夹是一个技能，目前只有 `zhou-shenghua-woodcut-style`，内含风格规则、Python 渲染库和生图提示词。`skills.Starter()` 把它们读成给 `full-main-agent` 和 `compact-main-agent` 的技能：同一个主 agent 的两个角色都有，会话换到另一种大小的模型时技能还在。
 
-两个技能模式输出 `skillsResult`：
+一个身份第一次连上时，`profileOf` 在 store 里建这个用户，接着 `giveStarterSkills` 把这些技能给它。只在建用户的那一次给，所以用户删掉的技能不会再回来。
+
+### 导入文件夹
+
+`--read-skill DIR` 输出 `readResult`，字段和 `skill/set` 的参数一样，只少了角色：
 
 ```go
-type skillsResult struct {
-	OK    bool         `json:"ok"`
-	Dir   string       `json:"dir"`
-	Roles []roleSkills `json:"roles,omitempty"`
-	Error string       `json:"error,omitempty"`
+type readResult struct {
+	OK      bool         `json:"ok"`
+	Skill   *skillFields `json:"skill,omitempty"`
+	Skipped []string     `json:"skipped,omitempty"`
+	Error   string       `json:"error,omitempty"`
 }
 ```
 
-`Dir` 为空表示 `config.yaml` 没写 `skills_dir`，技能关闭。否则 `skillsIn` 先调 `skill.Check(dir, agent.Names)` 按 agent 启动时的规则检查整个目录，再对 `agent.Names` 里的每个角色调 `skill.Load`，用和一轮开始时相同的方式读出技能。角色是引擎的 11 个：`full-main-agent`、`compact-main-agent`、`general-sub-agent`、`browser-sub-agent`、`design-sub-agent`、`codebase-sub-agent`、`frontend-sub-agent`、`backend-sub-agent`、`writing-sub-agent`、`research-sub-agent`、`hub-main-agent`。没有目录的角色就是没有技能。
+主进程把它交给界面，界面填进对话框，用户勾好给哪些 agent 后自己调 `skill/set`。
+
+### 旧配置里的 `skills_dir`
+
+`--import-config` 在拆完旧的按身份声明模型的配置之后，再看 `config.yaml` 有没有 `skills_dir`（`importSkills`）。有就按角色读 `<skills_dir>/<role>/<skill>`，主 agent 的两个角色先读：
+
+- 同名的技能合成一个，带上所有有它的角色；内容不同时留先读到的那份，也就是主 agent 的，其余记进 `skipped`。
+- 引擎会拒绝的技能（`Package.Check`）不搬，同样记进 `skipped`，不挡启动。
+- 每个已有用户都得到全部技能，写完再从 `config.yaml` 去掉这一项（`config.SkillsDir` 用 YAML 节点删键，其余注释保留）。文件夹原样留在磁盘上。
+
+每一步都能重跑：没删掉键之前中断，下次启动再写一遍同样的技能。`config.LoadFile` 遇到还写着 `skills_dir` 的文件直接报错，提示先跑 `--import-config`；主进程每次启动都先跑这一步，所以用户看不到这个错误。
 
 ## 配置加载和校验
 
-`config.Load` 在 `config.yaml` 不存在时先写入自带技能，再写入模板（权限 `0600`）。技能先写，这样复制失败时下一次启动会重试。
+`config.Load` 在 `config.yaml` 不存在时写入模板（权限 `0600`）。
 
 解析分两步走：
 
 1. `Parse` 把 YAML 转成 JSON 再解码，这样文件用的就是引擎在工作区类型上定义的 json 标签。未知字段报错，拼错的键不会被静默忽略。
 2. `Validate` 只检查这份文件的形状能出的错：`name` 必填，提供方名字唯一且不带 `/`，`type` 在 `openai`/`anthropic`/`gemini` 之内，模型名不重复，`calls` 和 `slots` 不为负，`limits` 不能是零值，`memory.model` 指向列出的模型。策略、规则和 `limits` 的取值留给引擎在启动时校验。
 
-`config.yaml` 只放"启动时取一次"的部署参数：模型和提供它们的 API、工作区工具、记忆用什么模型学、槽位。用户运行中改的东西（权限、MCP 服务器、记忆开不开）存在引擎的 store 里，通过网关改，所以改这些不用重启。逐键说明见 [配置](/zh/app/config)。
+`config.yaml` 只放"启动时取一次"的部署参数：模型和提供它们的 API、工作区工具、记忆用什么模型学、槽位。用户运行中改的东西（权限、MCP 服务器、技能、记忆开不开）存在引擎的 store 里，通过网关改，所以改这些不用重启。逐键说明见 [配置](/zh/app/config)。
 
 ## 宿主能力
 
@@ -166,12 +180,15 @@ type skillsResult struct {
 
 | 仓库 | 路径 | 职责 |
 |---|---|---|
-| ollupi-desktop | `sidecar/cmd/ollupid/main.go` | 命令行入口、一次性模式、启动顺序、`checkResult` 与 `skillsResult` |
-| ollupi-desktop | `sidecar/internal/host/host.go` | 装配、`Serve`、`Check`、`userBox`、`modelClients` |
+| ollupi-desktop | `sidecar/cmd/ollupid/main.go` | 命令行入口、一次性模式、启动顺序、`checkResult` |
+| ollupi-desktop | `sidecar/cmd/ollupid/skills.go` | `--read-skill` 和它的 `readResult`，`importSkills` 搬旧的 `skills_dir` |
+| ollupi-desktop | `sidecar/internal/host/host.go` | 装配、`Serve`、`Check`、`userBox`、`modelClients`，新身份的 `giveStarterSkills` |
 | ollupi-desktop | `sidecar/internal/handshake/handshake.go` | 握手行 |
-| ollupi-desktop | `sidecar/internal/config/config.go` | 配置类型、解析、`Validate`、首次写入、内置技能复制 |
+| ollupi-desktop | `sidecar/internal/config/config.go` | 配置类型、解析、`Validate`、首次写入 |
+| ollupi-desktop | `sidecar/internal/config/skillsdir.go` | 从旧配置里取出并删掉 `skills_dir` |
+| ollupi-desktop | `sidecar/internal/skillmd/` | 把技能文件夹读成 `skill.Package` |
 | ollupi-desktop | `sidecar/internal/config/template.go` | 首次启动写入的模板 |
 | ollupi-desktop | `sidecar/internal/browser/` | 把主进程的浏览器端点包成工具提供方 |
-| ollupi-desktop | `sidecar/skills/` | 随应用发布的技能 |
+| ollupi-desktop | `sidecar/skills/` | 随应用发布的技能，`Starter()` |
 | ollupi | `host/host.go` | `New` 装配、`Run` 跑常驻流程、`Close` |
 | ollupi | `gateway/server.go` | 网关，`Subscribe` 事件流 |

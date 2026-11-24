@@ -124,7 +124,7 @@ frame-src blob:; connect-src ws://127.0.0.1:*
 | 应用 | `info` | 版本、平台、home、配置路径、日志路径 |
 | 后端 | `backend.state`、`restart`、`onState` | 状态和重启 |
 | 配置 | `config.read`、`apply` | 读取和改写 `config.yaml`，见 [配置](/zh/app/config) |
-| 技能 | `skills.list`、`read`、`create`、`save`、`import`、`copy`、`remove`、`defaultFolder` | 按 agent 管理技能文件夹，见 [配置](/zh/desktop/config) |
+| 技能 | `skills.import` | 让用户选一个技能文件夹，用 `ollupid --read-skill` 读成字段；技能本身经网关读写，见 [配置](/zh/desktop/config#技能) |
 | 中枢 | `superAgentFolder` | 建 `<home>/super-agent` 并给出路径，中枢的 hub 工作区加在这里 |
 | 附件 | `attachments.pathOf`、`writeTemp`、`removeTemp` | 没有路径的文件先写成临时文件 |
 | 文件 | `files.list`、`read`、`kind` | 只读工作区文件，见 [侧边面板](/zh/desktop/side-panels) |
@@ -196,7 +196,7 @@ frame-src blob:; connect-src ws://127.0.0.1:*
 | ollupi-desktop | `apps/desktop/src/main/backend/supervisor.ts` | 后端进程、握手、日志 |
 | ollupi-desktop | `apps/desktop/src/main/backend/environment.ts` | 后端路径和登录 shell 环境 |
 | ollupi-desktop | `apps/desktop/src/main/backend/config.ts` | `config.yaml` 的读写 |
-| ollupi-desktop | `apps/desktop/src/main/backend/skills.ts` | 技能文件夹的读写 |
+| ollupi-desktop | `apps/desktop/src/main/backend/skills.ts` | 导入时读一个技能文件夹 |
 | ollupi-desktop | `apps/desktop/src/main/window.ts` | 主窗口和 `watchTheInterface` |
 | ollupi-desktop | `apps/desktop/src/main/ipc.ts` | IPC 处理和输入校验 |
 | ollupi-desktop | `apps/desktop/src/main/protocol.ts` | `app://` 协议和 CSP |

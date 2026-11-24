@@ -7,7 +7,7 @@ Ollupi 桌面端把 ollupi 引擎包成一个 macOS 应用。引擎是 Go 库，
 | 进程 | 代码 | 做什么 | 生命周期 |
 |---|---|---|---|
 | Go sidecar（`ollupid`） | `sidecar/` | 嵌入引擎，装配模型、工具、记忆、定时任务、中枢，在回环端口上提供网关 | 主进程启动它；SIGTERM 或 stdin 关闭时退出 |
-| Electron 主进程 | `apps/desktop/src/main` | 托管 sidecar，拥有 `config.yaml` 和技能文件夹的写入、窗口、内置浏览器、终端、git 操作、更新、通知 | 应用的生命周期，窗口关闭后仍在 |
+| Electron 主进程 | `apps/desktop/src/main` | 托管 sidecar，拥有 `config.yaml` 的写入、窗口、内置浏览器、终端、git 操作、更新、通知 | 应用的生命周期，窗口关闭后仍在 |
 | 渲染进程 | `apps/desktop/src/renderer` | 界面。沙箱内运行，只能通过 `window.desktop` 和网关 WebSocket 与外界说话 | 窗口的生命周期；隐藏窗口不销毁它 |
 
 ```mermaid
@@ -102,7 +102,7 @@ sequenceDiagram
 
 - 界面上第一次开始 Super Agent 时，渲染进程的 `startSuperAgent` 调 `desktop.superAgentFolder()` 拿到 `<home>/super-agent`，用 `workspace/add` 把它加成工作区，再用 `workspace/setKind` 把 `kind` 设成 `hub`，最后在其中开一个草稿会话。这个文件夹在主进程这边与 `config.yaml` 同级，中枢不拿它装项目文件。
 - 工作区的种类只有 `project` 和 `hub`，新建的都是 `project`；一个用户最多一个 hub 工作区，再改第二个会被引擎拒绝。
-- 这个工作区里的会话由 `agent.HubMain`（`hub-main-agent`）回答。它把工作交给项目会话，自己不跑项目的命令、不碰项目的文件。它也是技能的一个归属：`skills_dir` 下 `hub-main-agent/` 目录里的技能只给它用。
+- 这个工作区里的会话由 `agent.HubMain`（`hub-main-agent`）回答。它把工作交给项目会话，自己不跑项目的命令、不碰项目的文件。它也是技能的一个归属：给了 `hub-main-agent` 的技能它才看得到。
 - 桌面端不为中枢传别的配置，界面语言里的 Super Agent 与文档里的中枢是同一件东西。中枢的待办面板见 [面板](/zh/app/panels)。
 
 ## 待办
@@ -121,8 +121,9 @@ sequenceDiagram
 
 | 问题 | 放在哪 | 为什么 |
 |---|---|---|
-| 这份 `config.yaml` 能不能启动 | sidecar 的 `--check-config`，它用临时目录完整装配一遍引擎 | 引擎才知道模型、技能目录、工作区沙箱和记忆模型是否合法，桌面端不重写校验 |
-| 这个文件夹里的技能能不能加载 | sidecar 的 `--check-skills`，用 agent 启动时同一份目录逻辑 | 同上 |
+| 这份 `config.yaml` 能不能启动 | sidecar 的 `--check-config`，它用临时目录完整装配一遍引擎 | 引擎才知道模型、工作区沙箱和记忆模型是否合法，桌面端不重写校验 |
+| 一个技能合不合规 | 引擎在 `skill/set` 时检查，不通过回 `invalidParams` | 同上；界面只把原因显示出来 |
+| 一个技能文件夹怎么读 | sidecar 的 `--read-skill`，和随应用发布的技能同一个读法 | `SKILL.md` 只有一处解析 |
 | 一个工具调用现在在等什么 | 引擎网关的 `ItemRow`（`gateway/wire.go`），`@ollupi/core` 的 `waitsForApproval` 照抄它的判定 | 界面只读状态，判定跟着协议里那个类型走 |
 | 待办现在的状态 | 引擎的 `todos` 表，渲染进程只读镜像 | 中枢和桌面要看到同一份 |
 | 哪些事件值得通知 | 渲染进程的 `notifications` 域 | 它跟着网关，有用户的通知偏好 |
