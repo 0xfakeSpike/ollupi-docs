@@ -6,6 +6,8 @@ Agents will run by the hundreds and thousands at once, on personal computers and
 
 Suppose you give an agent a task: collect the surviving parts of the Yongle Encyclopedia. The more than 800 surviving volumes are scattered across more than 30 institutions in eight countries. The agent launches one subagent per volume to find, download, recognize and proofread the scans: more than 800 sessions (threads) in all. On the same computer there are also scheduled tasks, messages from chat apps and other sessions.
 
+![800 tasks at once; the only control is how slow the machine feels](./why-fig-1-waiting.svg)
+
 These sessions start at the same time and compete for the same model quota, memory and CPU: model requests are refused in bulk and retried again and again, and the machine gets slower and slower. Who decides which sessions run at a given moment?
 
 - **The user decides.** The user cannot see how much quota and memory is left, and can only slow down starting new tasks by hand according to how sluggish the machine feels. This is imprecise, and it adds to the user's load.
@@ -15,11 +17,15 @@ These sessions start at the same time and compete for the same model quota, memo
 
 The software industry has solved a similar problem twice. HTTP and RPC frameworks use connection pools: the number of connections is capped, requests queue, and a connection goes back when it is done. Cloud providers pool physical machines: users request what they need and the available resources seem unlimited, but the platform hands out only what is actually used, and idle CPU and memory go to other users. AWS Lambda oversubscribes CPU and memory up to 10 times in production, and idle EC2 capacity is sold cheaply as Spot Instances. What the two have in common: total resources are capped, they are handed out by actual use, and what is idle is given back. The caller only submits requests; it does not allocate resources.
 
+![Connections and servers went into pools; agents are next](./why-fig-2-pool.svg)
+
 Agents are the third time. With a pool, the user only sets the limits and then hands over every task: even if 800 subagents are launched, no more than the limit run at once, and the rest queue. One running place in the pool is called a slot.
 
 But a session is not a connection. A connection is borrowed for a few milliseconds and returned, and it is used the same way every time; a session can last from minutes to days, calling the model, running commands and launching subagents along the way. Before sessions can be pooled, their life cycle has to be clear.
 
 ## The life cycle of a session
+
+![One session: what goes in turn, what runs at once](./why-fig-3-lifecycle.svg)
 
 The runtime's own computation is small: each turn needs only a few to a few dozen milliseconds of CPU. The rest of the time is spent waiting, and what is waited on decides what can run at once:
 
@@ -34,6 +40,8 @@ So at one moment, a single session may have a model call, a download and several
 
 Pooling requires a session to give back its slot while it is idle and to resume when its turn comes. The life cycle above has four features, each of which leads to one condition:
 
+![A pool of agents: four conditions, one place each](./why-fig-4-anatomy.svg)
+
 1. **Different bottlenecks → schedule them separately, each with its own limit.** Sessions are let through by slots; model calls are rate-limited by the provider's quota and the local concurrency limit; the model can move long tool calls to the background, where they run in a separate tool pool and, when done, report back the way a subagent does. If the three shared one queue they would block each other: if tool runs took up model-call places, a few long-running tools would use them all up and leave every session unable to call the model. The limits must also be shared by all sessions: if each session calls, gets refused and retries on its own, it only makes congestion worse.
 2. **Commands must run → separate the runtime from the sandbox.** The agent loop uses almost no computation; what needs isolating is the commands it runs. The loop runs in a shared runtime, and commands run in their own sandboxes. Otherwise every session would carry a whole set of processes or a whole machine, and the pool's capacity would drop sharply.
 3. **Waits last days → no session state in the runtime.** While a session waits, processes restart and are upgraded, and machines fail. So every step is written to durable storage: a waiting session is only a log in the database, holding no slot and no memory, and any process can wake it and continue from where it stopped.
@@ -45,11 +53,15 @@ Without any one of these, pooling does not work. Any mechanism beyond these four
 
 The first four approaches build on one another: each solves the previous one's problem and leaves a new gap. Cloudflare takes a different route.
 
+![Which conditions each approach meets](./why-fig-5-matrix.svg)
+
 1. **One virtual machine per agent.** The agent and the commands it runs go into the same machine, fully isolated. The gap is that nothing is shared: each agent has a machine to itself and does not release it when idle; each calls the model on its own with no common limit; suspending relies on memory snapshots, and resuming returns to the moment of the snapshot, so commands run after it may run again.
 2. **One process per session**, such as Claude Code and its SDK. There is no longer a machine for every agent, and one machine can host many sessions. The gap is that only the commands need isolating, yet every session gets a complete runtime environment: running Ollupi and DeepSeek Harness with one process per session takes 20–107 MB per process. Model calls are still made separately, with no common limit.
 3. **One process hosting many sessions**, such as pi's SDK and DeepSeek Harness. Sessions share one process, which saves the surplus runtime environments. There are two gaps: no common limit, so they fail in bulk under bursts; and state lives only in memory, so when the process is killed turns are cut off, and waiting sessions still hold memory. pi's experimental version, pi-durable, stores state in SQLite and can continue from where it stopped after being killed, but still lacks a common limit.
 4. **Durable execution frameworks**, such as Temporal, Restate and DBOS. State is durable, and after a restart the process can resume from where it stopped. The gap is that they do not understand an agent's steps and can only treat the code as a black box: on recovery they replay the code, and a failed step is retried, so every step must be safe to repeat, which commands the model decides on the spot cannot be. Scheduling limits and sandboxes also have to be built by hand.
 5. **Cloudflare's Durable Objects and Workflows**, the other route to pooling: pooling done at the platform layer. Each session is a separate object with its own storage, and while waiting it is only storage; scaling, replication and isolation are the platform's job. What it offers is lower-level building blocks: the agent loop, limits on model calls and the record of side effects still have to be built on top by the developer.
+
+![Measured: without 1, bursts fail; without 3, kills stop turns](./why-fig-6-burst.svg)
 
 ## Ollupi: only these four conditions
 
@@ -67,6 +79,8 @@ What is given up is customization: a host can replace the model, the tools, the 
 ## Costs and limits
 
 Ollupi and Cloudflare are the two routes to pooling: Cloudflare at the platform layer, Ollupi at the runtime layer. The trade-off between them:
+
+![Ollupi wins on one machine; Cloudflare wins at scale](./why-fig-7-tradeoff.svg)
 
 Ollupi keeps sessions in one process and one database, and its advantage is efficiency on one machine: each step is written to local SQLite, and waiting on the model takes only one slot. The cost is that scaling, replication and isolation are left to whoever deploys it: a shard is one file on one machine, more capacity means more shards, backups have to be done by the deployer, and users on the same shard affect each other. So it can run directly on a personal computer, and a provider can also embed it in its own service and deploy it on its own cloud; the more users and the higher the concurrency, the more pooled scheduling pays off.
 

@@ -36,7 +36,7 @@
 
 ## 术语
 
-全站统一，第一次出现时括号注英文：agent（不译，"代理"只指网络代理）、子 agent、会话（thread）、轮次（turn，口语可说"一轮"）、条目（item）、槽位（slot）、分片（shard）、租约（lease）、宿主（host）、审批策略（严格 / 适中 / 宽松）、提权（escalation）。
+全站统一，第一次出现时括号注英文：agent（不译，"代理"只指网络代理）、子 agent、会话（thread）、轮次（turn，口语可说"一轮"）、条目（item）、槽位（slot）、分片（shard）、租约（lease）、宿主（host）、审批策略（严格 / 适中 / 宽松）、全权（full access，引擎里叫 escalation；界面上写"完全访问"）。
 
 ## 引擎页面与引擎版本
 

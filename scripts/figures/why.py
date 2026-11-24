@@ -6,7 +6,7 @@ big type (title 56px, nothing under 22px), few words, a footer with the figure n
 Colors: Ollupi = indigo; the other approaches = slate; running = indigo, idle or waiting = light slate;
 a bad outcome = rose, a good one = teal. Text never takes a series color except labels of a series.
 
-Run: python3 scripts/figures/why.py zh   (en once the English page is rewritten)
+Run: python3 scripts/figures/why.py zh   and   python3 scripts/figures/why.py en
 Output: docs/{zh,en}/intro/why-fig-*.svg, next to the page that uses them. Commit the output.
 Not under docs/public/images: scripts/sync.mjs replaces that folder with the engine repository's figures.
 """
@@ -150,9 +150,9 @@ def fig_pool():
     """The same problem a third time: connections, servers, and now agents go into a pool."""
     f = Fig(NUM["pool"], t("连接和服务器已经池化，下一个是 agent", "Connections and servers went into pools; agents are next"))
     rows = [
-        (t("HTTP / RPC 框架", "HTTP / RPC frameworks"), t("请求：数量不限", "Requests: no limit"), t("连接池：连接数有上限", "Connection pool: few connections"), False),
+        (t("HTTP / RPC 框架", "HTTP / RPC"), t("请求：数量不限", "Requests: no limit"), t("连接池：连接数有上限", "Connection pool: few connections"), False),
         (t("云服务", "Cloud providers"), t("用户申请的资源：看似不限", "What users reserve: seemingly unlimited"),
-         t("物理机池：按实际用量分配，闲置转给他人", "Physical pool: given by actual use, idle resold"), False),
+         t("物理机池：按实际用量分配，闲置转给他人", "Server pool: shared by actual use"), False),
         (t("agent 运行时", "Agent runtime"), t("会话：数量不限", "Sessions: no limit"), t("agent 池：槽位和配额有上限", "Agent pool: few slots, one quota"), True),
     ]
     rh, rg, y0 = 180, 24, 176
@@ -238,7 +238,7 @@ def fig_anatomy():
     f.badge(dx + dw - 44, dy + 122 + 2 * 58 + 23, 4, r=20)
     f.badge(dx, dy, 3)
     f.arrow(px + pw + 12, 430, dx - 12, 430, mid="aI", color=INDIGO)
-    f.text((px + pw + dx) / 2, 410, t("逐步写入", "Each step"), "f", "middle")
+    f.text((px + pw + dx) / 2, 410, t("逐步写入", "Writes"), "f", "middle")
     # Waking: back to the queue, any process can pick it up.
     wy = 784
     f.add(f'<path d="M{dx + dw / 2},{dy + dh + 6} L{dx + dw / 2},{wy} L{qx + 1.5 * qp},{wy} L{qx + 1.5 * qp},{qy + 5 * qp + 28}" '
@@ -252,10 +252,10 @@ def fig_matrix():
     """Each approach against the four conditions, asked as yes-or-no questions."""
     f = Fig(NUM["matrix"], t("各方案满足哪几个条件", "Which conditions each approach meets"),
             t("灰：未测、需自建或不适用。依据见正文", "Grey: not measured, build it yourself, or not applicable"))
-    cols = [(t("统一调度，", "Shared scheduling"), t("有资源上限？", "and limits?")),
-            (t("运行时共享，", "Shared runtime,"), t("只隔离命令？", "only commands isolated?")),
-            (t("状态在进程外，", "State outside the"), t("重启可恢复？", "process, survives restarts?")),
-            (t("唤醒时不重复", "No command run twice"), t("执行命令？", "after waking?"))]
+    cols = [(t("统一调度，", "Shared"), t("有资源上限？", "scheduling,"), t("", "with limits?")),
+            (t("运行时共享，", "Shared runtime,"), t("只隔离命令？", "only commands"), t("", "isolated?")),
+            (t("状态在进程外，", "State outside"), t("重启可恢复？", "the process,"), t("", "resumable?")),
+            (t("唤醒时不重复", "Wakes without"), t("执行命令？", "running a"), t("", "command twice?"))]
     Y, NO = (t("是", "Yes"), "good"), (t("否", "No"), "bad")
     UNT, DIY = (t("未测", "Not measured"), "none"), (t("需自建", "Build it yourself"), "none")
     NA = (t("不续跑", "Never resumes"), "none")
@@ -268,14 +268,17 @@ def fig_matrix():
         ("Cloudflare", [DIY, DIY, Y, DIY]),
         ("Ollupi", [Y, Y, Y, Y]),
     ]
-    lw = 380
+    lw = t(380, 440)
     cw = (W - 2 * PAD - lw) / 4
-    for i, (l1, l2) in enumerate(cols):
+    for i, heads in enumerate(cols):
         x = PAD + lw + i * cw
         f.badge(x + 26, 176, i + 1, r=18)
-        f.text(x + 52, 186, l1, "s", fill=INDIGO_DEEP, weight=700, maxw=cw - 58)
-        f.text(x + 52, 220, l2, "s", fill=INDIGO_DEEP, weight=700, maxw=cw - 58)
-    rh, y0 = 76, 244
+        if LANG == "zh":
+            f.text(x + 52, 186, heads[0], "s", fill=INDIGO_DEEP, weight=700, maxw=cw - 58)
+            f.text(x + 52, 220, heads[1], "s", fill=INDIGO_DEEP, weight=700, maxw=cw - 58)
+        else:
+            f.lines(x + 52, 184, heads, "f", lh=28, fill=INDIGO_DEEP, weight=700)
+    rh, y0 = 76, t(244, 256)
     style = {"bad": (ROSE_TINT, ROSE, INK2), "good": (TEAL_TINT, TEAL, INK2), "none": (SLATE_TINT, "none", MUTED)}
     for r, (name, cells) in enumerate(rows):
         y = y0 + r * rh
@@ -324,7 +327,7 @@ def fig_lifecycle():
         f.text(X(13) if u0 == 0 else (X(u0) + X(u1)) / 2, mid(0) + 9, t("运行中", "Running"), "s", "middle", fill=INDIGO_DEEP,
                weight=700)
     f.rect(X(52), ft + 8, X(88) - X(52) - 4, fb - ft - 16, "#ffffff", SLATE_2, r=12, dash=True)
-    f.text((X(52) + X(88)) / 2, mid(0) + 9, t("等待下载的报告，不占槽位", "Waits for the report, doing nothing"), "s", "middle",
+    f.text((X(52) + X(88)) / 2, mid(0) + 9, t("等待下载的报告，不占槽位", "Waits, holding no slot"), "s", "middle",
            fill=MUTED)
     f.rect(PAD - 16, ft - 4, tx1 + 16 - (PAD - 16), fb - ft + 8, "none", INDIGO, r=18, sw=3)
     f.text(PAD, mid(0) + 11, t("会话", "Session"), "m", fill=INDIGO_DEEP)
@@ -383,7 +386,10 @@ def fig_lifecycle():
                        (SLATE, t("工具执行：受限于本机 CPU、磁盘、网络与端口", "Tool runs: wait on local CPU, disk, network, ports"))):
         f.rect(lx, ly - 22, 44, 28, col, "none", r=6)
         f.text(lx + 58, ly, label, "s", fill=INK2)
-        lx += 58 + tw(label, 26) + 64
+        if LANG == "zh":
+            lx += 58 + tw(label, 26) + 64
+        else:
+            ly += 40
     return f.save(f"why-fig-{NUM['lifecycle']}-lifecycle")
 
 
@@ -417,8 +423,10 @@ def fig_waiting():
         dot(gx + (i % cols) * pitch, gy + (i // cols) * pitch, "m" if i in model else "r" if i in refused else "w", 4.5)
     ly = gy + rows * pitch + 30
     lx = gx
-    for state, label in (("m", t("调用模型", "Calling the model")), ("r", t("被拒、重试", "Refused, retrying")),
-                         ("w", t("等待工具返回", "Waiting on a tool"))):
+    for k, (state, label) in enumerate((("m", t("调用模型", "Calling the model")), ("r", t("被拒、重试", "Refused, retrying")),
+                                        ("w", t("等待工具返回", "Waiting on a tool")))):
+        if LANG != "zh" and k == 2:
+            lx, ly = gx, ly + 40
         dot(lx + 8, ly - 8, state, 8)
         f.text(lx + 26, ly, label, "s")
         lx += 26 + tw(label, 26) + 40
@@ -442,7 +450,7 @@ def fig_waiting():
         f.text(W - PAD, y, note, "s", "end", fill=ROSE)
         f.rect(tx, y + 14, W - PAD - tx, 22, SLATE_TINT, "none", r=11)
         f.rect(tx, y + 14, (W - PAD - tx) * frac, 22, ROSE, "none", r=11)
-    f.lines(tx, 568, [t("机器变卡，", "The machine slows;"), t("模型请求成批被拒", "model calls fail in bulk")], "s", lh=36,
+    f.lines(tx, 568, [t("机器变卡，", "The machine lags;"), t("模型请求成批被拒", "calls fail in bulk")], "s", lh=36,
             maxw=W - PAD - tx)
     # The only control the user has: slow down new tasks.
     bx, by, bw, bh = 840, 650, W - PAD - 840, 136
@@ -464,9 +472,9 @@ def fig_burst():
     f = Fig(NUM["burst"], t("实测：缺条件 1 突发时成批失败，缺条件 3 被杀后中断", "Measured: without 1, bursts fail; without 3, kills stop turns"),
             t("基准：2026-11-02，Apple M1，模拟的模型和工具；Ollupi 测于 v0.8.3–v0.8.5",
               "Benchmarks: 2026-11-02, Apple M1, simulated model and tools; Ollupi measured on v0.8.3–v0.8.5"))
-    rows = [(t("pi 的 SDK", "pi SDK"), 2534, False, t("中断，不再继续", "Stop halfway, never resume")),
+    rows = [(t("pi 的 SDK", "pi SDK"), 2534, False, t("中断，不再继续", "Stopped for good")),
             ("pi-durable", 2181, True, t("全部完成", "All complete")),
-            ("DeepSeek Harness", 2190, False, t("标为中断，不再继续", "Marked interrupted, never resume")),
+            ("DeepSeek Harness", 2190, False, t("标为中断，不再继续", "Ends interrupted")),
             ("Ollupi", 0, True, t("全部完成", "All complete"))]
     lx, rx = PAD, 900
     f.badge(lx + 20, 189, 1, r=20)
@@ -512,7 +520,8 @@ def fig_tradeoff():
     for i, s in enumerate(right):
         f.chip(cx + 40, top + 50 + i * step, pw, ph, [s], SLATE_TINT, SLATE, "b", INDIGO_DEEP)
     my = top + 50 + 5 * step + 20
-    f.chip(cx - 280, my, 560, ph, [t("等待用户时的成本：相当，均只剩存储", "Cost while waiting on the user: about even, storage only")], "#ffffff", SLATE_2,
+    mw = t(560, 920)
+    f.chip(cx - mw / 2, my, mw, ph, [t("等待用户时的成本：相当，均只剩存储", "Cost while waiting on the user: even, storage only")], "#ffffff", SLATE_2,
            "b", INK2)
     return f.save(f"why-fig-{NUM['tradeoff']}-tradeoff")
 

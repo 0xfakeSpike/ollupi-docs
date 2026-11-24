@@ -5,13 +5,13 @@ The Ollupi engine is a Go library, module path `github.com/0xfakeSpike/ollupi`. 
 This page is for backend engineers who want to embed the engine in their own service: a minimal host that runs, and the things to handle before going live. Layering and assembly are on [engine architecture](/engine/architecture); slot scheduling and how a turn runs are on [execution model](/engine/execution).
 
 ```sh
-go get github.com/0xfakeSpike/ollupi@v0.17.2
+go get github.com/0xfakeSpike/ollupi@v0.26.2
 ```
 
 The engine uses SQLite's FTS5: build and test with `-tags sqlite_fts5` (or set `GOFLAGS=-tags=sqlite_fts5`). Without it, `store/sqlite/fts5.go` makes the build fail.
 
 ::: info Full page in Chinese
-This page is being translated. The complete version, with a minimal host and a preflight check that compile against v0.17.2, is [in Chinese](/zh/integrate/embed).
+This page is being translated. The complete version, with a minimal host and a preflight check that compile against v0.26.2, is [in Chinese](/zh/integrate/embed).
 :::
 
 The full page covers:

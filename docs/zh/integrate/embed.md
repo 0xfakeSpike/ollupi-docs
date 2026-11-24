@@ -5,7 +5,7 @@ Ollupi 引擎是一个 Go 库，模块路径 `github.com/0xfakeSpike/ollupi`。�
 本页给要把引擎嵌进自己服务的后端工程师：一个能跑起来的最小宿主，和上线前要处理的几件事。分层与装配见[引擎架构](/zh/engine/architecture)，槽位（slot）调度与一轮（turn）怎样运行见[执行模型](/zh/engine/execution)。
 
 ```sh
-go get github.com/0xfakeSpike/ollupi@v0.17.2
+go get github.com/0xfakeSpike/ollupi@v0.26.2
 ```
 
 引擎要用 SQLite 的 FTS5，构建和测试都要带 `-tags sqlite_fts5`（或设 `GOFLAGS=-tags=sqlite_fts5`）；不带时 `store/sqlite/fts5.go` 让编译直接失败。
@@ -52,7 +52,7 @@ v0.16.0 之前，宿主自己 `repo.Open` 打开库，填 `agent.Config`（v0.14
 
 ## 最小宿主程序
 
-下面是一个完整的 `main` 包：单用户、令牌认证、只带网页工具。它对着引擎 v0.17.2 编译并通过 `go vet`。模型名和 limits 是示例，换成你的连接实际支持的；真实部署时把 `Home`、监听地址、令牌换成配置项。
+下面是一个完整的 `main` 包：单用户、令牌认证，不加宿主自己的工具，只用引擎自带的那些（网页读取、计划、提问、子 agent 等）。它对着引擎 v0.26.2 编译并通过 `go vet`。模型名和 limits 是示例，换成你的连接实际支持的；真实部署时把 `Home`、监听地址、令牌换成配置项。
 
 ```go
 package main
@@ -71,8 +71,6 @@ import (
 	"github.com/0xfakeSpike/ollupi/pkg/llm"
 	"github.com/0xfakeSpike/ollupi/pkg/sandbox"
 	"github.com/0xfakeSpike/ollupi/policy"
-	"github.com/0xfakeSpike/ollupi/tool/builtin/web"
-	"github.com/0xfakeSpike/ollupi/tool/kit"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -86,6 +84,7 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	boxes := func(string) (sandbox.Box, error) { return sandbox.Here() }
 	h, err := host.New(ctx, host.Config{
 		Home:   "/srv/ollupi",
 		Name:   "support",
@@ -96,9 +95,8 @@ func run() error {
 				"gpt-5.2": {Context: 400_000, Output: 128_000},
 			}),
 		},
-		Tools:       []kit.Provider{web.New()},
 		Permissions: policy.Settings{ApprovalPolicy: string(policy.OnRequest)},
-		Boxes:       func(string) (sandbox.Box, error) { return sandbox.Here() },
+		Boxes:       boxes,
 		Slots:       32,
 		UserSlots:   4,
 		RunLimit:    30 * time.Minute,
@@ -131,6 +129,7 @@ func run() error {
 - **网关只认允许的 Host 和 Origin。** 默认只接受 `Host` 为 `localhost`、`127.0.0.1`、`::1` 的请求；经反向代理或用域名访问时，把对外域名写进 `AllowedHosts`，否则一律 403 `host not allowed`。浏览器客户端的来源写进 `AllowedOrigins`，写法是 `coder/websocket` 的 Origin 模式（`app.example.com`、`*.example.com`，或带协议的 `app://support`）。
 - **`Token` 属于用户 `default`**（`gateway.DefaultUser`）。多用户换成 `Authenticate`，见[扩展点](/zh/integrate/extend#认证)。
 - **`Serve` 自己建 `http.Server`**（`ReadHeaderTimeout` 5 秒、`IdleTimeout` 2 分钟），挂在 `GET /`。`gateway.Server` 也实现了 `http.Handler`，可以装进自己的服务器，但路径不能加前缀。`GET /healthz` 不要令牌，回 200。
+- **网页工具不用自己加。** `host.New` 自己注册 `web.New(cfg.Boxes)`，网页请求经用户的 Box 发出；再往 `Tools` 里放一份，第一轮就失败：`tool registry: provider "web" twice`。
 - **这个示例没有命令和文件工具。** `sandbox.Here()` 是这台机器、不设限制：工作区校验、附件和 stdio MCP 服务器都从这台机器读、在这台机器起，stdio 服务器的工作目录是主目录。要让 agent 跑命令、改文件，把 `workspace.New` 建的工作区工具放进 `Tools`；它在本机默认以 `workspace-write` 模式跑命令，要用 macOS 的 Seatbelt，其他系统上要把 `workspace.Options` 里 `Config.SandboxMode` 设成 `full-access` 或者接云沙箱，见[扩展点](/zh/integrate/extend#云沙箱)和[沙箱](/zh/engine/sandbox)。引擎 README 提醒：在服务器自己机器上的沙箱里跑用户命令的服务不该提供宽松（`never`）策略，那时需要完全访问的命令不经询问就以完全访问运行；`sandbox.Here` 不设任何限制，它跑的命令在任何策略下都能做用户在这台机器上能做的一切，只适合可以完全使用这台机器的用户。
 - **`llm.NewGemini` 返回 `(*Gemini, error)`**，没有 API key 时报错；`NewOpenAI` 和 `NewAnthropic` 不返回错误。
 
@@ -171,7 +170,7 @@ func run() error {
 - **默认权限里的规则提到的工具。** `Permissions` 只查语法。规则提到一个注册表里没有、名字里也不带 `__` 的工具时，每一轮都失败，原因是 `run: the permission settings: the default permission settings: permission rule "x": tool "x" is not in the tool registry`。
 - **`Allowlist`。** 名单里不存在的工具名被直接忽略，不报错。
 
-所以发版前最好拿临时目录跑一遍同样的配置，发一条消息看它是否正常结束。下面这段在 `os.MkdirTemp` 给出的空目录上装配、建用户、建工具注册表、发一条消息，等这一轮结束（`cfg` 是生产配置的副本）。它对着 v0.17.2 编译并通过 `go vet`，在 v0.17.1 上用一个假模型跑通过：
+所以发版前最好拿临时目录跑一遍同样的配置，发一条消息看它是否正常结束。下面这段在 `os.MkdirTemp` 给出的空目录上装配、建用户、建工具注册表、发一条消息，等这一轮结束（`cfg` 是生产配置的副本）。它对着 v0.26.2 编译并通过 `go vet`，并在 v0.26.2 上用一个假模型跑通过：
 
 ```go
 func preflight(ctx context.Context, cfg host.Config, dir string) error {

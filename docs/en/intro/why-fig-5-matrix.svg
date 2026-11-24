@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+<defs><marker id="aS" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="24" markerHeight="24" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#64748b"/></marker><marker id="aI" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="24" markerHeight="24" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#4f46e5"/></marker><marker id="aR" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="24" markerHeight="24" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#e11d48"/></marker><marker id="aF" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="24" markerHeight="24" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#cbd5e1"/></marker></defs>
+<style>text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #1e1b4b; } .t { font-size: 56px; font-weight: 800; } .k { font-size: 44px; font-weight: 800; } .m { font-size: 34px; font-weight: 700; } .b { font-size: 30px; fill: #334155; } .s { font-size: 26px; fill: #64748b; } .f { font-size: 22px; fill: #94a3b8; }</style>
+<rect width="1600" height="900" fill="#ffffff"/>
+<text class="t" x="80" y="118" style="font-size:56.0px">Which conditions each approach meets</text>
+<line x1="80" y1="828" x2="1520" y2="828" stroke="#e2e8f0" stroke-width="2"/>
+<text class="f" x="80" y="866">Fig. 5 · Grey: not measured, build it yourself, or not applicable</text>
+<text class="f" x="1520" y="866" text-anchor="end">Why Ollupi</text>
+<circle cx="546.0" cy="176.0" r="18" fill="#4f46e5" stroke="#ffffff" stroke-width="4"/>
+<text x="546.0" y="183.2" text-anchor="middle" style="font-size:21px;font-weight:800;fill:#ffffff">1</text>
+<text class="f" x="572.0" y="184.0" text-anchor="start" style="fill:#1e1b4b;font-weight:700">Shared</text>
+<text class="f" x="572.0" y="212.0" text-anchor="start" style="fill:#1e1b4b;font-weight:700">scheduling,</text>
+<text class="f" x="572.0" y="240.0" text-anchor="start" style="fill:#1e1b4b;font-weight:700">with limits?</text>
+<circle cx="796.0" cy="176.0" r="18" fill="#4f46e5" stroke="#ffffff" stroke-width="4"/>
+<text x="796.0" y="183.2" text-anchor="middle" style="font-size:21px;font-weight:800;fill:#ffffff">2</text>
+<text class="f" x="822.0" y="184.0" text-anchor="start" style="fill:#1e1b4b;font-weight:700">Shared runtime,</text>
+<text class="f" x="822.0" y="212.0" text-anchor="start" style="fill:#1e1b4b;font-weight:700">only commands</text>
+<text class="f" x="822.0" y="240.0" text-anchor="start" style="fill:#1e1b4b;font-weight:700">isolated?</text>
+<circle cx="1046.0" cy="176.0" r="18" fill="#4f46e5" stroke="#ffffff" stroke-width="4"/>
+<text x="1046.0" y="183.2" text-anchor="middle" style="font-size:21px;font-weight:800;fill:#ffffff">3</text>
+<text class="f" x="1072.0" y="184.0" text-anchor="start" style="fill:#1e1b4b;font-weight:700">State outside</text>
+<text class="f" x="1072.0" y="212.0" text-anchor="start" style="fill:#1e1b4b;font-weight:700">the process,</text>
+<text class="f" x="1072.0" y="240.0" text-anchor="start" style="fill:#1e1b4b;font-weight:700">resumable?</text>
+<circle cx="1296.0" cy="176.0" r="18" fill="#4f46e5" stroke="#ffffff" stroke-width="4"/>
+<text x="1296.0" y="183.2" text-anchor="middle" style="font-size:21px;font-weight:800;fill:#ffffff">4</text>
+<text class="f" x="1322.0" y="184.0" text-anchor="start" style="fill:#1e1b4b;font-weight:700">Wakes without</text>
+<text class="f" x="1322.0" y="212.0" text-anchor="start" style="fill:#1e1b4b;font-weight:700">running a</text>
+<text class="f" x="1322.0" y="240.0" text-anchor="start" style="fill:#1e1b4b;font-weight:700">command twice?</text>
+<text class="b" x="80.0" y="304.0" text-anchor="start" style="fill:#1e1b4b">A VM per agent</text>
+<rect x="526.0" y="264.0" width="238.0" height="60.0" rx="12" fill="#fff1f2" stroke="#e11d48" stroke-width="3"/>
+<circle cx="619.0" cy="294.0" r="16" fill="#e11d48"/>
+<path d="M613.0,288.0 L625.0,300.0 M625.0,288.0 L613.0,300.0" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+<text class="b" x="647.0" y="304.0" text-anchor="start" style="fill:#334155;font-weight:700">No</text>
+<rect x="776.0" y="264.0" width="238.0" height="60.0" rx="12" fill="#fff1f2" stroke="#e11d48" stroke-width="3"/>
+<circle cx="869.0" cy="294.0" r="16" fill="#e11d48"/>
+<path d="M863.0,288.0 L875.0,300.0 M875.0,288.0 L863.0,300.0" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+<text class="b" x="897.0" y="304.0" text-anchor="start" style="fill:#334155;font-weight:700">No</text>
+<rect x="1026.0" y="264.0" width="238.0" height="60.0" rx="12" fill="#fff1f2" stroke="#e11d48" stroke-width="3"/>
+<circle cx="1119.0" cy="294.0" r="16" fill="#e11d48"/>
+<path d="M1113.0,288.0 L1125.0,300.0 M1125.0,288.0 L1113.0,300.0" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+<text class="b" x="1147.0" y="304.0" text-anchor="start" style="fill:#334155;font-weight:700">No</text>
+<rect x="1276.0" y="264.0" width="238.0" height="60.0" rx="12" fill="#fff1f2" stroke="#e11d48" stroke-width="3"/>
+<circle cx="1369.0" cy="294.0" r="16" fill="#e11d48"/>
+<path d="M1363.0,288.0 L1375.0,300.0 M1375.0,288.0 L1363.0,300.0" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+<text class="b" x="1397.0" y="304.0" text-anchor="start" style="fill:#334155;font-weight:700">No</text>
+<text class="b" x="80.0" y="380.0" text-anchor="start" style="fill:#1e1b4b">A process per session</text>
+<rect x="526.0" y="340.0" width="238.0" height="60.0" rx="12" fill="#fff1f2" stroke="#e11d48" stroke-width="3"/>
+<circle cx="619.0" cy="370.0" r="16" fill="#e11d48"/>
+<path d="M613.0,364.0 L625.0,376.0 M625.0,364.0 L613.0,376.0" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+<text class="b" x="647.0" y="380.0" text-anchor="start" style="fill:#334155;font-weight:700">No</text>
+<rect x="776.0" y="340.0" width="238.0" height="60.0" rx="12" fill="#fff1f2" stroke="#e11d48" stroke-width="3"/>
+<circle cx="869.0" cy="370.0" r="16" fill="#e11d48"/>
+<path d="M863.0,364.0 L875.0,376.0 M875.0,364.0 L863.0,376.0" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+<text class="b" x="897.0" y="380.0" text-anchor="start" style="fill:#334155;font-weight:700">No</text>
+<rect x="1026.0" y="340.0" width="238.0" height="60.0" rx="12" fill="#f1f5f9" stroke="none" stroke-width="3"/>
+<text class="s" x="1145.0" y="379.4" text-anchor="middle" style="fill:#64748b">Not measured</text>
+<rect x="1276.0" y="340.0" width="238.0" height="60.0" rx="12" fill="#f1f5f9" stroke="none" stroke-width="3"/>
+<text class="s" x="1395.0" y="379.4" text-anchor="middle" style="fill:#64748b">Not measured</text>
+<text class="b" x="80.0" y="456.0" text-anchor="start" style="fill:#1e1b4b;font-size:28.7px">Many sessions per process</text>
+<rect x="526.0" y="416.0" width="238.0" height="60.0" rx="12" fill="#fff1f2" stroke="#e11d48" stroke-width="3"/>
+<circle cx="619.0" cy="446.0" r="16" fill="#e11d48"/>
+<path d="M613.0,440.0 L625.0,452.0 M625.0,440.0 L613.0,452.0" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+<text class="b" x="647.0" y="456.0" text-anchor="start" style="fill:#334155;font-weight:700">No</text>
+<rect x="776.0" y="416.0" width="238.0" height="60.0" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="3"/>
+<circle cx="869.0" cy="446.0" r="16" fill="#0d9488"/>
+<path d="M862.3,446.0 L867.0,451.3 L876.3,440.7" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="b" x="897.0" y="456.0" text-anchor="start" style="fill:#334155;font-weight:700">Yes</text>
+<rect x="1026.0" y="416.0" width="238.0" height="60.0" rx="12" fill="#fff1f2" stroke="#e11d48" stroke-width="3"/>
+<circle cx="1119.0" cy="446.0" r="16" fill="#e11d48"/>
+<path d="M1113.0,440.0 L1125.0,452.0 M1125.0,440.0 L1113.0,452.0" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+<text class="b" x="1147.0" y="456.0" text-anchor="start" style="fill:#334155;font-weight:700">No</text>
+<rect x="1276.0" y="416.0" width="238.0" height="60.0" rx="12" fill="#f1f5f9" stroke="none" stroke-width="3"/>
+<text class="s" x="1395.0" y="455.4" text-anchor="middle" style="fill:#64748b">Never resumes</text>
+<text class="b" x="80.0" y="532.0" text-anchor="start" style="fill:#1e1b4b">pi-durable</text>
+<rect x="526.0" y="492.0" width="238.0" height="60.0" rx="12" fill="#fff1f2" stroke="#e11d48" stroke-width="3"/>
+<circle cx="619.0" cy="522.0" r="16" fill="#e11d48"/>
+<path d="M613.0,516.0 L625.0,528.0 M625.0,516.0 L613.0,528.0" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+<text class="b" x="647.0" y="532.0" text-anchor="start" style="fill:#334155;font-weight:700">No</text>
+<rect x="776.0" y="492.0" width="238.0" height="60.0" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="3"/>
+<circle cx="869.0" cy="522.0" r="16" fill="#0d9488"/>
+<path d="M862.3,522.0 L867.0,527.3 L876.3,516.7" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="b" x="897.0" y="532.0" text-anchor="start" style="fill:#334155;font-weight:700">Yes</text>
+<rect x="1026.0" y="492.0" width="238.0" height="60.0" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="3"/>
+<circle cx="1119.0" cy="522.0" r="16" fill="#0d9488"/>
+<path d="M1112.3,522.0 L1117.0,527.3 L1126.3,516.7" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="b" x="1147.0" y="532.0" text-anchor="start" style="fill:#334155;font-weight:700">Yes</text>
+<rect x="1276.0" y="492.0" width="238.0" height="60.0" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="3"/>
+<circle cx="1369.0" cy="522.0" r="16" fill="#0d9488"/>
+<path d="M1362.3,522.0 L1367.0,527.3 L1376.3,516.7" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="b" x="1397.0" y="532.0" text-anchor="start" style="fill:#334155;font-weight:700">Yes</text>
+<text class="b" x="80.0" y="608.0" text-anchor="start" style="fill:#1e1b4b">Durable execution</text>
+<rect x="526.0" y="568.0" width="238.0" height="60.0" rx="12" fill="#f1f5f9" stroke="none" stroke-width="3"/>
+<text class="s" x="645.0" y="607.4" text-anchor="middle" style="fill:#64748b;font-size:22.1px">Build it yourself</text>
+<rect x="776.0" y="568.0" width="238.0" height="60.0" rx="12" fill="#f1f5f9" stroke="none" stroke-width="3"/>
+<text class="s" x="895.0" y="607.4" text-anchor="middle" style="fill:#64748b;font-size:22.1px">Build it yourself</text>
+<rect x="1026.0" y="568.0" width="238.0" height="60.0" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="3"/>
+<circle cx="1119.0" cy="598.0" r="16" fill="#0d9488"/>
+<path d="M1112.3,598.0 L1117.0,603.3 L1126.3,592.7" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="b" x="1147.0" y="608.0" text-anchor="start" style="fill:#334155;font-weight:700">Yes</text>
+<rect x="1276.0" y="568.0" width="238.0" height="60.0" rx="12" fill="#fff1f2" stroke="#e11d48" stroke-width="3"/>
+<circle cx="1369.0" cy="598.0" r="16" fill="#e11d48"/>
+<path d="M1363.0,592.0 L1375.0,604.0 M1375.0,592.0 L1363.0,604.0" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+<text class="b" x="1397.0" y="608.0" text-anchor="start" style="fill:#334155;font-weight:700">No</text>
+<text class="b" x="80.0" y="684.0" text-anchor="start" style="fill:#1e1b4b">Cloudflare</text>
+<rect x="526.0" y="644.0" width="238.0" height="60.0" rx="12" fill="#f1f5f9" stroke="none" stroke-width="3"/>
+<text class="s" x="645.0" y="683.4" text-anchor="middle" style="fill:#64748b;font-size:22.1px">Build it yourself</text>
+<rect x="776.0" y="644.0" width="238.0" height="60.0" rx="12" fill="#f1f5f9" stroke="none" stroke-width="3"/>
+<text class="s" x="895.0" y="683.4" text-anchor="middle" style="fill:#64748b;font-size:22.1px">Build it yourself</text>
+<rect x="1026.0" y="644.0" width="238.0" height="60.0" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="3"/>
+<circle cx="1119.0" cy="674.0" r="16" fill="#0d9488"/>
+<path d="M1112.3,674.0 L1117.0,679.3 L1126.3,668.7" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="b" x="1147.0" y="684.0" text-anchor="start" style="fill:#334155;font-weight:700">Yes</text>
+<rect x="1276.0" y="644.0" width="238.0" height="60.0" rx="12" fill="#f1f5f9" stroke="none" stroke-width="3"/>
+<text class="s" x="1395.0" y="683.4" text-anchor="middle" style="fill:#64748b;font-size:22.1px">Build it yourself</text>
+<text class="b" x="80.0" y="760.0" text-anchor="start" style="fill:#4f46e5;font-weight:700">Ollupi</text>
+<rect x="526.0" y="720.0" width="238.0" height="60.0" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="3"/>
+<circle cx="619.0" cy="750.0" r="16" fill="#0d9488"/>
+<path d="M612.3,750.0 L617.0,755.3 L626.3,744.7" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="b" x="647.0" y="760.0" text-anchor="start" style="fill:#334155;font-weight:700">Yes</text>
+<rect x="776.0" y="720.0" width="238.0" height="60.0" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="3"/>
+<circle cx="869.0" cy="750.0" r="16" fill="#0d9488"/>
+<path d="M862.3,750.0 L867.0,755.3 L876.3,744.7" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="b" x="897.0" y="760.0" text-anchor="start" style="fill:#334155;font-weight:700">Yes</text>
+<rect x="1026.0" y="720.0" width="238.0" height="60.0" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="3"/>
+<circle cx="1119.0" cy="750.0" r="16" fill="#0d9488"/>
+<path d="M1112.3,750.0 L1117.0,755.3 L1126.3,744.7" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="b" x="1147.0" y="760.0" text-anchor="start" style="fill:#334155;font-weight:700">Yes</text>
+<rect x="1276.0" y="720.0" width="238.0" height="60.0" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="3"/>
+<circle cx="1369.0" cy="750.0" r="16" fill="#0d9488"/>
+<path d="M1362.3,750.0 L1367.0,755.3 L1376.3,744.7" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="b" x="1397.0" y="760.0" text-anchor="start" style="fill:#334155;font-weight:700">Yes</text>
+</svg>

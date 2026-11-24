@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+<defs><marker id="aS" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="24" markerHeight="24" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#64748b"/></marker><marker id="aI" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="24" markerHeight="24" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#4f46e5"/></marker><marker id="aR" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="24" markerHeight="24" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#e11d48"/></marker><marker id="aF" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="24" markerHeight="24" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#cbd5e1"/></marker></defs>
+<style>text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #1e1b4b; } .t { font-size: 56px; font-weight: 800; } .k { font-size: 44px; font-weight: 800; } .m { font-size: 34px; font-weight: 700; } .b { font-size: 30px; fill: #334155; } .s { font-size: 26px; fill: #64748b; } .f { font-size: 22px; fill: #94a3b8; }</style>
+<rect width="1600" height="900" fill="#ffffff"/>
+<text class="t" x="80" y="118" style="font-size:40.7px">Measured: without 1, bursts fail; without 3, kills stop turns</text>
+<line x1="80" y1="828" x2="1520" y2="828" stroke="#e2e8f0" stroke-width="2"/>
+<text class="f" x="80" y="866">Fig. 6 · Benchmarks: 2026-11-02, Apple M1, simulated model and tools; Ollupi measured on v0.8.3–v0.8.5</text>
+<text class="f" x="1520" y="866" text-anchor="end">Why Ollupi</text>
+<circle cx="100.0" cy="189.0" r="20" fill="#4f46e5" stroke="#ffffff" stroke-width="4"/>
+<text x="100.0" y="197.0" text-anchor="middle" style="font-size:23px;font-weight:800;fill:#ffffff">1</text>
+<text class="m" x="132.0" y="200.0" text-anchor="start">3000 turns at once, quota 256</text>
+<text class="s" x="132.0" y="240.0" text-anchor="start">Turns that failed</text>
+<circle cx="920.0" cy="189.0" r="20" fill="#4f46e5" stroke="#ffffff" stroke-width="4"/>
+<text x="920.0" y="197.0" text-anchor="middle" style="font-size:23px;font-weight:800;fill:#ffffff">3</text>
+<text class="m" x="952.0" y="200.0" text-anchor="start">After kill -9</text>
+<text class="s" x="952.0" y="240.0" text-anchor="start">Turns in progress</text>
+<text class="b" x="80.0" y="340.0" text-anchor="start" style="fill:#1e1b4b">pi SDK</text>
+<rect x="370.0" y="308.0" width="337.9" height="44.0" rx="8" fill="#fff1f2" stroke="#e11d48" stroke-width="2"/>
+<text class="m" x="723.9" y="342.0" text-anchor="start" style="fill:#e11d48">2534</text>
+<text class="b" x="900.0" y="340.0" text-anchor="start" style="fill:#1e1b4b">pi SDK</text>
+<circle cx="1200.0" cy="330.0" r="20" fill="#e11d48"/>
+<path d="M1192.5,322.5 L1207.5,337.5 M1207.5,322.5 L1192.5,337.5" stroke="#fff" stroke-width="4.3" stroke-linecap="round"/>
+<text class="b" x="1236.0" y="340.0" text-anchor="start">Stopped for good</text>
+<text class="b" x="80.0" y="450.0" text-anchor="start" style="fill:#1e1b4b">pi-durable</text>
+<rect x="370.0" y="418.0" width="290.8" height="44.0" rx="8" fill="#fff1f2" stroke="#e11d48" stroke-width="2"/>
+<text class="m" x="676.8" y="452.0" text-anchor="start" style="fill:#e11d48">2181</text>
+<text class="b" x="900.0" y="450.0" text-anchor="start" style="fill:#1e1b4b">pi-durable</text>
+<circle cx="1200.0" cy="440.0" r="20" fill="#0d9488"/>
+<path d="M1191.7,440.0 L1197.5,446.7 L1209.2,433.3" fill="none" stroke="#fff" stroke-width="4.3" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="b" x="1236.0" y="450.0" text-anchor="start">All complete</text>
+<text class="b" x="80.0" y="560.0" text-anchor="start" style="fill:#1e1b4b;font-size:29.1px">DeepSeek Harness</text>
+<rect x="370.0" y="528.0" width="292.0" height="44.0" rx="8" fill="#fff1f2" stroke="#e11d48" stroke-width="2"/>
+<text class="m" x="678.0" y="562.0" text-anchor="start" style="fill:#e11d48">2190</text>
+<text class="b" x="900.0" y="560.0" text-anchor="start" style="fill:#1e1b4b;font-size:29.1px">DeepSeek Harness</text>
+<circle cx="1200.0" cy="550.0" r="20" fill="#e11d48"/>
+<path d="M1192.5,542.5 L1207.5,557.5 M1207.5,542.5 L1192.5,557.5" stroke="#fff" stroke-width="4.3" stroke-linecap="round"/>
+<text class="b" x="1236.0" y="560.0" text-anchor="start">Ends interrupted</text>
+<text class="b" x="80.0" y="670.0" text-anchor="start" style="fill:#4f46e5;font-weight:700">Ollupi</text>
+<text class="m" x="386.0" y="672.0" text-anchor="start" style="fill:#0d9488">0</text>
+<text class="b" x="900.0" y="670.0" text-anchor="start" style="fill:#4f46e5;font-weight:700">Ollupi</text>
+<circle cx="1200.0" cy="660.0" r="20" fill="#0d9488"/>
+<path d="M1191.7,660.0 L1197.5,666.7 L1209.2,653.3" fill="none" stroke="#fff" stroke-width="4.3" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="b" x="1236.0" y="670.0" text-anchor="start">All complete</text>
+<line x1="850" y1="300" x2="850" y2="700" stroke="#e2e8f0" stroke-width="3"/>
+<text class="s" x="80.0" y="770.0" text-anchor="start">None of the three caps model calls; they only retry</text>
+</svg>
