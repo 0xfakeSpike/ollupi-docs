@@ -470,11 +470,11 @@ def fig_waiting():
 def fig_burst():
     """Many sessions in one process: bursts fail in bulk, and a kill loses the turn."""
     f = Fig(NUM["burst"], t("实测：缺条件 1 突发时成批失败，缺条件 3 被杀后中断", "Measured: without 1, bursts fail; without 3, kills stop turns"),
-            t("基准：2026-11-02，Apple M1，模拟的模型和工具；Ollupi 测于 v0.8.3–v0.8.5",
-              "Benchmarks: 2026-11-02, Apple M1, simulated model and tools; Ollupi measured on v0.8.3–v0.8.5"))
-    rows = [(t("pi 的 SDK", "pi SDK"), 2534, False, t("中断，不再继续", "Stopped for good")),
-            ("pi-durable", 2181, True, t("全部完成", "All complete")),
-            ("DeepSeek Harness", 2190, False, t("标为中断，不再继续", "Ends interrupted")),
+            t("基准：2026-11-19，Apple M1，模拟的模型和工具；Ollupi 测于 v0.18.0",
+              "Benchmarks: 2026-11-19, Apple M1, simulated model and tools; Ollupi measured on v0.18.0"))
+    rows = [(t("pi 的 SDK", "pi SDK"), 2517, False, t("中断，不再继续", "Stopped for good")),
+            ("pi-durable", 2473, True, t("全部完成", "All complete")),
+            ("DeepSeek Harness", 1236, False, t("标为中断，不再继续", "Ends interrupted")),
             ("Ollupi", 0, True, t("全部完成", "All complete"))]
     lx, rx = PAD, 900
     f.badge(lx + 20, 189, 1, r=20)

@@ -4,7 +4,7 @@
 <rect width="1600" height="900" fill="#ffffff"/>
 <text class="t" x="80" y="118" style="font-size:40.7px">Measured: without 1, bursts fail; without 3, kills stop turns</text>
 <line x1="80" y1="828" x2="1520" y2="828" stroke="#e2e8f0" stroke-width="2"/>
-<text class="f" x="80" y="866">Fig. 6 · Benchmarks: 2026-11-02, Apple M1, simulated model and tools; Ollupi measured on v0.8.3–v0.8.5</text>
+<text class="f" x="80" y="866">Fig. 6 · Benchmarks: 2026-11-19, Apple M1, simulated model and tools; Ollupi measured on v0.18.0</text>
 <text class="f" x="1520" y="866" text-anchor="end">Why Ollupi</text>
 <circle cx="100.0" cy="189.0" r="20" fill="#4f46e5" stroke="#ffffff" stroke-width="4"/>
 <text x="100.0" y="197.0" text-anchor="middle" style="font-size:23px;font-weight:800;fill:#ffffff">1</text>
@@ -15,22 +15,22 @@
 <text class="m" x="952.0" y="200.0" text-anchor="start">After kill -9</text>
 <text class="s" x="952.0" y="240.0" text-anchor="start">Turns in progress</text>
 <text class="b" x="80.0" y="340.0" text-anchor="start" style="fill:#1e1b4b">pi SDK</text>
-<rect x="370.0" y="308.0" width="337.9" height="44.0" rx="8" fill="#fff1f2" stroke="#e11d48" stroke-width="2"/>
-<text class="m" x="723.9" y="342.0" text-anchor="start" style="fill:#e11d48">2534</text>
+<rect x="370.0" y="308.0" width="335.6" height="44.0" rx="8" fill="#fff1f2" stroke="#e11d48" stroke-width="2"/>
+<text class="m" x="721.6" y="342.0" text-anchor="start" style="fill:#e11d48">2517</text>
 <text class="b" x="900.0" y="340.0" text-anchor="start" style="fill:#1e1b4b">pi SDK</text>
 <circle cx="1200.0" cy="330.0" r="20" fill="#e11d48"/>
 <path d="M1192.5,322.5 L1207.5,337.5 M1207.5,322.5 L1192.5,337.5" stroke="#fff" stroke-width="4.3" stroke-linecap="round"/>
 <text class="b" x="1236.0" y="340.0" text-anchor="start">Stopped for good</text>
 <text class="b" x="80.0" y="450.0" text-anchor="start" style="fill:#1e1b4b">pi-durable</text>
-<rect x="370.0" y="418.0" width="290.8" height="44.0" rx="8" fill="#fff1f2" stroke="#e11d48" stroke-width="2"/>
-<text class="m" x="676.8" y="452.0" text-anchor="start" style="fill:#e11d48">2181</text>
+<rect x="370.0" y="418.0" width="329.7" height="44.0" rx="8" fill="#fff1f2" stroke="#e11d48" stroke-width="2"/>
+<text class="m" x="715.7" y="452.0" text-anchor="start" style="fill:#e11d48">2473</text>
 <text class="b" x="900.0" y="450.0" text-anchor="start" style="fill:#1e1b4b">pi-durable</text>
 <circle cx="1200.0" cy="440.0" r="20" fill="#0d9488"/>
 <path d="M1191.7,440.0 L1197.5,446.7 L1209.2,433.3" fill="none" stroke="#fff" stroke-width="4.3" stroke-linecap="round" stroke-linejoin="round"/>
 <text class="b" x="1236.0" y="450.0" text-anchor="start">All complete</text>
 <text class="b" x="80.0" y="560.0" text-anchor="start" style="fill:#1e1b4b;font-size:29.1px">DeepSeek Harness</text>
-<rect x="370.0" y="528.0" width="292.0" height="44.0" rx="8" fill="#fff1f2" stroke="#e11d48" stroke-width="2"/>
-<text class="m" x="678.0" y="562.0" text-anchor="start" style="fill:#e11d48">2190</text>
+<rect x="370.0" y="528.0" width="164.8" height="44.0" rx="8" fill="#fff1f2" stroke="#e11d48" stroke-width="2"/>
+<text class="m" x="550.8" y="562.0" text-anchor="start" style="fill:#e11d48">1236</text>
 <text class="b" x="900.0" y="560.0" text-anchor="start" style="fill:#1e1b4b;font-size:29.1px">DeepSeek Harness</text>
 <circle cx="1200.0" cy="550.0" r="20" fill="#e11d48"/>
 <path d="M1192.5,542.5 L1207.5,557.5 M1207.5,542.5 L1192.5,557.5" stroke="#fff" stroke-width="4.3" stroke-linecap="round"/>

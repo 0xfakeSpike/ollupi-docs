@@ -56,7 +56,7 @@ The first four approaches build on one another: each solves the previous one's p
 ![Which conditions each approach meets](./why-fig-5-matrix.svg)
 
 1. **One virtual machine per agent.** The agent and the commands it runs go into the same machine, fully isolated. The gap is that nothing is shared: each agent has a machine to itself and does not release it when idle; each calls the model on its own with no common limit; suspending relies on memory snapshots, and resuming returns to the moment of the snapshot, so commands run after it may run again.
-2. **One process per session**, such as Claude Code and its SDK. There is no longer a machine for every agent, and one machine can host many sessions. The gap is that only the commands need isolating, yet every session gets a complete runtime environment: running Ollupi and DeepSeek Harness with one process per session takes 20–107 MB per process. Model calls are still made separately, with no common limit.
+2. **One process per session**, such as Claude Code and its SDK. There is no longer a machine for every agent, and one machine can host many sessions. The gap is that only the commands need isolating, yet every session gets a complete runtime environment: running Ollupi and DeepSeek Harness with one process per session takes 17.7–129 MB per process. Model calls are still made separately, with no common limit.
 3. **One process hosting many sessions**, such as pi's SDK and DeepSeek Harness. Sessions share one process, which saves the surplus runtime environments. There are two gaps: no common limit, so they fail in bulk under bursts; and state lives only in memory, so when the process is killed turns are cut off, and waiting sessions still hold memory. pi's experimental version, pi-durable, stores state in SQLite and can continue from where it stopped after being killed, but still lacks a common limit.
 4. **Durable execution frameworks**, such as Temporal, Restate and DBOS. State is durable, and after a restart the process can resume from where it stopped. The gap is that they do not understand an agent's steps and can only treat the code as a black box: on recovery they replay the code, and a failed step is retried, so every step must be safe to repeat, which commands the model decides on the spot cannot be. Scheduling limits and sandboxes also have to be built by hand.
 5. **Cloudflare's Durable Objects and Workflows**, the other route to pooling: pooling done at the platform layer. Each session is a separate object with its own storage, and while waiting it is only storage; scaling, replication and isolation are the platform's job. What it offers is lower-level building blocks: the agent loop, limits on model calls and the record of side effects still have to be built on top by the developer.
@@ -90,19 +90,19 @@ One thing not yet solved: the limits cap concurrent sessions, model requests and
 
 | Claim | Data |
 |---|---|
-| The agent loop uses almost no CPU | With turns of about 17 seconds, pi's SDK, pi-durable and DeepSeek Harness use 5–48 ms of CPU per turn |
-| Waiting sessions take almost no memory | 50,000 waiting sessions add about 14 MB; the other three harnesses take 23–181 KB per waiting session |
-| A shared runtime uses less memory than one process per session | About 160 KB per active session; with one process per session, 20 MB for Ollupi and 107 MB for DeepSeek Harness |
-| With shared limits, bursts do not cause failures | 3000 turns submitted at once with a quota of 256: 0 failed on Ollupi, over two thousand on each of the other three |
-| After the process is killed, it continues from where it stopped without redoing | 90 kills during 960 turns: all completed, 0 redone |
-| Latency at full load | 4096 sessions at once, a median of 20.9 s per turn; 17 s when run alone |
+| The agent loop uses almost no CPU | 512 sessions running at once, with turns of about 17 seconds, take 0.64 of a core for the whole process |
+| Waiting sessions take almost no memory | 50,000 waiting sessions take 34 MB of resident memory in all; in the side-by-side comparison, a waiting session takes 14 KB on Ollupi and 64–147 KB on the other three harnesses |
+| A shared runtime uses less memory than one process per session | About 112 KB per active session; with one process per session, 17.7 MB for Ollupi and 129 MB for DeepSeek Harness |
+| With shared limits, bursts do not cause failures | 3000 turns submitted at once with a quota of 256: all complete on Ollupi, with no 429s; the other three complete 483–1764 |
+| After the process is killed, it continues from where it stopped without redoing | 30 kills while 500 sessions run: all 600 turns completed, and of 110 calls cut off, 0 redone |
+| Latency at full load | At 1536 sessions at once, a turn is about 5% slower than alone (17 s); at 4096, its median is 48.2 s, nearly all of the extra time spent waiting for the one SQLite connection |
 | Resources held by an agent suspended in a virtual machine | To be added |
-| How long a standby takes to take over | To be added |
-| How a heavy user affects others on the same shard | To be added |
+| How long a standby takes to take over | 1.3 s at the median with a 1.5 s lease; across 8 kills, all 480 turns complete |
+| How a heavy user affects others on the same shard | With one user filling every slot, the others wait 206 s; with a per-user limit of 64 slots, they wait 8 ms and their turns take 17.1 s, as alone |
 | Fairness between users | To be added |
-| Whether adding shards scales linearly | To be added |
+| Whether adding shards scales linearly | On one machine, 4096 sessions over 1, 2 and 4 shards run 84.9, 116.3 and 144.4 turns a second, and at 4 shards the machine runs out first; with a machine for each shard, to be added |
 
-The data so far comes from [benchmarks](/benchmarks/) and the [comparison with other harnesses](/benchmarks/#comparison): a simulated model and simulated tools, on one Apple M1 with 8 GB of memory; Ollupi was measured on v0.8.3 to v0.8.5, before multiple users, shards, the log rebuild and the tool pool. The [second round of benchmarks](/benchmarks/plan) will measure again on the current version and fill the gaps.
+The data so far comes from [benchmarks](/benchmarks/) and the [comparison with other harnesses](/benchmarks/#comparison): a simulated model and simulated tools, on one Apple M1 with 8 GB of memory; Ollupi was measured on v0.18.0 (2026-11-19), one run each. What is still blank is in [what to measure next](/benchmarks/plan).
 
 ## Two projects
 
