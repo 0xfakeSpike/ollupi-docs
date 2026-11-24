@@ -29,7 +29,7 @@
 各参数调大调小的后果集中在[容量规划与限流](/zh/integrate/capacity#调大调小的后果)。
 
 ::: info 演进
-v0.16.0 之前填的是 `agent.Config`（v0.14.0 到 v0.15.1 叫 `service.Config`），有 `DB`、`OnEvent`、`Lease`、`OnLeaseLost`、`Attachments`、`AttachmentsDir`、`ToolsFor`、`BoxFor` 等字段。`18d6757` 用 `host.Config` 取代它，默认值不变（32 个槽位、全部可给一个用户、4 小时）：库和附件目录由 `Home` 决定，工具 provider 换成 `tool/kit` 的接口，用户自己的工具只来自他的 MCP 服务器，`BoxFor` 改名 `Boxes`。`1ae27b2` 起每个用户的 MCP 服务器存进库里；租约移到 `shard.Member`（`48c8454`）。v0.16.1（`b02dbfd`）起审批策略不填时默认 `on-request`；更早的 `agent.Config` 不填会启动失败。
+v0.16.0 之前填的是 `agent.Config`（v0.14.0 到 v0.15.1 叫 `service.Config`），有 `DB`、`OnEvent`、`Lease`、`OnLeaseLost`、`Attachments`、`AttachmentsDir`、`ToolsFor`、`BoxFor` 等字段。`9fa9186` 用 `host.Config` 取代它，默认值不变（32 个槽位、全部可给一个用户、4 小时）：库和附件目录由 `Home` 决定，工具 provider 换成 `tool/kit` 的接口，用户自己的工具只来自他的 MCP 服务器，`BoxFor` 改名 `Boxes`。`3580e6f` 起每个用户的 MCP 服务器存进库里；租约移到 `shard.Member`（`68a4035`）。v0.16.1（`c6a54b2`）起审批策略不填时默认 `on-request`；更早的 `agent.Config` 不填会启动失败。
 :::
 
 ## 模型连接
@@ -87,7 +87,7 @@ v0.16.0 之前填的是 `agent.Config`（v0.14.0 到 v0.15.1 叫 `service.Config
 按 `Rate` 和 `Burst` 的默认值，分片被杀再拉起后，8000 个客户端按协议重连 83 秒全部回来，经路由的 4000 个 44 秒（[连接](/zh/benchmarks/#连接)）。默认值本身是估计的，没有拿别的取值比较过。
 
 ::: info 演进
-`fc3d064`（v0.13.0）把连接管理移进 `pkg/wshub`，加上心跳、准入限速和每用户多条连接；提交说明写明准入速率是估计值，当时还没有网关实验。`ce11149` 加上连接寿命 `MaxAge` 和 4000 关闭码。以前 `PongWithin` 内没收到 pong 就断开，一个一下发来大量请求的客户端，pong 排在被限速的请求后面，会被当成失联断开；`3e97634` 只在网关一直等着读这条连接时才这样判断。
+`a98cbb7`（v0.13.0）把连接管理移进 `pkg/wshub`，加上心跳、准入限速和每用户多条连接；提交说明写明准入速率是估计值，当时还没有网关实验。`d05fff4` 加上连接寿命 `MaxAge` 和 4000 关闭码。以前 `PongWithin` 内没收到 pong 就断开，一个一下发来大量请求的客户端，pong 排在被限速的请求后面，会被当成失联断开；`f4931bd` 只在网关一直等着读这条连接时才这样判断。
 :::
 
 协议层还有几个不可配的上限：一条入站消息最多 4 MiB；每个连接每秒 50 条消息、可以突发 200 条；发给一个客户端的待发数据超过 16 MiB 时断开它（`gateway/server.go`、`pkg/jsonrpc/jsonrpc.go`）。客户端在各种关闭码之后该怎么做，见[客户端](/zh/integrate/client)。

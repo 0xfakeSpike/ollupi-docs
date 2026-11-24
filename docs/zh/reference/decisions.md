@@ -1,11 +1,11 @@
-# 设计决策记录
+# 设计决策
 
 这一页记录 Ollupi 为什么长成现在这样。每条决策用同一个结构：背景、决定、放弃的方案、代价、依据。只收录能从提交、代码或仓库文档找到依据的内容。"放弃的方案"只写确实存在过或文档里明确对比过的做法，找不到记录的直接写"没有记录"。
 
 引用约定：
 
-- 引擎（ollupi）的提交直接写哈希，如 `acfb8e4`。桌面端（ollupi-desktop）的提交写成 `desktop@729225b`。
-- 已删除的文档写成"文件名（提交）"，表示在该提交里还能读到，如 `docs/deepening-directions.md`（`05ef4b0` 的父提交）。
+- 引擎（ollupi）的提交直接写哈希，如 `acfb8e4`。桌面端（ollupi-desktop）的提交写成 `desktop@563a633`。
+- 已删除的文档写成"文件名（提交）"，表示在该提交里还能读到，如 `docs/deepening-directions.md`（`d522016` 的父提交）。
 - 引用的基准数字都来自 `bench/README.md`。这些数字是模拟模型和模拟工具跑出来的，在多用户、分片、沙箱接口和日志重建（第 26 条）之前测的，之后没有重测。
 
 | # | 决策 | 一句话 |
@@ -42,7 +42,7 @@
 
 **背景**
 
-第一个提交里，所有会话的一轮（turn）就共用一条全局队列，暂停的一轮不占 worker（`acfb8e4` 的 README）。当时的定位是"本地 AI agent 的核心"。`4c2e9d7` 把定位改成给云服务商构建大规模并发的个人 agent 服务，对照物随之变成"每个 agent 一个 VM 或容器"：进程要么一直常驻，要么冷启动重建，等用户时进程挂起还占着内存。
+第一个提交里，所有会话的一轮（turn）就共用一条全局队列，暂停的一轮不占 worker（`acfb8e4` 的 README）。当时的定位是"本地 AI agent 的核心"。`6376672` 把定位改成给云服务商构建大规模并发的个人 agent 服务，对照物随之变成"每个 agent 一个 VM 或容器"：进程要么一直常驻，要么冷启动重建，等用户时进程挂起还占着内存。
 
 ![逐个隔离与 Ollupi 的对比](/images/cli-vs-ollupi.svg)
 
@@ -58,19 +58,19 @@
 
 隔离不再来自进程边界，要由代码自己守住：
 
-- 入口检查调用方是否拥有所指的东西，别人的东西一律当不存在（`28adb4d`）。
-- 命令、文件和 MCP 服务器经 `sandbox.Box` 访问（`aecfb63`、`f1ff694`）。
-- 一个用户的故障不能波及整个分片，这一条是单独补的（`fb3e2d1`）：附件在进入事件循环之前读写并设超时，panic 只让这一轮失败，MCP 调用有超时，一轮在槽位里最多跑 `RunLimit`（默认 4 小时）。
+- 入口检查调用方是否拥有所指的东西，别人的东西一律当不存在（`4b549e1`）。
+- 命令、文件和 MCP 服务器经 `sandbox.Box` 访问（`30f586b`、`8332920`）。
+- 一个用户的故障不能波及整个分片，这一条是单独补的（`af8624c`）：附件在进入事件循环之前读写并设超时，panic 只让这一轮失败，MCP 调用有超时，一轮在槽位里最多跑 `RunLimit`（默认 4 小时）。
 
 **依据**
 
-`acfb8e4`、`fec6d4d`、`4c2e9d7`、`fb3e2d1`，`README.md`，`bench/README.md`。
+`acfb8e4`、`a52677b`、`6376672`、`af8624c`，`README.md`，`bench/README.md`。
 
 ## 2. SQLite 与先落库再执行
 
 **背景**
 
-初版 README 就写"运行时没有隐藏状态"：模型文本、推理、工具调用、审批、计划、提问与回答，都先落成一条条目（item）再执行（`acfb8e4`）。问题出在工具调用上。调用从模型回复记下开始就是 `inProgress`，一直到结果返回，崩溃后分不清没跑过和跑到一半，恢复时只能猜：把这一轮第一条未结束的调用标成可能已生效，哪怕它根本没开始（`b52bde4`）。
+初版 README 就写"运行时没有隐藏状态"：模型文本、推理、工具调用、审批、计划、提问与回答，都先落成一条条目（item）再执行（`acfb8e4`）。问题出在工具调用上。调用从模型回复记下开始就是 `inProgress`，一直到结果返回，崩溃后分不清没跑过和跑到一半，恢复时只能猜：把这一轮第一条未结束的调用标成可能已生效，哪怕它根本没开始（`218f30f`）。
 
 **决定**
 
@@ -85,18 +85,18 @@
 
 **放弃的方案**
 
-恢复时按位置猜测哪条调用可能已生效（`b52bde4` 删除）。选 SQLite 而不是其他存储，没有记录。
+恢复时按位置猜测哪条调用可能已生效（`218f30f` 删除）。选 SQLite 而不是其他存储，没有记录。
 
 **代价**
 
 - 写放大：每一轮约 68 次读、15 次写，约 11.6 KB 磁盘（三次模型调用、两次工具调用）。
 - 读写都排在一条连接上。4096 个活跃会话时每轮等连接约 43 ms，不足以解释这一轮慢下来的 3.9 s，瓶颈还没找到。
 - 成本随历史增长：长跑实验里历史从 8 轮到 138 轮，每轮 CPU 从 12.1 ms 涨到 34.8 ms，主要花在编码带完整历史的请求和重读历史上。
-- `inProgress` 的调用不会自动重做，生效与否交给模型和用户判断。`tools.Annotations` 有 `IdempotentHint` 字段，但运行时不读它。`docs/deepening-directions.md`（`05ef4b0` 的父提交）把幂等键和按副作用分类列为最值得做深的方向，代码里目前没有。
+- `inProgress` 的调用不会自动重做，生效与否交给模型和用户判断。`tools.Annotations` 有 `IdempotentHint` 字段，但运行时不读它。`docs/deepening-directions.md`（`d522016` 的父提交）把幂等键和按副作用分类列为最值得做深的方向，代码里目前没有。
 
 **依据**
 
-`acfb8e4`、`b52bde4`，`repo/db.go`，`repo/items.go`，`agent/runtime/execute.go`，`bench/README.md`。
+`acfb8e4`、`218f30f`，`repo/db.go`，`repo/items.go`，`agent/runtime/execute.go`，`bench/README.md`。
 
 **之后**
 
@@ -106,11 +106,11 @@ v0.16.0 起状态不再写在条目的状态列里，而是记在只追加的会
 
 **背景**
 
-`e407f17` 加全局槽位时，把等槽位的会话放进一个内存队列，只存会话和一轮的 ID。同一天 `021777e` 发现这份队列缓存的是数据库本来就能回答的问题，还要维护：`reconcile` 要查重，一轮结束要摘除。
+`23cac37` 加全局槽位时，把等槽位的会话放进一个内存队列，只存会话和一轮的 ID。同一天 `530e97c` 发现这份队列缓存的是数据库本来就能回答的问题，还要维护：`reconcile` 要查重，一轮结束要摘除。
 
 **决定**
 
-内存里只留 `slotByThread`，以及从它派生的每用户计数 `slotsOfUser`。理由写在 `021777e` 里：一个 goroutine 正在运行这件事只有进程知道。`05ef4b0` 之前的 README 补了一句：放进库里反而会留下没人释放的锁。README 现在说"no scheduling state lives in memory"，指的是这张表之外没有别的，而这张表随进程消失，不需要恢复。
+内存里只留 `slotByThread`，以及从它派生的每用户计数 `slotsOfUser`。理由写在 `530e97c` 里：一个 goroutine 正在运行这件事只有进程知道。`d522016` 之前的 README 补了一句：放进库里反而会留下没人释放的锁。README 现在说"no scheduling state lives in memory"，指的是这张表之外没有别的，而这张表随进程消失，不需要恢复。
 
 其余一律从库里读：
 
@@ -123,28 +123,28 @@ v0.16.0 起状态不再写在条目的状态列里，而是记在只追加的会
 
 | 方案 | 加入 | 移除 | 移除时的说法 |
 |---|---|---|---|
-| 全局互斥锁加条件变量 | 早期 | `bca8b52` | 调度事件改成单一消费者 |
-| 四个常驻 worker 和运行队列 | `acfb8e4` | `64f8593` | worker 数的是整个 step，长工具卡住所有会话 |
-| 内存等待队列 | `e407f17` | `021777e` | 库已经能回答，还要维护 |
-| 每分钟全量 reconcile 自愈 | `99ddde4` | `3593427` | 见第 18 条 |
+| 全局互斥锁加条件变量 | 早期 | `4106bd3` | 调度事件改成单一消费者 |
+| 四个常驻 worker 和运行队列 | `acfb8e4` | `52faf5a` | worker 数的是整个 step，长工具卡住所有会话 |
+| 内存等待队列 | `23cac37` | `530e97c` | 库已经能回答，还要维护 |
+| 每分钟全量 reconcile 自愈 | `268a420` | `4a18265` | 见第 18 条 |
 
 **代价**
 
-每个事件之后都要读库。`5a91c47` 之前，等待中的一轮也是 `inProgress`，每个事件都重新扫一遍它们，于是拆出 `ready` 和三个 `waitingOn*` 状态，`admit` 只读就绪的。事件循环里有数据库读写，所以循环里的任何慢操作都会卡住所有会话：`fb3e2d1` 为此把附件读写移出循环。
+每个事件之后都要读库。`b46b9d7` 之前，等待中的一轮也是 `inProgress`，每个事件都重新扫一遍它们，于是拆出 `ready` 和三个 `waitingOn*` 状态，`admit` 只读就绪的。事件循环里有数据库读写，所以循环里的任何慢操作都会卡住所有会话：`af8624c` 为此把附件读写移出循环。
 
 **依据**
 
-`021777e`、`6fe9fcd`、`bca8b52`、`5a91c47`，`agent/loop.go`，`agent/schedule.go`，`repo/turns.go`。
+`530e97c`、`4daf0e8`、`4106bd3`、`b46b9d7`，`agent/loop.go`，`agent/schedule.go`，`repo/turns.go`。
 
 **之后**
 
-v0.16.0 起调度器只从 store 的 feed 得知哪些会话变得可以运行（`3c3ed62`），事件循环和 `reconcile` 都没有了。内存里仍只有哪个会话占着槽位；`admit` 按空闲槽位，从 `threads` 表上记下的"变为可运行的时刻"里取会话。见第 26 条和[执行模型](/zh/engine/execution)。
+v0.16.0 起调度器只从 store 的 feed 得知哪些会话变得可以运行（`82081ec`），事件循环和 `reconcile` 都没有了。内存里仍只有哪个会话占着槽位；`admit` 按空闲槽位，从 `threads` 表上记下的"变为可运行的时刻"里取会话。见第 26 条和[执行模型](/zh/engine/execution)。
 
 ## 4. 两层并发
 
 **背景**
 
-早期的 4 个 worker 数的是整个 step，agent 的时间又主要花在等模型上，于是 4 个长工具就能卡住所有会话（`64f8593`）。去掉 worker 池之后又没有任何上限：一轮派出几百个子 agent，就起几百个 goroutine，每个都把会话留在内存里等模型名额（`e407f17`）。
+早期的 4 个 worker 数的是整个 step，agent 的时间又主要花在等模型上，于是 4 个长工具就能卡住所有会话（`52faf5a`）。去掉 worker 池之后又没有任何上限：一轮派出几百个子 agent，就起几百个 goroutine，每个都把会话留在内存里等模型名额（`23cac37`）。
 
 **决定**
 
@@ -156,22 +156,22 @@ v0.16.0 起调度器只从 store 的 feed 得知哪些会话变得可以运行�
 | 槽位 | 同时运行的一轮 | 32（`defaultSlots`） | `agent/agent.go` |
 | 用户槽位 | 单个用户可占的槽位 | 等于 `Slots` | `Config.UserSlots` |
 
-一轮拿到槽位后一直跑，直到必须等待或给出最终回答（`ed426d6`）。两次模型调用之间重新读这一轮的条目和权限，插话和权限改动在下一次模型调用时生效。
+一轮拿到槽位后一直跑，直到必须等待或给出最终回答（`45bad36`）。两次模型调用之间重新读这一轮的条目和权限，插话和权限改动在下一次模型调用时生效。
 
 **放弃的方案**
 
-- 按 step 计数的 worker 池（`64f8593`）。
-- 每次模型调用后让出执行权。这个让出来自四 worker 时代，当时是为了让别的会话进来，worker 池没了之后只剩成本：多一个概念，每次模型调用重建一次 Runtime，读一次整个会话（`ed426d6`）。
+- 按 step 计数的 worker 池（`52faf5a`）。
+- 每次模型调用后让出执行权。这个让出来自四 worker 时代，当时是为了让别的会话进来，worker 池没了之后只剩成本：多一个概念，每次模型调用重建一次 Runtime，读一次整个会话（`45bad36`）。
 
 **代价**
 
 - 跑长工具的一轮一直占着槽位。
-- 重试期间调用继续占着槽位和模型名额（`a7bf0b2`）。
-- 桌面端每个模型是一个独立连接，有自己的 `calls`（`desktop@ccc2bb8`），同一账号下多个模型的总并发是各模型之和。
+- 重试期间调用继续占着槽位和模型名额（`5b34df7`）。
+- 桌面端每个模型是一个独立连接，有自己的 `calls`（`desktop@6902456`），同一账号下多个模型的总并发是各模型之和。
 
 **依据**
 
-`64f8593`、`e407f17`、`ed426d6`、`585809f`、`a7bf0b2`，`pkg/llm/connection.go`，`agent/agent.go`。
+`52faf5a`、`23cac37`、`45bad36`、`1ff8637`、`5b34df7`，`pkg/llm/connection.go`，`agent/agent.go`。
 
 ## 5. 子 agent 即普通会话
 
@@ -186,12 +186,12 @@ v0.16.0 起调度器只从 store 的 feed 得知哪些会话变得可以运行�
 和普通会话的区别只有这些：
 
 - 槽位不够时排在普通会话后面（`ReadyThreads` 的 `ORDER BY threads.parent_thread_id IS NOT NULL`）。
-- 不收用户输入（`ErrSubagentThread`）。
-- 权限沿用父会话，再多一层禁止 `Agent`，所以不能再派生子 agent。
+- 角色固定为启动它的那种子 agent，后续轮次都按这个角色跑。
+- 权限沿用父会话，再多一层提供方限制（`subagents` 不在允许列表里），所以不能再派生子 agent。
 
 **放弃的方案**
 
-子 agent 结果的单独写入路径 `EndSubagentTurn` 及其事务。`d7a26a7` 改成从子会话最后一轮推导报告，只留一条写路径；子 agent 结束和父写入之间崩溃，由下一次 `reconcile` 补上。
+子 agent 结果的单独写入路径 `EndSubagentTurn` 及其事务。`0fae87a` 改成从子会话最后一轮推导报告，只留一条写路径；子 agent 结束和父写入之间崩溃，由下一次 `reconcile` 补上。
 
 **代价**
 
@@ -200,33 +200,33 @@ v0.16.0 起调度器只从 store 的 feed 得知哪些会话变得可以运行�
 
 **依据**
 
-`acfb8e4`、`d7a26a7`、`28b9033`，`tools/subagent/subagent.go`，`agent/subagents.go`，`agent/scope.go`，`repo/turns.go`。
+`acfb8e4`、`0fae87a`、`6cb46e5`，`tools/subagent/subagent.go`，`agent/subagents.go`，`agent/scope.go`，`repo/turns.go`。
 
 ## 6. 定时任务即消息
 
 **背景**
 
-早期定时任务是 agent 的一部分：`agent/cron.go`，事件循环里有一个定时分支，`settle` 还要负责发送到期的任务（`99ddde4`、`bca8b52`）。
+早期定时任务是 agent 的一部分：`agent/cron.go`，事件循环里有一个定时分支，`settle` 还要负责发送到期的任务（`268a420`、`4106bd3`）。
 
 **决定**
 
-`ee7776c` 把定时任务的知识全部移出 agent。`tools/cron` 自己每分钟检查一次，到点调用应用传入的 `send`，`send` 走的是和用户消息相同的路径（当时是 `Agent.StartScheduledTurn`，内部调 `startTurn`）。效果和用户发了一条消息一样：会话空闲就开一轮，忙就排队。一轮上的 `cron_job_id` 让界面能标出来源。同一个任务上一次还在排队时，这次跳过。
+`3c3cc23` 把定时任务的知识全部移出 agent。`tools/cron` 自己每分钟检查一次，到点调用应用传入的 `send`，`send` 走的是和用户消息相同的路径（当时是 `Agent.StartScheduledTurn`，内部调 `startTurn`）。效果和用户发了一条消息一样：会话空闲就开一轮，忙就排队。一轮上的 `cron_job_id` 让界面能标出来源。同一个任务上一次还在排队时，这次跳过。
 
 **放弃的方案**
 
-- 定时分支放在 agent 事件循环里（`ee7776c` 删除）。
+- 定时分支放在 agent 事件循环里（`3c3cc23` 删除）。
 - 外部 cron 启动进程。这是 README 对比表里的另一种做法，项目没有用过。
 
 **代价**
 
-- `sendDue` 先发送，再记录运行。两步之间崩溃，重启后会再发一次。`ee7776c` 把它记为已知问题；`35bab6a` 把发送和记账放进同一个事务，这个窗口已经没有了。
+- `sendDue` 先发送，再记录运行。两步之间崩溃，重启后会再发一次。`3c3cc23` 把它记为已知问题；`ebff4fb` 把发送和记账放进同一个事务，这个窗口已经没有了。
 - 检查粒度是一分钟。
 - 大量任务同时到点时，它们和用户消息在同一个队列里排队。混合负载实验里 1000 个任务同时到点，高峰期到达的一轮等第一次模型请求的 p50 是 44.1 s，高峰 59.4 s 排空。
-- cron 表达式没有年份，"只跑一次"用写明日期的表达式加 `times: 1`，所以最后一次运行在近一年之后时，拒绝创建或恢复（`8f1d5e2`）。
+- cron 表达式没有年份，"只跑一次"用写明日期的表达式加 `times: 1`，所以最后一次运行在近一年之后时，拒绝创建或恢复（`05a2099`）。
 
 **依据**
 
-`ee7776c`、`8f1d5e2`，`tools/cron/cron.go`，`agent/turns.go`，`bench/README.md`。
+`3c3cc23`、`05a2099`，`tools/cron/cron.go`，`agent/turns.go`，`bench/README.md`。
 
 **之后**
 
@@ -236,13 +236,13 @@ v0.16.0 起定时任务归 `cron` 包：每分钟读出到点的任务，在一�
 
 **背景**
 
-第一个提交的网关就写明对齐 Codex app-server（`acfb8e4`）。桌面端第一版 README 给的选型理由是："现成、有鉴权，和 Codex app-server 同构；UI 只是网关的一个客户端"（`desktop@729225b`）。桌面端的形态也对标 Codex 和 Claude 桌面端。
+第一个提交的网关就写明对齐 Codex app-server（`acfb8e4`）。桌面端第一版 README 给的选型理由是："现成、有鉴权，和 Codex app-server 同构；UI 只是网关的一个客户端"（`desktop@563a633`）。桌面端的形态也对标 Codex 和 Claude 桌面端。
 
 **决定**
 
 WebSocket 上的 JSON-RPC 2.0，方法名按 `thread/*`、`turn/*`、`item/*` 分层：`turn/start`、`turn/steer`、`turn/interrupt`，通知 `item/started`、`item/completed`，服务端请求 `item/toolCall/requestApproval` 和 `item/tool/requestUserInput`。Ollupi 自己的能力加在同样的命名方式下：`workspace/*`、`cron/*`、`memory/*`、`settings/*`、`search`。
 
-连接模型改过一次：先是一个进程服务一个窗口，新连接顶掉旧连接（`9580752`）；多用户之后变成每个用户一条连接，新连接只顶掉本人的（`15a76c7`）。
+连接模型改过一次：先是一个进程服务一个窗口，新连接顶掉旧连接（`5d2f910`）；多用户之后变成每个用户一条连接，新连接只顶掉本人的（`477f8f7`）。
 
 **放弃的方案**
 
@@ -254,46 +254,46 @@ WebSocket 上的 JSON-RPC 2.0，方法名按 `thread/*`、`turn/*`、`item/*` �
 
 **依据**
 
-`acfb8e4`、`9580752`、`15a76c7`，`desktop@729225b`，`gateway/protocol.go`。
+`acfb8e4`、`5d2f910`、`477f8f7`，`desktop@563a633`，`gateway/protocol.go`。
 
 ## 8. 协议契约从分发表生成
 
 **背景**
 
-桌面端要知道网关的全部消息。第一版在 `packages/protocol` 里手写类型（`desktop@729225b`）。第二版 `sidecar/cmd/protogen` 解析 ollupi 的 Go 源码生成 TS（`desktop@3821b99`），但界面仍然在解析 Go。
+桌面端要知道网关的全部消息。第一版在 `packages/protocol` 里手写类型（`desktop@563a633`）。第二版 `sidecar/cmd/protogen` 解析 ollupi 的 Go 源码生成 TS（`desktop@afdad7d`），但界面仍然在解析 Go。
 
 **决定**
 
-网关用一张表声明所有消息：客户端方法及其参数、结果和处理函数，服务端通知，服务端请求，错误名。`Call` 从这张表分发，`go generate` 从同一张表写出 `gateway/protocol.schema.json`，`initialize` 报告它的 sha256（`0bbbe5e`）。桌面端从这个文件生成类型、方法表和校验器（`desktop@94bc7d2`）。两边都做真实流量校验：引擎用假模型跑一遍完整会话，按契约校验每条消息；桌面端录一段真实 sidecar 的会话（`fixtures/session.json`），按消息校验，再把通知回放一遍，结果要和 `thread/read` 一致。
+网关用一张表声明所有消息：客户端方法及其参数、结果和处理函数，服务端通知，服务端请求，错误名。`Call` 从这张表分发，`go generate` 从同一张表写出 `gateway/protocol.schema.json`，`initialize` 报告它的 sha256（`c85e08f`）。桌面端从这个文件生成类型、方法表和校验器（`desktop@8dad792`）。两边都做真实流量校验：引擎用假模型跑一遍完整会话，按契约校验每条消息；桌面端录一段真实 sidecar 的会话（`fixtures/session.json`），按消息校验，再把通知回放一遍，结果要和 `thread/read` 一致。
 
 **放弃的方案**
 
-- 手写 `wire.ts`（`desktop@94bc7d2` 删除）。
-- 用 Go 生成器解析 ollupi 源码（`desktop@94bc7d2` 删除 `sidecar/cmd/protogen`）。
+- 手写 `wire.ts`（`desktop@8dad792` 删除）。
+- 用 Go 生成器解析 ollupi 源码（`desktop@8dad792` 删除 `sidecar/cmd/protogen`）。
 
 **代价**
 
 - 每次协议变动都要重新生成并重录 fixture，桌面端提交里反复出现这一步。
-- 生成物也会出错：字符串有了长度约束后，ajv 生成的校验器带上 `require()`，渲染进程启动时就停了（`desktop@62b8c69`），现在长度函数内联，再出现 `require` 就让生成失败。
+- 生成物也会出错：字符串有了长度约束后，ajv 生成的校验器带上 `require()`，渲染进程启动时就停了（`desktop@febcc30`），现在长度函数内联，再出现 `require` 就让生成失败。
 
 **依据**
 
-`0bbbe5e`，`desktop@3821b99`、`desktop@94bc7d2`、`desktop@62b8c69`，`gateway/protocol.go`，`gateway/traffic_test.go`。
+`c85e08f`，`desktop@afdad7d`、`desktop@8dad792`、`desktop@febcc30`，`gateway/protocol.go`，`gateway/traffic_test.go`。
 
 ## 9. 工具只给模型用
 
 **背景**
 
-早期有 `tool/call`，界面可以直接调模型的工具。这把界面绑在写给模型看的工具输出上，还让工具层多了一个跳过权限、又拒绝本地和等待型工具的直调模式（`38c5a1c`）。
+早期有 `tool/call`，界面可以直接调模型的工具。这把界面绑在写给模型看的工具输出上，还让工具层多了一个跳过权限、又拒绝本地和等待型工具的直调模式（`daf6ee9`）。
 
 **决定**
 
-删掉 `tool/call`、`Agent.CallTool` 和 `Registry.Call`。界面要做的事走明确的方法，比如 `cron/list`、`cron/create`，返回类型化的行。契约只给用户参与、界面专门显示的工具定类型（`0ae03bb`，范围见[模型、工具与 MCP](/zh/integrate/protocol/models-tools)），其余工具调用按通用样式显示，它们的输出可以随时为模型调整。
+删掉 `tool/call`、`Agent.CallTool` 和 `Registry.Call`。界面要做的事走明确的方法，比如 `cron/list`、`cron/create`，返回类型化的行。契约只给用户参与、界面专门显示的工具定类型（`f4afff2`，范围见[模型、工具与 MCP](/zh/integrate/protocol/models-tools)），其余工具调用按通用样式显示，它们的输出可以随时为模型调整。
 
 **放弃的方案**
 
-- 界面直接调用工具（`38c5a1c` 删除）。
-- 把定时任务工具和 `memory_search` 也写进契约：`f21b104` 写进去，同一天的 `0ae03bb` 拿掉，桌面端需求文档也跟着收窄（`desktop@e0cb3c1`、`desktop@f6bd358`）。
+- 界面直接调用工具（`daf6ee9` 删除）。
+- 把定时任务工具和 `memory_search` 也写进契约：`32cd522` 写进去，同一天的 `f4afff2` 拿掉，桌面端需求文档也跟着收窄（`desktop@cf755e7`、`desktop@fd3e206`）。
 
 **代价**
 
@@ -301,17 +301,17 @@ WebSocket 上的 JSON-RPC 2.0，方法名按 `thread/*`、`turn/*`、`item/*` �
 
 **依据**
 
-`38c5a1c`、`f21b104`、`0ae03bb`，`desktop@f6bd358`。
+`daf6ee9`、`32cd522`、`f4afff2`，`desktop@fd3e206`。
 
 ## 10. 单库即分片与租约
 
 **背景**
 
-`v0.9.0` 之前，一个数据库只属于一个使用者，网关只有一个令牌。`4c2e9d7` 把定位改成云服务之后，`v0.9.0` 引入了多用户。
+`v0.9.0` 之前，一个数据库只属于一个使用者，网关只有一个令牌。`6376672` 把定位改成云服务之后，`v0.9.0` 引入了多用户。
 
 **决定**
 
-一个数据库是一个分片（shard），分片内的用户共用表（`28adb4d`，迁移 `0005_users`）：
+一个数据库是一个分片（shard），分片内的用户共用表（`4b549e1`，迁移 `0005_users`）：
 
 | 机制 | 做法 |
 |---|---|
@@ -322,7 +322,7 @@ WebSocket 上的 JSON-RPC 2.0，方法名按 `thread/*`、`turn/*`、`item/*` �
 | 路由 | `gateway.Router` 无状态，认证后按 `repo.Catalog` 转发；`Catalog` 是单独的一个库 |
 | 放置 | 新用户放到接受新用户的分片里人最少的一个；`OnShard` 让分片拒绝放在别处的用户 |
 
-不设 `Lease` 时什么都不变，进程相信自己是唯一的（`cd8faee`）。桌面端就是这样，只有默认用户（`desktop@8356c82`）。
+不设 `Lease` 时什么都不变，进程相信自己是唯一的（`0e7688f`）。桌面端就是这样，只有默认用户（`desktop@ef47129`）。
 
 **放弃的方案**
 
@@ -336,17 +336,17 @@ WebSocket 上的 JSON-RPC 2.0，方法名按 `thread/*`、`turn/*`、`item/*` �
 - 备用进程要能打开同一个数据库文件。
 - `Fence` 的检查在 `DB.Tx` 入口，每个事务多一次读；不走事务的单条写入（如 `Launch`）不经过它。
 - `Catalog` 还在用 `AutoMigrate`，不走第 17 条的编号 migration。
-- 这些改动之后基准没有重测（`d85f978`）。
+- 这些改动之后基准没有重测（`857bcd5`）。
 
 **依据**
 
-`28adb4d`、`15a76c7`、`585809f`、`cd8faee`、`583d20c`，`repo/shard.go`，`repo/catalog.go`，`agent/lease.go`，`gateway/router.go`。
+`4b549e1`、`477f8f7`、`1ff8637`、`0e7688f`、`3a84b0e`，`repo/shard.go`，`repo/catalog.go`，`agent/lease.go`，`gateway/router.go`。
 
 ## 11. sidecar 形态
 
 **背景**
 
-ollupi 是 Go 库，不是可执行程序，应用自己负责装配。桌面端的界面用 Electron（`desktop@729225b`）。
+ollupi 是 Go 库，不是可执行程序，应用自己负责装配。桌面端的界面用 Electron（`desktop@563a633`）。
 
 **决定**
 
@@ -354,28 +354,28 @@ ollupi 是 Go 库，不是可执行程序，应用自己负责装配。桌面端
 
 - 主进程启动它，令牌放在环境变量 `OLLUPI_GATEWAY_TOKEN` 里（不放 argv，别的用户能读到），从 stdout 读一行握手：`ready` 带网关地址，`fatal` 带原因。
 - 渲染进程直接连网关。主进程不转发协议消息，只管进程和原生能力。
-- 主进程独占 `config.yaml`。改配置先写候选文件，用 `ollupid --check-config` 按真实启动的流程校验，通过才替换并重启后端（`desktop@690ec3a`）。技能同理，用 `--check-skills`（`desktop@9d876a9`）。
-- 引擎依赖从 `replace ../../ollupi` 改成带版本的模块（`desktop@68ecb2f`），克隆下来就能构建，发版也基于确定的引擎。
+- 主进程独占 `config.yaml`。改配置先写候选文件，用 `ollupid --check-config` 按真实启动的流程校验，通过才替换并重启后端（`desktop@7dac7ad`）。技能同理，用 `--check-skills`（`desktop@790c5fa`）。
+- 引擎依赖从 `replace ../../ollupi` 改成带版本的模块（`desktop@941e696`），克隆下来就能构建，发版也基于确定的引擎。
 
 **放弃的方案**
 
-浏览器工具做成主进程上的 MCP 服务器（`desktop@cce4633`）。同一天 `desktop@090f9f7` 把它改成 sidecar 里的工具提供方：调用带着会话，每个会话能有自己的标签页，权限内容能写成网页的主机名。
+浏览器工具做成主进程上的 MCP 服务器（`desktop@fabaac9`）。同一天 `desktop@0600aa4` 把它改成 sidecar 里的工具提供方：调用带着会话，每个会话能有自己的标签页，权限内容能写成网页的主机名。
 
 **代价**
 
 - ollupi 只在启动时读一次配置，所以任何配置改动都要重启后端。
-- 本地 `go.work` 曾让发版构建用上未发布的引擎：`0.7.8` 带着一个界面没有对应契约的 ollupi 发了出去（`desktop@eb2b8e1`），之后发版构建用 `GOWORK=off`。
-- 界面和后端可能版本不一致，所以 `initialize` 报告契约摘要，不一致时界面出提示（`desktop@94bc7d2`）。
+- 本地 `go.work` 曾让发版构建用上未发布的引擎：`0.7.8` 带着一个界面没有对应契约的 ollupi 发了出去（`desktop@93d828f`），之后发版构建用 `GOWORK=off`。
+- 界面和后端可能版本不一致，所以 `initialize` 报告契约摘要，不一致时界面出提示（`desktop@8dad792`）。
 
 **依据**
 
-`desktop@729225b`、`desktop@690ec3a`、`desktop@68ecb2f`、`desktop@090f9f7`、`desktop@eb2b8e1`，`sidecar/cmd/ollupid/main.go`，`sidecar/internal/handshake/handshake.go`，`apps/desktop/src/main/backend/supervisor.ts`。
+`desktop@563a633`、`desktop@7dac7ad`、`desktop@941e696`、`desktop@0600aa4`、`desktop@93d828f`，`sidecar/cmd/ollupid/main.go`，`sidecar/internal/handshake/handshake.go`，`apps/desktop/src/main/backend/supervisor.ts`。
 
 ## 12. 原生 Anthropic 与 Gemini 接口
 
 **背景**
 
-初版只有 OpenAI 兼容的 Chat Completions 客户端（`acfb8e4` 的 README）。思考内容的签名要原样送回，这是服务商自己的格式（`9ac61ec`）。
+初版只有 OpenAI 兼容的 Chat Completions 客户端（`acfb8e4` 的 README）。思考内容的签名要原样送回，这是服务商自己的格式（`287d0ed`）。
 
 **决定**
 
@@ -387,24 +387,24 @@ ollupi 是 Go 库，不是可执行程序，应用自己负责装配。桌面端
 
 **代价**
 
-- `items` 多一个 `native` 列，体积大。会话分页和搜索跳过它（`701ac2a`），`0003_rebuild_turns_items` 把它放到最后。
-- 三个客户端的行为要各自对齐。重试就是例子：OpenAI 和 Anthropic 的 SDK 只重试两次，Gemini 不重试，`a7bf0b2` 才统一成 8 次。
-- Anthropic 和 Gemini 要声明回答上限，这个值要放得下 prompt，所以 `ChatRequest` 带上调用方估算的输入（`8d77f0c`）。
-- `config.yaml` 里每个提供方都必须写 `type`（`desktop@dfb69ba`）。
+- `items` 多一个 `native` 列，体积大。会话分页和搜索跳过它（`917871c`），`0003_rebuild_turns_items` 把它放到最后。
+- 三个客户端的行为要各自对齐。重试就是例子：OpenAI 和 Anthropic 的 SDK 只重试两次，Gemini 不重试，`5b34df7` 才统一成 8 次。
+- Anthropic 和 Gemini 要声明回答上限，这个值要放得下 prompt，所以 `ChatRequest` 带上调用方估算的输入（`b2834b4`）。
+- `config.yaml` 里每个提供方都必须写 `type`（`desktop@ecce8ba`）。
 
 **依据**
 
-`9ac61ec`、`a7bf0b2`、`8d77f0c`，`pkg/llm/chat.go`，`pkg/llm/anthropic.go`，`pkg/llm/gemini.go`。
+`287d0ed`、`5b34df7`、`b2834b4`，`pkg/llm/chat.go`，`pkg/llm/anthropic.go`，`pkg/llm/gemini.go`。
 
 ## 13. 精简模式
 
 **背景**
 
-完整的提示词和工具列表约 8k token。窗口小的模型起不来，而且启动时的 `checkPromptFits` 会检查每个模型，一个这样的模型就让整个 agent 停下（`f1382d1`）。
+完整的提示词和工具列表约 8k token。窗口小的模型起不来，而且启动时的 `checkPromptFits` 会检查每个模型，一个这样的模型就让整个 agent 停下（`9f75884`）。
 
 **决定**
 
-输入预算不足 16384 token（`compactInputTokens`）的模型用精简版：`compactRules` 代替 `loopRules`，不列技能，只发 `read_file`、`run_command`、`load_tools`。其余工具走已有的延迟加载（`f195793`），只在 `DEFERRED TOOLS` 里列名字，用到时加载。
+输入预算不足 16384 token（`compactInputTokens`）的模型用精简版：`compactRules` 代替 `loopRules`，不列技能，只发 `read_file`、`run_command`、`load_tools`。其余工具走已有的延迟加载（`3205976`），只在 `DEFERRED TOOLS` 里列名字，用到时加载。
 
 16384 这个门槛的来历写在常量注释里：完整内容约 8k，`Fits` 只允许系统提示词和工具定义占输入预算的一半（`fixedPercent = 50`）。
 
@@ -419,7 +419,7 @@ ollupi 是 Go 库，不是可执行程序，应用自己负责装配。桌面端
 
 **依据**
 
-`f1382d1`、`f195793`，`agent/contextmanager/manager.go`，`agent/systemprompt/systemprompt.go`，`agent/runtime/runtime.go`。
+`9f75884`、`3205976`，`agent/contextmanager/manager.go`，`agent/systemprompt/systemprompt.go`，`agent/runtime/runtime.go`。
 
 ## 14. 记忆快照与稳定前缀
 
@@ -429,21 +429,21 @@ ollupi 是 Go 库，不是可执行程序，应用自己负责装配。桌面端
 
 | 提交 | 改动 | 原因 |
 |---|---|---|
-| `635fdc3` | 只在一轮的第一次模型调用前召回 | 一轮内的 prompt 前缀保持稳定 |
-| `6f94607` | 上一轮的 `memoryContext` 留在原位 | 丢掉它等于从上一轮起点重写 prompt，每轮都丢掉服务商的前缀缓存 |
-| `db21f76` | 改成每个会话一份快照，压缩后刷新 | 召回不再堆积，压缩丢掉它们时也不会丢内容 |
+| `c14c9da` | 只在一轮的第一次模型调用前召回 | 一轮内的 prompt 前缀保持稳定 |
+| `026aa38` | 上一轮的 `memoryContext` 留在原位 | 丢掉它等于从上一轮起点重写 prompt，每轮都丢掉服务商的前缀缓存 |
+| `e5dbf12` | 改成每个会话一份快照，压缩后刷新 | 召回不再堆积，压缩丢掉它们时也不会丢内容 |
 
 **决定**
 
 会话开始时载入一份快照：全局记忆和本范围记忆各占一半预算，按类型和新旧排序。放不下的由只读的 `memory_search` 查。同样的考虑贯穿 prompt 的其他部分：
 
-- 系统提示词从最稳定到最不稳定排列，其他会话和子 agent 能共用更多缓存前缀（`98ff53f`）。
-- 放不下时只缩最近一次模型回复的工具结果预算，更早的结果保持原样（`6f94607`）。
-- 延迟加载的工具排在后面，工具列表只增不减（`f195793`）。
+- 系统提示词从最稳定到最不稳定排列，其他会话和子 agent 能共用更多缓存前缀（`0322ce5`）。
+- 放不下时只缩最近一次模型回复的工具结果预算，更早的结果保持原样（`026aa38`）。
+- 延迟加载的工具排在后面，工具列表只增不减（`3205976`）。
 
 **放弃的方案**
 
-每次迭代召回、每轮召回（`635fdc3`、`db21f76` 依次替换）。
+每次迭代召回、每轮召回（`c14c9da`、`e5dbf12` 依次替换）。
 
 **代价**
 
@@ -452,46 +452,46 @@ ollupi 是 Go 库，不是可执行程序，应用自己负责装配。桌面端
 
 **依据**
 
-`635fdc3`、`6f94607`、`db21f76`、`98ff53f`，`agent/memory/recall.go`，`agent/systemprompt/systemprompt.go`。
+`c14c9da`、`026aa38`、`e5dbf12`、`0322ce5`，`agent/memory/recall.go`，`agent/systemprompt/systemprompt.go`。
 
 ## 15. 脱敏只在模型边界
 
 **背景**
 
-第一版就是在模型边界统一脱敏（`acfb8e4`）。但记忆提取的请求曾把原始个人数据发出去（`31f9092` 修复），记忆另有一道自己的凭据过滤（`831b554` 删除）。
+第一版就是在模型边界统一脱敏（`acfb8e4`）。但记忆提取的请求曾把原始个人数据发出去（`aec429e` 修复），记忆另有一道自己的凭据过滤（`8caf728` 删除）。
 
 **决定**
 
-脱敏只发生在发给模型的那一刻，回答在记录和交给工具之前还原。记忆只经模型调用到达模型，所以记忆本身可以存真实值，不再有单独的凭据过滤（`831b554`）。用户可以开关，默认开，运行时在每次模型调用前读这个开关（`2d7d064`）。占位符是 HMAC，密钥存在 `settings.redaction_key`，每用户一个，重启后占位符不变。
+脱敏只发生在发给模型的那一刻，回答在记录和交给工具之前还原。记忆只经模型调用到达模型，所以记忆本身可以存真实值，不再有单独的凭据过滤（`8caf728`）。用户可以开关，默认开，运行时在每次模型调用前读这个开关（`922fc07`）。占位符是 HMAC，密钥存在 `settings.redaction_key`，每用户一个，重启后占位符不变。
 
 **放弃的方案**
 
-- 记忆自己的凭据过滤（`831b554` 删除）。
-- 进程启动时随机生成密钥（`e36dd28` 引入，`9ac61ec` 改成持久化，这样占位符在重启后保持一致）。
+- 记忆自己的凭据过滤（`8caf728` 删除）。
+- 进程启动时随机生成密钥（`ee05459` 引入，`287d0ed` 改成持久化，这样占位符在重启后保持一致）。
 
 **代价**
 
 - 数据库里是明文。
-- 每次模型调用都要过一遍检测器。`bd16658` 让每轮的 `Redactor` 记住处理过的文本，同一段文本一轮只搜一次。
-- 截断可能切开一个敏感值，留下脱敏认不出的半截。`31f9092` 加 `redact.Spans`，截断点要避开敏感区间。
+- 每次模型调用都要过一遍检测器。`05cabb8` 让每轮的 `Redactor` 记住处理过的文本，同一段文本一轮只搜一次。
+- 截断可能切开一个敏感值，留下脱敏认不出的半截。`aec429e` 加 `redact.Spans`，截断点要避开敏感区间。
 
 **依据**
 
-`acfb8e4`、`31f9092`、`e36dd28`、`2d7d064`、`831b554`、`9ac61ec`、`bd16658`，`pkg/redact/redact.go`，`repo/users.go`。
+`acfb8e4`、`aec429e`、`ee05459`、`922fc07`、`8caf728`、`287d0ed`、`05cabb8`，`pkg/redact/redact.go`，`repo/users.go`。
 
 ## 16. 审批绑定执行内容
 
 **背景**
 
-初版审批前冻结目录、命令和环境变量，批准后按冻结内容执行（`acfb8e4`）。这只防止命令被改。等审批期间环境也可能变：浏览器点击要作用的标签页可能已经跳到别的网站（`0f981f8`），要写的文件可能被改过（`9ac61ec`）。
+初版审批前冻结目录、命令和环境变量，批准后按冻结内容执行（`acfb8e4`）。这只防止命令被改。等审批期间环境也可能变：浏览器点击要作用的标签页可能已经跳到别的网站（`8a7a0e7`），要写的文件可能被改过（`287d0ed`）。
 
 **决定**
 
-批准之后、执行之前，把调用的内容重新算一遍。内容变了就不执行，按新内容重新决定：再问一次、被规则拒绝，或者规则允许就跑。算不出来的直接拒绝。文件修改审批的是冻结的 diff。`acceptAlways` 只在有建议规则时提供，看不清的命令、需要完全访问的调用不提供（`5ac0e03`）。
+批准之后、执行之前，把调用的内容重新算一遍。内容变了就不执行，按新内容重新决定：再问一次、被规则拒绝，或者规则允许就跑。算不出来的直接拒绝。文件修改审批的是冻结的 diff。`acceptAlways` 只在有建议规则时提供，看不清的命令不提供；全权调用有建议规则时照样提供，写进去的是 escalate 规则（`cfb0ce2`，后者由 `32d07e5` 补上）。
 
 **放弃的方案**
 
-批准后只按冻结内容执行，不再核对（`0f981f8` 替换）。
+批准后只按冻结内容执行，不再核对（`8a7a0e7` 替换）。
 
 **代价**
 
@@ -499,17 +499,17 @@ ollupi 是 Go 库，不是可执行程序，应用自己负责装配。桌面端
 
 **依据**
 
-`5ac0e03`、`0f981f8`、`9ac61ec`，`agent/runtime/calls.go`，`tools/spec.go`，`tools/workspace/files.go`，`sidecar/internal/browser/browser.go`。
+`cfb0ce2`、`8a7a0e7`、`287d0ed`，`agent/runtime/calls.go`，`tools/spec.go`，`tools/workspace/files.go`，`sidecar/internal/browser/browser.go`。
 
 **之后**
 
-`cf4141e`（v0.16.0）推翻了"批准后重算"：调用写下时就按规则判定，批准对这次调用照原样生效，执行前不再重新决定。审批前冻结的内容（`Prepared`）仍在，工具执行时核对它，环境变了就让这次调用失败，而不是再问一次。现在的做法见[权限与审批](/zh/engine/permissions)。
+`b7b6bdf`（v0.16.0）推翻了"批准后重算"：调用写下时就按规则判定，批准对这次调用照原样生效，执行前不再重新决定。审批前冻结的内容（`Prepared`）仍在，工具执行时核对它，环境变了就让这次调用失败，而不是再问一次。现在的做法见[权限与审批](/zh/engine/permissions)。
 
 ## 17. 编号 migration
 
 **背景**
 
-最早靠 gorm 的 `AutoMigrate`。它只能加表加列，做不到的改动就要清库。`3593427`、`9580752`、`28b9033` 的提交信息都写着"rebuild development databases"，`b967d0e` 写着 repo 没有 schema 版本，格式变了就重建，`0166926` 写着现有数据库必须重建。`a885647` 的理由很直接：库里现在存的是用户的对话和记忆。
+最早靠 gorm 的 `AutoMigrate`。它只能加表加列，做不到的改动就要清库。`4a18265`、`5d2f910`、`6cb46e5` 的提交信息都写着"rebuild development databases"，`9b6f168` 写着 repo 没有 schema 版本，格式变了就重建，`cce6f5f` 写着现有数据库必须重建。`a27cc8f` 的理由很直接：库里现在存的是用户的对话和记忆。
 
 **决定**
 
@@ -518,12 +518,12 @@ ollupi 是 Go 库，不是可执行程序，应用自己负责装配。桌面端
 - `0001_init.sql` 是当时 gorm 建出来的结构。迁移之前的库先用 `AutoMigrate` 补到这一步，保留数据，标记为版本 1。
 - 库的版本比当前 ollupi 知道的新，拒绝打开。
 - 只往前走。
-- 迁移时关外键，这样一步可以重建被别的表引用的表而不触发级联删除；提交之前检查所有外键（`d1c6092`）。
+- 迁移时关外键，这样一步可以重建被别的表引用的表而不触发级联删除；提交之前检查所有外键（`0b39984`）。
 - 测试比较迁移出来的库和 gorm 从行类型建出来的库，改了行类型不写 migration 就失败。
 
 **放弃的方案**
 
-`AutoMigrate` 加清库（`a885647` 替换）。
+`AutoMigrate` 加清库（`a27cc8f` 替换）。
 
 **代价**
 
@@ -531,7 +531,7 @@ ollupi 是 Go 库，不是可执行程序，应用自己负责装配。桌面端
 
 **依据**
 
-`a885647`、`d1c6092`，`repo/migrate.go`，`repo/migrate_test.go`，`repo/migrations/`。
+`a27cc8f`、`0b39984`，`repo/migrate.go`，`repo/migrate_test.go`，`repo/migrations/`。
 
 ## 18. 出错即暴露
 
@@ -543,55 +543,55 @@ ollupi 是 Go 库，不是可执行程序，应用自己负责装配。桌面端
 
 | 情况 | 行为 | 提交 |
 |---|---|---|
-| 调度时读库失败、会话无法前进 | `halt` 让这一轮以失败结束，写明原因 | `3593427` |
-| 结束一轮时存储失败、子 agent 报告送不到 | 发 `EventError`，不假装结束 | `28b9033` |
-| 工作区或父会话设置读不出来 | 这一轮失败 | `28b9033` |
-| 模型没声明上下文限额 | 启动报错，不按名字猜 | `cd0efe2` |
-| `${NAME}` 引用的环境变量没设置 | 拒绝配置 | `desktop@9131f39` |
-| 库的版本比引擎新 | 拒绝打开 | `a885647` |
-| 书签或历史文件读不出来 | 不当成空文件，否则下次保存就覆盖了 | `desktop@4748a86` |
-| 待处理请求读库失败 | 报错，不返回空列表 | `fb3e2d1` |
+| 调度时读库失败、会话无法前进 | `halt` 让这一轮以失败结束，写明原因 | `4a18265` |
+| 结束一轮时存储失败、子 agent 报告送不到 | 发 `EventError`，不假装结束 | `6cb46e5` |
+| 工作区或父会话设置读不出来 | 这一轮失败 | `6cb46e5` |
+| 模型没声明上下文限额 | 启动报错，不按名字猜 | `be273dd` |
+| `${NAME}` 引用的环境变量没设置 | 拒绝配置 | `desktop@6c6a914` |
+| 库的版本比引擎新 | 拒绝打开 | `a27cc8f` |
+| 书签或历史文件读不出来 | 不当成空文件，否则下次保存就覆盖了 | `desktop@2df6fae` |
+| 待处理请求读库失败 | 报错，不返回空列表 | `af8624c` |
 
-外部的暂时故障单独处理，它们有明确的边界：模型请求重试 8 次，仍失败就让这一轮失败（`a7bf0b2`）；MCP 服务器连不上就跳过，并在状态里报告原因（`0fb4289`）；记忆提取退避重试，多次失败后跳过这一批并记下原因（`3cc5749`）。
+外部的暂时故障单独处理，它们有明确的边界：模型请求重试 8 次，仍失败就让这一轮失败（`5b34df7`）；MCP 服务器连不上就跳过，并在状态里报告原因（`2ad6af5`）；记忆提取退避重试，多次失败后跳过这一批并记下原因（`3e5d30b`）。
 
 **放弃的方案**
 
-- 每分钟全量 `reconcile` 自愈错过的状态转换。`99ddde4` 加上，同一天的 `3593427` 删掉，改成当场失败。
-- 内置的常见模型限额表（`cd0efe2` 删除）。
+- 每分钟全量 `reconcile` 自愈错过的状态转换。`268a420` 加上，同一天的 `4a18265` 删掉，改成当场失败。
+- 内置的常见模型限额表（`be273dd` 删除）。
 
 **代价**
 
 - 一次读库失败就结束一轮，没有后台修复。
-- 用户要自己填模型限额。API 不给限额时表单存不了，`desktop@4660809` 改成界面填默认值并写进 `config.yaml`，所以这个值是看得见、能改的，引擎这边的规则没变。
+- 用户要自己填模型限额。API 不给限额时表单存不了，`desktop@0c60f34` 改成界面填默认值并写进 `config.yaml`，所以这个值是看得见、能改的，引擎这边的规则没变。
 
 **依据**
 
-`.cursor/rules/coding-rules.mdc`，`3593427`、`28b9033`、`cd0efe2`，`desktop@4748a86`、`desktop@4660809`。
+`.cursor/rules/coding-rules.mdc`，`4a18265`、`6cb46e5`、`be273dd`，`desktop@2df6fae`、`desktop@0c60f34`。
 
 ## 19. 逻辑放在拥有它的层
 
 **背景**
 
-`eedc2c8` 的标题是"Give each core concept a single owner"，之前工作区操作写在网关里，一轮和条目的状态转换写在 agent 里。`701ac2a` 又做了一次：网关在调用后补发通知，有一份定时任务校验的副本。`docs/roadmap.md` 把原则写明了："逻辑放在拥有它的那一层，desktop 只做展示和装配"。
+`58221f1` 的标题是"Give each core concept a single owner"，之前工作区操作写在网关里，一轮和条目的状态转换写在 agent 里。`917871c` 又做了一次：网关在调用后补发通知，有一份定时任务校验的副本。`docs/roadmap.md` 把原则写明了："逻辑放在拥有它的那一层，desktop 只做展示和装配"。
 
 **决定**
 
 | 层 | 拥有 | 不做 |
 |---|---|---|
 | `repo` | 会话状态机：一轮和条目的转换及其约束 | |
-| `agent` | 调度、权限解析、发出每一次变化 | 不管传输形状和响应大小（`c8cede9`） |
-| `gateway` | 编解码、认证、分页的字节预算 | 不补通知，不复制校验（`701ac2a`） |
+| `agent` | 调度、权限解析、发出每一次变化 | 不管传输形状和响应大小（`55e13d6`） |
+| `gateway` | 编解码、认证、分页的字节预算 | 不补通知，不复制校验（`917871c`） |
 | `tools/*` | 自己的校验，如 `cron.ErrInvalidJob` | |
 | sidecar | 装配，以及引擎不认识的东西（浏览器工具、飞书） | 不改 ollupi |
 | 桌面端 | 展示、原生能力、`config.yaml` | 不推导引擎已有的事实 |
 
-桌面端的例子：会话预览和更新时间最早在客户端猜，`dfe7766` 让通知带上存储后的会话行，`desktop@d19f40d` 删掉推导。配置能不能启动，由后端自己的 `--check-config` 判断，界面不做第二份校验。
+桌面端的例子：会话预览和更新时间最早在客户端猜，`d61d135` 让通知带上存储后的会话行，`desktop@8b55bb2` 删掉推导。配置能不能启动，由后端自己的 `--check-config` 判断，界面不做第二份校验。
 
 **放弃的方案**
 
-- 网关里的工作区逻辑（`eedc2c8` 移到 agent）。
-- 网关补发通知、复制定时任务校验（`701ac2a` 删除）。
-- 客户端推导预览和 `updatedAt`（`desktop@d19f40d` 删除）。
+- 网关里的工作区逻辑（`58221f1` 移到 agent）。
+- 网关补发通知、复制定时任务校验（`917871c` 删除）。
+- 客户端推导预览和 `updatedAt`（`desktop@8b55bb2` 删除）。
 
 **代价**
 
@@ -599,13 +599,13 @@ ollupi 是 Go 库，不是可执行程序，应用自己负责装配。桌面端
 
 **依据**
 
-`eedc2c8`、`c8cede9`、`701ac2a`、`dfe7766`，`desktop@d19f40d`，`docs/roadmap.md`。
+`58221f1`、`55e13d6`、`917871c`、`d61d135`，`desktop@8b55bb2`，`docs/roadmap.md`。
 
 ## 20. Seatbelt 沙箱
 
 **背景**
 
-agent 的命令在用户本机运行。`docs/sandbox-sources.md`（`05ef4b0` 的父提交）是 2026-10-14 的调研，整理了 Codex、Anthropic 的 sandbox-runtime 和其他 macOS 方案。
+agent 的命令在用户本机运行。`docs/sandbox-sources.md`（`d522016` 的父提交）是 2026-10-14 的调研，整理了 Codex、Anthropic 的 sandbox-runtime 和其他 macOS 方案。
 
 **决定**
 
@@ -617,17 +617,17 @@ agent 的命令在用户本机运行。`docs/sandbox-sources.md`（`05ef4b0` 的
 
 **代价**
 
-只有 macOS。Linux 和 Windows 还在 `docs/roadmap.md` 的 P3 里。云端靠 `sandbox.Machine` 接入别的沙箱（`aecfb63`）：机器本身是隔离边界，命令受限且不能提权。
+只有 macOS。Linux 和 Windows 还在 `docs/roadmap.md` 的 P3 里。云端靠 `sandbox.Machine` 接入别的沙箱（`30f586b`）：机器本身是隔离边界，命令受限，不能给全权。
 
 **依据**
 
-`docs/sandbox-sources.md`（`05ef4b0` 的父提交），`pkg/sandbox/seatbelt_base.sbpl`，`pkg/sandbox/box.go`，`docs/roadmap.md`。
+`docs/sandbox-sources.md`（`d522016` 的父提交），`pkg/sandbox/seatbelt_base.sbpl`，`pkg/sandbox/box.go`，`docs/roadmap.md`。
 
 ## 21. 自建更新器
 
 **背景**
 
-没有 Developer ID，应用用 ad hoc 签名（`desktop@fad6587`）。Squirrel.Mac 要求两个版本有相同的 designated requirement，ad hoc 签名的版本之间没有。
+没有 Developer ID，应用用 ad hoc 签名（`desktop@34988f6`）。Squirrel.Mac 要求两个版本有相同的 designated requirement，ad hoc 签名的版本之间没有。
 
 **决定**
 
@@ -635,7 +635,7 @@ agent 的命令在用户本机运行。`docs/sandbox-sources.md`（`05ef4b0` 的
 
 **放弃的方案**
 
-Squirrel.Mac（`desktop@63813b7` 写明不可用）。
+Squirrel.Mac（`desktop@8c043e9` 写明不可用）。
 
 **代价**
 
@@ -645,7 +645,7 @@ Squirrel.Mac（`desktop@63813b7` 写明不可用）。
 
 **依据**
 
-`desktop@fad6587`、`desktop@63813b7`，`apps/desktop/src/main/update.ts`。
+`desktop@34988f6`、`desktop@8c043e9`，`apps/desktop/src/main/update.ts`。
 
 ## 22. 石与苔：界面先给结论
 
@@ -655,7 +655,7 @@ Squirrel.Mac（`desktop@63813b7` 写明不可用）。
 
 **决定**
 
-用 impeccable 技能重定方向，用户在一轮方向稿里选了"动物园导览图"的理念：侧栏的工作区是一块块区域色的大圆角区域，屏幕是一张纸色工作面；只留一个赭色信号表示"需要你"，动作是苔色；分区靠底色和留白，不靠线；按钮都是胶囊。界面第一层只放结论和要你做的决定：回答在过程前面、改动的文件成卡片，过程收成一句人话，审批卡片先说要做什么和后果，面板和设置页先说一句状态，细节都收进"细节"（`desktop@cbd6940`、`desktop@ae8c1a0`）。规则写进 `packages/ui/DESIGN.md`，产品事实写进 `apps/desktop/PRODUCT.md`。
+用 impeccable 技能重定方向，用户在一轮方向稿里选了"动物园导览图"的理念：侧栏的工作区是一块块区域色的大圆角区域，屏幕是一张纸色工作面；只留一个赭色信号表示"需要你"，动作是苔色；分区靠底色和留白，不靠线；按钮都是胶囊。界面第一层只放结论和要你做的决定：回答在过程前面、改动的文件成卡片，过程收成一句人话，审批卡片先说要做什么和后果，面板和设置页先说一句状态，细节都收进"细节"（`desktop@cde8c50`、`desktop@52cd86f`）。规则写进 `packages/ui/DESIGN.md`，产品事实写进 `apps/desktop/PRODUCT.md`。
 
 **放弃的方案**
 
@@ -665,12 +665,12 @@ Squirrel.Mac（`desktop@63813b7` 写明不可用）。
 
 **代价**
 
-- 几乎所有界面文件都改了一遍，之后又有几轮修正：标题栏的面板入口（`desktop@1563feb`），以及一个容器查询写在自身上导致设置页大片空白的回归（`desktop@81fd1ad`）。
+- 几乎所有界面文件都改了一遍，之后又有几轮修正：标题栏的面板入口（`desktop@6874b19`），以及一个容器查询写在自身上导致设置页大片空白的回归（`desktop@7aab799`）。
 - 熟悉技术细节的用户多点一下才能看到命令、路径、token。
 
 **依据**
 
-`desktop@cbd6940`、`desktop@1563feb`、`desktop@ae8c1a0`、`desktop@81fd1ad`，`packages/ui/DESIGN.md`、`apps/desktop/PRODUCT.md`。
+`desktop@cde8c50`、`desktop@6874b19`、`desktop@52cd86f`、`desktop@7aab799`，`packages/ui/DESIGN.md`、`apps/desktop/PRODUCT.md`。
 
 ## 23. 标识是月亮前的小狼
 
@@ -682,7 +682,7 @@ Squirrel.Mac（`desktop@63813b7` 写明不可用）。
 
 - 名字保留：审查时没有找到用 "ollupi" 的产品或商标，ollupi.com、ollupi.ai 未注册。给它写定含义（lupi 是意大利语的"狼"：夜里醒着、记得同伴、守着自己的地方）、读法（oh-LOO-pee）、定义句和标语，中文也写 Ollupi。
 - 标识是坐在月亮前的完整小狼，画法参考黑背胡狼（大耳朵、背鞍）。App 图标和圆形标识先是夜紫底，用上后在 Dock 里太暗，同一天改成燕麦底，和界面的石与苔同一个色调。
-- 小狼有六种姿势，只出现在空状态和第一次（`desktop@c1bf458`）。
+- 小狼有六种姿势，只出现在空状态和第一次（`desktop@ada5121`）。
 
 **放弃的方案**
 
@@ -698,7 +698,7 @@ Squirrel.Mac（`desktop@63813b7` 写明不可用）。
 
 **依据**
 
-`desktop@2bb5967`、`desktop@c1bf458`、`a9b3ddd`（引擎仓库的 `docs/logo`），ollupi-desktop 的 `assets/logo/make.py`、`apps/desktop/PRODUCT.md` 的 Brand Commitments。
+`desktop@7cfda22`、`desktop@ada5121`、`c3bf9b8`（引擎仓库的 `docs/logo`），ollupi-desktop 的 `assets/logo/make.py`、`apps/desktop/PRODUCT.md` 的 Brand Commitments。
 
 ## 24. 浏览器由 Playwright 驱动
 
@@ -708,7 +708,7 @@ Squirrel.Mac（`desktop@63813b7` 写明不可用）。
 
 **决定**
 
-动作和快照交给 Playwright（`desktop@c0295de`），标签页的生命周期、显示、下载、历史仍归 `AgentBrowser`。
+动作和快照交给 Playwright（`desktop@4f4ebe6`），标签页的生命周期、显示、下载、历史仍归 `AgentBrowser`。
 
 - Electron 只给每个页面一个 CDP 通道（`webContents.debugger`），Playwright 要的是一个浏览器。`TabsOverCDP` 回答 Playwright 连接时的四个浏览器级命令，其余按会话转给各标签页的 debugger。Playwright 用 `connectOverCDP(transport)` 在进程内连上，不经 socket。
 - 不开 `--remote-debugging-port`。
@@ -732,7 +732,7 @@ VS Code 的内置浏览器是同一结构：`WebContentsView` 由主进程拥有
 
 **依据**
 
-`desktop@c0295de`，`apps/desktop/src/main/browser/cdp.ts`，`apps/desktop/src/main/browser/playwright.ts`，`apps/desktop/src/main/browser/browser.ts`；VS Code 的 `.github/skills/integrated-browser/SKILL.md` 和 `src/vs/platform/browserView/node/playwrightService.ts`；Chrome 博客《Changes to remote debugging switches to improve security》。
+`desktop@4f4ebe6`，`apps/desktop/src/main/browser/cdp.ts`，`apps/desktop/src/main/browser/playwright.ts`，`apps/desktop/src/main/browser/browser.ts`；VS Code 的 `.github/skills/integrated-browser/SKILL.md` 和 `src/vs/platform/browserView/node/playwrightService.ts`；Chrome 博客《Changes to remote debugging switches to improve security》。
 
 ## 25. 主题：石与苔之外的暮色
 
@@ -771,28 +771,28 @@ VS Code 的内置浏览器是同一结构：`WebContentsView` 由主进程拥有
 
 **背景**
 
-v0.15 时，一个会话的状态分写在几处：轮次和条目在 `turns`、`items` 表里各有状态列，执行中原地更新；谁改了状态，谁自己发事件（`agent/event` 的 `OnEvent` 回调，11-17 上午 `a9026ed` 改成每个连接订阅的事件总线）；重启时 `RecoverItems` 按条目状态逐类处理，再走调度器的 `recover`（第 2、3 条）。
+v0.15 时，一个会话的状态分写在几处：轮次和条目在 `turns`、`items` 表里各有状态列，执行中原地更新；谁改了状态，谁自己发事件（`agent/event` 的 `OnEvent` 回调，11-17 上午 `806a975` 改成每个连接订阅的事件总线）；重启时 `RecoverItems` 按条目状态逐类处理，再走调度器的 `recover`（第 2、3 条）。
 
-重建之前几天的改动都朝"一轮的状态从条目读出来"推：`fdefa84`（11-16）让一轮按条目一步步运行、每步之后重读条目和权限；11-14 有一次无状态 runtime 的重写（`766cbfa` 到 `ca51712`），当天由 `4b3ae71` 撤回，提交里没写撤回的原因。
+重建之前几天的改动都朝"一轮的状态从条目读出来"推：`6ecaaea`（11-16）让一轮按条目一步步运行、每步之后重读条目和权限；11-14 有一次无状态 runtime 的重写（`13a7924` 到 `2d5e4ec`），当天由 `aa316a2` 撤回，提交里没写撤回的原因。
 
 仓库里没有一份专门写重建动机的文字。上面的背景是从重建前后的提交推出来的。
 
 **决定**
 
-- **会话是一份只追加的日志**（`89cbf7c`）。日志由 `conversation.Entry` 组成：轮次排队和结束、消息、推理、模型回答和失败、工具调用的每一步（提出、请求审批、决定、开始、提问、回答、结果）、子 agent 的派生和报告、压缩、召回的记忆。记录写下后不再修改。
+- **会话是一份只追加的日志**（`9b2c378`）。日志由 `conversation.Entry` 组成：轮次排队和结束、消息、推理、模型回答和失败、工具调用的每一步（提出、请求审批、决定、开始、提问、回答、结果）、子 agent 的派生和报告、压缩、召回的记忆。记录写下后不再修改。
 - **状态是折叠出来的。** 轮次、条目、当前轮次在等什么、会话能不能运行，都由 `conversation.View.Apply` 从日志算出来。`turns`、`items` 表和 `threads` 的几列只是物化，为了查询，在追加的同一个事务里写下。
-- **一条写路径。** 所有写入都在 `store.Update` 的一个事务里，每条记录先过 `conversation.Check`，接不上就整个事务失败（`6a64e78`）。
-- **一条通知路径。** 提交之后，变化作为事件发到 store 的 feed 上，按提交编号（`8a8e43b`）。调度器（`3c3ed62`）、网关（`9b5b50b`）和记忆提取只从 feed 得知变化，写的一方不通知任何人。
-- **规则是纯函数。** `conversation`、`agent`（`Next`，`6b1c5cb`）、`policy`（`d1b1463`）只读传进来的视图，不导入 `store`。
-- **恢复不是另一条路径。** 一次运行开始时，先关掉上一次运行留下的、已开始却没有结果的调用。`3c3ed62` 的提交说明写明这就是全部的崩溃恢复。
-- 新库 `data/store.sqlite` 从新的表结构开始，旧引擎在 `13a3637` 整个删除。
+- **一条写路径。** 所有写入都在 `store.Update` 的一个事务里，每条记录先过 `conversation.Check`，接不上就整个事务失败（`e3aa45f`）。
+- **一条通知路径。** 提交之后，变化作为事件发到 store 的 feed 上，按提交编号（`87702d3`）。调度器（`82081ec`）、网关（`499f96f`）和记忆提取只从 feed 得知变化，写的一方不通知任何人。
+- **规则是纯函数。** `conversation`、`agent`（`Next`，`4765533`）、`policy`（`abad1b8`）只读传进来的视图，不导入 `store`。
+- **恢复不是另一条路径。** 一次运行开始时，先关掉上一次运行留下的、已开始却没有结果的调用。`82081ec` 的提交说明写明这就是全部的崩溃恢复。
+- 新库 `data/store.sqlite` 从新的表结构开始，旧引擎在 `619e2e6` 整个删除。
 
 **放弃的方案**
 
 | 方案 | 存在于 | 移除 |
 |---|---|---|
-| 状态写在各自的表里，原地更新；写的一方自己发事件 | v0.15.1 及以前 | `13a3637` |
-| 在旧结构上逐步收拾：事件总线、`permission.Manager`、精简 `agent/service` | 11-17 上午的 `a9026ed`、`5a09546`、`eafc057` 等 | 同日由 `13a3637` 随旧引擎删除 |
+| 状态写在各自的表里，原地更新；写的一方自己发事件 | v0.15.1 及以前 | `619e2e6` |
+| 在旧结构上逐步收拾：事件总线、`permission.Manager`、精简 `agent/service` | 11-17 上午的 `806a975`、`6b765ff`、`0fbe6d5` 等 | 同日由 `619e2e6` 随旧引擎删除 |
 
 **代价**
 
@@ -801,12 +801,12 @@ v0.15 时，一个会话的状态分写在几处：轮次和条目在 `turns`、
 - feed 的订阅回调在提交者的 goroutine 上同步执行，回调一慢，写的一方跟着慢。
 - 日志只增不减，会话删除之前一直留着。
 - 协议的通知全部换掉（`thread/changed`、`turn/changed`、`item/changed`，各带提交序号），客户端必须跟着改。
-- 旧库：v0.16.0 的 tag 说明写明不迁移；第二天 `28ffcc8` 改为第一次打开时整份导入，没结束的轮次记为被升级中断，不重跑。
+- 旧库：v0.16.0 的 tag 说明写明不迁移；第二天 `58d2b37` 改为第一次打开时整份导入，没结束的轮次记为被升级中断，不重跑。
 - 基准数字全部早于这次重建。v0.16.0 的 tag 说明写明要重测，到 v0.17.1 还没有重测。
 
 **依据**
 
-`89cbf7c`、`d1b1463`、`6b1c5cb`、`6a64e78`、`8a8e43b`、`cf4141e`、`3c3ed62`、`d110977`、`9b5b50b`、`18d6757`、`13a3637`、`28ffcc8`，v0.16.0 的 tag 说明，`conversation/`，`store/store.go`，`store/sqlite/`，`schedule/schedule.go`，`run/run.go`，引擎仓库的 `docs/lifecycle.md`。
+`9b2c378`、`abad1b8`、`4765533`、`e3aa45f`、`87702d3`、`b7b6bdf`、`82081ec`、`b9b330f`、`499f96f`、`9fa9186`、`619e2e6`、`58d2b37`，v0.16.0 的 tag 说明，`conversation/`，`store/store.go`，`store/sqlite/`，`schedule/schedule.go`，`run/run.go`，引擎仓库的 `docs/lifecycle.md`。
 
 ## 27. 存活检测走 WebSocket 心跳，读被压住时不算
 
@@ -831,7 +831,7 @@ v0.15 时，一个会话的状态分写在几处：轮次和条目在 `turns`、
 
 **依据**
 
-`3e97634`、`cb7f93a`，`pkg/jsonrpc/jsonrpc.go`，`pkg/wshub/wshub.go`，`pkg/jsonrpc/serve_test.go`，引擎仓库的 `bench/compare/README.md`。
+`f4931bd`、`48414fa`，`pkg/jsonrpc/jsonrpc.go`，`pkg/wshub/wshub.go`，`pkg/jsonrpc/serve_test.go`，引擎仓库的 `bench/compare/README.md`。
 
 ## 代码位置
 

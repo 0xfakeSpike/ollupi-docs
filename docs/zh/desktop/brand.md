@@ -48,7 +48,7 @@ Ollupi 的名字、标识、图标和字标，以及它们在产品里出现的�
 :::
 
 ::: info 演进
-上一版标识是像素画的小狼（格墨方向：夜蓝墨色、像素网格、Bricolage Grotesque 字体），有咧嘴、眨眼、左右张望等表情，也用在界面里的加载和状态行上。2026-11-12 界面换成石与苔，2026-11-13 标识换成现在的小狼（`desktop@2bb5967`）。中间试过只画狼头，冷峻、像游戏战队标识，也试过圆头，读起来像猫；完整的、可亲的小狼是用户选的方向。
+上一版标识是像素画的小狼（格墨方向：夜蓝墨色、像素网格、Bricolage Grotesque 字体），有咧嘴、眨眼、左右张望等表情，也用在界面里的加载和状态行上。2026-11-12 界面换成石与苔，2026-11-13 标识换成现在的小狼（`desktop@7cfda22`）。中间试过只画狼头，冷峻、像游戏战队标识，也试过圆头，读起来像猫；完整的、可亲的小狼是用户选的方向。
 :::
 
 ## 图标与字标
@@ -79,7 +79,9 @@ Ollupi 的名字、标识、图标和字标，以及它们在产品里出现的�
 | `app-icon-dusk.svg`、`png/app-icon-dusk-1024.png` | 暮色主题下 Dock 里的图标（运行时切换） |
 | `mark-dusk.svg`、`png/mark-dusk-1024.png` | 暮色的圆形标识，"关于"和第一次打开时 |
 
-Dock 图标跟着主题在运行时换；Finder 和启动台里显示的是打包时的燕麦图标，运行中的应用改不了它。
+Dock 图标跟着主题在运行时换。实现是 `src/main/appIcon.ts` 的 `setAppIcon`：打包后从 `Resources/brand` 取对应的 png，开发时直接从 `assets/brand/png` 取，用 `app.dock.setIcon` 换。`electron-builder.yml` 的 `extraResources` 只带这两个 1024 的 png。Finder 和启动台里显示的是打包时的燕麦图标，运行中的应用改不了它。
+
+暮色下界面里多两处小东西，其他主题下不渲染：新会话页（不是第一次打开时）问候上方是一条小地平线（`Horizon`）；侧栏顶部红绿灯和字标之间的空处停着一只蜻蜓（`Dragonfly`）。两个都是 `Wolf.tsx` 导出的组件。
 
 ## 小狼的姿势
 
@@ -90,7 +92,7 @@ Dock 图标跟着主题在运行时换；Finder 和启动台里显示的是打�
 | 坐着 | 守着、等着 | 会话还没有消息；这个范围没有记忆、这里没有定时任务 |
 | 竖耳听 | 在认识你 | 记忆为空 |
 | 低头嗅 | 在找 | 搜索没结果 |
-| 小跑 | 出发、学新本事 | 还没有技能 |
+| 小跑 | 出发、学新本事 | 已画好，界面里还没用到（技能页的空列表不画空状态插图） |
 | 趴着 | 休息、没事可做 | 没有定时任务 |
 | 蜷着睡 | 安静、关着 | 技能关着 |
 
@@ -101,7 +103,7 @@ Dock 图标跟着主题在运行时换；Finder 和启动台里显示的是打�
 界面里的小狼只用单色剪影（`Wolf` 组件；暮色主题下脚边多两簇草和两点萤火），颜色跟随周围文字（通常 `fg-subtle`），镂空是所在的底色，64px；彩色的圆形标识（`Emblem`）只在品牌时刻。它不循环动、不代替文字，读屏软件跳过它（`aria-hidden`）。
 
 ::: info 演进
-姿势和放置在 `desktop@c1bf458` 加入。放在哪、不放在哪按 impeccable 技能的 delight 一章判断：干活的界面把个性集中在第一次、完成、恢复这类时刻，其余时候靠可靠本身；重复一百次以后仍然不烦。
+姿势和放置在 `desktop@ada5121` 加入。放在哪、不放在哪按 impeccable 技能的 delight 一章判断：干活的界面把个性集中在第一次、完成、恢复这类时刻，其余时候靠可靠本身；重复一百次以后仍然不烦。
 :::
 
 ## 代码位置
@@ -113,5 +115,6 @@ Dock 图标跟着主题在运行时换；Finder 和启动台里显示的是打�
 | ollupi-desktop `assets/brand/figure.py`、`poses.py` | 小狼的画法 |
 | ollupi-desktop `assets/brand/make.py` | 生成全部标识、png、`Ollupi.icns`、总览图和 `wolfArt.ts` |
 | ollupi-desktop `assets/brand/Ollupi.icns` | 打包进应用的图标（`electron-builder.yml` 的 `mac.icon`） |
-| ollupi-desktop `apps/desktop/src/renderer/src/views/common/Wolf.tsx` | `Wolf`、`Emblem` 组件 |
+| ollupi-desktop `apps/desktop/src/renderer/src/views/common/Wolf.tsx` | `Wolf`、`Emblem`、`Horizon`、`Dragonfly` 组件 |
 | ollupi-desktop `apps/desktop/src/renderer/src/views/common/Wordmark.tsx` | 侧栏字标 |
+| ollupi-desktop `apps/desktop/src/main/appIcon.ts` | 按主题换 Dock 图标（`setAppIcon`） |

@@ -19,7 +19,7 @@ Ollupi 有三条互不相干的搜索路径：查自己的会话、消息、定�
 | 工作区文件的内容和路径 | 工作区工具 `grep`、`glob` | 模型调用工具 | `grep` 用 Go RE2 正则，`glob` 用路径模式 | 没有，逐目录遍历 |
 | 网页 | — | — | — | — |
 
-网页这一行是空的：`tool/builtin/web` 只提供 `web_fetch`，读一个给定的 URL（见[工具系统](/zh/engine/tools)）；代码里没有搜索 API 的提供者，也没有搜索引擎的配置项和密钥。要让模型“搜网页”，只能先给它一个网址。
+网页这一行是空的：`tool/builtin/web` 只提供 `web_fetch`，读一个给定的 URL（见[工具系统](/zh/engine/tools)），请求经用户的 `Box` 发出——本机的 `Box` 走系统代理，先读 `HTTP_PROXY`/`HTTPS_PROXY`，没配时读系统的代理设置；代码里没有搜索 API 的提供者，也没有搜索引擎的配置项和密钥。要让模型“搜网页”，只能先给它一个网址。
 
 ## 会话、消息、任务与记忆：`search`
 
@@ -51,7 +51,7 @@ Ollupi 有三条互不相干的搜索路径：查自己的会话、消息、定�
 `workspaceId` 非空时前三类都再加一条 `<列> = ?`：会话看 `threads.workspace_id`，消息和任务看所属会话的；不属于任何工作区（general）的会话、消息、任务在这个过滤下不出现。记忆查全局记忆加这个工作区的记忆，不查 general 记忆，和这个工作区的会话实际载入的一致；不带 `workspaceId` 时查用户的全部记忆。
 
 ::: info 演进
-`d110977` 重写搜索时，带 `workspaceId` 的记忆只查这个工作区，漏掉了用户在哪里都看得到的全局记忆。`88fee2f` 让它同时查全局和这个工作区。
+`b9b330f` 重写搜索时，带 `workspaceId` 的记忆只查这个工作区，漏掉了用户在哪里都看得到的全局记忆。`8328c82` 让它同时查全局和这个工作区。
 :::
 
 ### 返回
@@ -68,8 +68,8 @@ Ollupi 有三条互不相干的搜索路径：查自己的会话、消息、定�
 `snippet` 由引擎生成，只围绕**第一个词**：在正文里按 Unicode 小写找到第一个词，取前后各 40 个字符（`snippetRunes`），把空白折叠成单个空格，两端被截断时加 `…`。所以片段一定含第一个词，其余词可能不在其中。高亮不在引擎里，引擎只返回原样的 `snippet`。字段的协议定义见[搜索协议](/zh/integrate/protocol/search)。
 
 ::: info 演进
-- 以前查询没有长度、词数和时间的上限，短词也走索引。`fdefa84` 加上 200 个字符、8 个词和 5 秒的上限，短于 3 个字符的词只扫调用者自己的消息。
-- 定时任务那一组的协议字段以前叫 `tasks`，代码里早已叫 cron job（`store.Found.CronJobs`）。`46545db`（v0.17.2）把字段改成 `cronJobs`，协议契约的 sha256 随之改变，客户端要读新名字。
+- 以前查询没有长度、词数和时间的上限，短词也走索引。`6ecaaea` 加上 200 个字符、8 个词和 5 秒的上限，短于 3 个字符的词只扫调用者自己的消息。
+- 定时任务那一组的协议字段以前叫 `tasks`，代码里早已叫 cron job（`store.Found.CronJobs`）。`d43d78b`（v0.17.2）把字段改成 `cronJobs`，协议契约的 sha256 随之改变，客户端要读新名字。
 :::
 
 ## 索引与一致性
@@ -91,7 +91,7 @@ CREATE VIRTUAL TABLE items_search USING fts5(text, content='items', content_rowi
 
 - 正在流式输出的回答搜不到：流式的片段不写进日志；回答写成 `AgentMessage` 条目时整段进索引。
 - 删除会话时条目被级联删除，触发器把它们从索引里去掉。
-- 重启不重建：索引和触发器都在库里。从旧引擎导入的会话写进 `items` 时同样经插入触发器进索引。
+- 重启不重建：索引和触发器都在库里。
 - `items` 的主键是 `(thread_id, id)`，没有 `INTEGER PRIMARY KEY`，索引靠 `rowid` 回读原文。`VACUUM` 可能重新编号这类表的 `rowid`，之后必须重建索引；代码里不对 `store.sqlite` 执行 `VACUUM`，也没有重建语句。
 
 查询这样用索引，每个词一组：
@@ -106,7 +106,7 @@ trigram 索引查不了短于 3 个字符的词，所以短词只靠第一个条
 `store/sqlite/fts5.go` 在没有 `sqlite_fts5` 或 `fts5` 构建标签时让编译失败，因为 `items_search` 需要 FTS5。
 
 ::: info 演进
-以前索引由 `0004` 迁移建在旧库上，只收状态为 `completed` 的消息，另有一个更新触发器跟着改正文和状态。v0.16.0 换成以对话日志为中心的新库，`8a8e43b` 在新库的建表里重建了 `items_search`：条目写下不变，只剩插入和删除两个触发器。
+以前索引由 `0004` 迁移建在旧库上，只收状态为 `completed` 的消息，另有一个更新触发器跟着改正文和状态。v0.16.0 换成以对话日志为中心的新库，`87702d3` 在新库的建表里重建了 `items_search`：条目写下不变，只剩插入和删除两个触发器。
 :::
 
 ### 大小写、中文、宽度
@@ -133,7 +133,7 @@ trigram 索引查不了短于 3 个字符的词，所以短词只靠第一个条
 | 每行字符数 | 500（`maxGrepRunes`） | 截断 |
 | 一次遍历的条目数 | 200000（`maxWalkEntries`） | 标 `truncated` |
 
-两者共用一个 walker：跳过 `.git`、`.gitignore` 与 `.git/info/exclude` 忽略的文件（go-git 的匹配器）、非文本文件；`Box.CheckRead` 不让读的计入 `skipped`。凭据文件和 agent 自己的数据在任何沙箱模式下都不读。
+两者共用一个 walker：跳过 `.git`、`.gitignore` 与 `.git/info/exclude` 忽略的文件（go-git 的匹配器）、非文本文件；`Box.CheckRead` 不让读的计入 `skipped`。凭据文件和 agent 自己的数据即使在全权（full access）下也不读。
 
 两者都标了只读、`OpenWorldHint` 为假，审批策略在 `on-request` 和 `untrusted` 下都不提问（`policy.Checker.requiresApproval`）。它们给出 `Content`，规则可以按路径写说明符，路径按小写匹配，例如 `grep(src/*)`，见[审批与权限](/zh/engine/permissions)。
 

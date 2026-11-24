@@ -6,19 +6,20 @@ Ollupi 引擎是一个 Go 库，模块路径 `github.com/0xfakeSpike/ollupi`。�
 
 ## 为什么这样设计
 
-- **引擎是库，宿主负责装配。** 引擎没有 `main`。`host.New` 按 `host.Config` 打开存储，装起 app、run、schedule、extract、cron 和网关；`Host.Run` 运行后台流程，`Gateway.Serve` 在宿主给的监听器上接客户端。桌面端的 sidecar、`bench/` 和 `eval/` 都这样嵌入引擎。分片租约也在引擎外面：`shard.Member.Run` 拿到租约后才调用宿主交给它的函数，引擎本身不知道分片的存在。
+- **引擎是库，宿主负责装配。** 引擎没有 `main`。`host.New` 按 `host.Config` 打开存储，装起 app、run、调度器（会话和后台任务各一个）、extract、usage、cron 和网关，配了 `Hub` 时装上中枢工具；`Host.Run` 运行后台流程，`Gateway.Serve` 在宿主给的监听器上接客户端。桌面端的 sidecar、`bench/` 和 `eval/` 都这样嵌入引擎。分片租约也在引擎外面：`shard.Member.Run` 拿到租约后才调用宿主交给它的函数，引擎本身不知道分片的存在。
 - **一条路写，一条路读，一条路通知。** 一切变化都是在 `store.Update` 的一个事务里向会话日志追加记录，每条记录先过 `conversation.Check`；会话现在的样子（`conversation.View`）由同一组纯函数从日志折叠出来；事务提交之后，改变的东西作为事件发到 store 的 feed 上，按提交编号。网关、调度器、记忆提取都只从 feed 得知变化，写的一方不通知任何人。所以不经网关、直接调用 `app` 的宿主拿到的是同一套规则，也不会漏掉调度。见[设计决策 19](/zh/reference/decisions#_19-逻辑放在拥有它的层)。
 - **规则是纯函数，不碰存储。** `conversation`（记录能不能追加）、`agent`（下一步做什么）、`policy`（调用能不能执行）只读传进来的 `View`，都不导入 `store`。读写数据库、调模型、执行工具的是 `run`、`app` 这些流程包。规则因此可以只用内存里的日志测试，`agent` 的测试只导入 `conversation`。
-- **内存里只有槽位表。** 排队靠的是 `threads` 表上记下的"会话变为可运行的时刻"，调度器内存里只有"哪个会话占着槽位"。进程重启后从库里重新取可运行的会话，没有内存状态要恢复。见[执行模型](/zh/engine/execution)和[设计决策 3](/zh/reference/decisions#_3-无内存调度状态)。
+- **内存里只有槽位表。** 排队靠的是 `threads` 表上记下的"会话变为可运行的时刻"，调度器内存里只有"哪个会话占着槽位"，后台任务的调度器也一样；用量记录器只记"哪些会话还要扫一遍"，漏掉的唤醒由重新扫描补上，条目才是事实。进程重启后从库里重新取可运行的会话，没有内存状态要恢复。见[执行模型](/zh/engine/execution)和[设计决策 3](/zh/reference/decisions#_3-无内存调度状态)。
 - **一个进程承载一个分片的全部会话。** 不按 agent 分进程或容器，等待中的会话只剩数据库记录。见[设计决策 1](/zh/reference/decisions#_1-池化-runtime)。
+- **中枢是可选部署组件，不是一个额外的进程。** `host.Config.Hub` 为真时，`host.New` 才把 `tool/builtin/hub` 这个 provider 加进内置工具，`agent.Names` 里的 `HubMain` 角色由一个 `kind` 为 `hub` 的工作区承载；开关关着时引擎里没有这组工具，创建 hub 工作区会被协议拒绝（`noHub`）。见[中枢](/zh/engine/hub)。
 
 代价有三处。feed 的订阅回调在提交者的 goroutine 上同步执行，回调慢了，写的一方就跟着慢（见[边界](#边界与已知问题)）。数据库只有一条连接，所有读写串行，一个慢事务会拖住整个分片，所以附件复制、工具集构造、模型调用和工具执行都放在事务之外。run 每一步都把整个会话的投影重读一遍，历史越长，每一步读得越多。
 
 ::: info 演进
 - 初版提交就把引擎定位成库：应用导入它，自带工具、技能和界面（`acfb8e4`）。
-- v0.12.1 时宿主构造的是 `agent.Agent`：调度状态在一个事件循环里改，事件经 `Config.OnEvent` 回调往上走，网关自己读库补齐视图。`a9026ed` 先把事件改成每个连接订阅的总线，让网关不再碰存储。
-- v0.16.0（`d263a2d`）把引擎重建为以会话日志为中心：`89cbf7c` 加入日志和折叠，`6a64e78` 加入 store 和 feed，`3c3ed62` 让调度器只从 feed 得知变化，`9b5b50b` 把网关建在 app 和 feed 上，`18d6757` 用 `host.Config` 取代 `service.Config`。旧的 `agent/*` 子包、`repo/`、`tools/*` 在 `13a3637` 删除。
-- `b8c3665` 把令牌契约移进 `auth`，`router` 不再依赖网关和它背后的整个引擎。
+- v0.12.1 时宿主构造的是 `agent.Agent`：调度状态在一个事件循环里改，事件经 `Config.OnEvent` 回调往上走，网关自己读库补齐视图。`806a975` 先把事件改成每个连接订阅的总线，让网关不再碰存储。
+- v0.16.0（`25321d6`）把引擎重建为以会话日志为中心：`9b2c378` 加入日志和折叠，`e3aa45f` 加入 store 和 feed，`82081ec` 让调度器只从 feed 得知变化，`499f96f` 把网关建在 app 和 feed 上，`9fa9186` 用 `host.Config` 取代 `service.Config`。旧的 `agent/*` 子包、`repo/`、`tools/*` 在 `619e2e6` 删除。
+- `dd262c1` 把令牌契约移进 `auth`，`router` 不再依赖网关和它背后的整个引擎。
 :::
 
 ## 分层
@@ -29,17 +30,18 @@ Ollupi 引擎是一个 Go 库，模块路径 `github.com/0xfakeSpike/ollupi`。�
 | 网关 | `gateway`、`auth` | WebSocket 上的 JSON-RPC 2.0；认证（`auth.Authenticate`）；把 feed 上的事件翻译成通知；协议契约（`gateway/protocol.go`） |
 | 流程 | `app` | 用户能做的每件事：先检查，再在一个事务里写下（发消息、插话、中断、审批、回答，工作区、环境、定时任务、记忆的增删改） |
 | | `run` | 一轮的每一步：读日志，问 `agent.Next`，调模型或执行工具，把结果追加回日志；`run.End` 结束一轮 |
-| | `schedule` | 槽位与排队：从 feed 得知可运行的会话，交给 `run` |
+| | `schedule` | 槽位与排队：两个实例，会话的从 feed 得知可运行的会话交给 `run.Run`，后台任务的交给 `run.Task` |
+| | `usage` | 用量：后台从 feed 醒来，把 `ModelResponded` 派生进 `usage` 表，供 `app.Usage` 查询 |
 | | `extract` | 记忆提取：从 feed 得知结束的轮次，提炼成记忆 |
 | | `cron` | 定时任务的日历；到点经 `app.Scheduled` 给会话排一轮 |
 | 核心 | `conversation` | 日志记录（`Entry`）、`Check`、`View` 投影 |
-| | `agent` | 四种角色（`Role`）和 `Next` 决策 |
+| | `agent` | 角色（`Role`：两个主 agent、八个子 agent、一个中枢主 agent）和 `Next` 决策 |
 | | `prompt` | 上下文窗口、系统提示、压缩、渲染 |
 | | `policy` | 权限判定 |
 | | `account` | 工作区、会话、执行环境、用户设置，权限分层 |
 | | `memory`、`ask` | 记忆条目与召回；结构化提问 |
 | 端口与适配器 | `store`、`store/sqlite` | `Store`、`Reader`、`Tx` 接口和 feed；SQLite 实现 |
-| | `tool`、`tool/kit`、`tool/builtin/*`、`tool/mcp` | 工具端口；注册表；内置工具；MCP |
+| | `tool`、`tool/kit`、`tool/builtin/*`、`tool/mcp` | 工具端口；注册表；内置工具（`Hub` 打开时含中枢工具）；MCP |
 | | `blob`、`skill` | 附件存储；技能目录 |
 | 分布式 | `shard`、`catalog`、`router`、`router/extproc` | 分片租约、目录、路由，见[分片与租约](/zh/engine/sharding) |
 | 基础包 | `pkg/llm`、`pkg/sandbox`、`pkg/redact`、`pkg/jsonrpc`、`pkg/sqlitedb`、`pkg/wshub` | 模型客户端、沙箱、脱敏、JSON-RPC 连接、SQLite 的打开与迁移、WebSocket 连接管理 |
@@ -64,6 +66,8 @@ flowchart TD
   host["host"] --> gateway["gateway"]
   host --> extract["extract"]
   host --> schedule["schedule"]
+  host --> usage["usage"]
+  usage --> store["store"]
   host --> sqlite["store/sqlite"]
   host --> tools["tool/mcp、tool/builtin/*"]
   gateway --> app["app"]
@@ -108,28 +112,29 @@ flowchart TD
 1. 检查 `Name` 非空、`Boxes` 已给；审批策略没写时取 `on-request`，再检查部署的权限设置（`policy.Settings.Check`），读不懂就拒绝启动。
 2. `newModels`：至少一个模型；每个模型有连接和名字；一个连接只对应一个模型；每个连接都有客户端。
 3. 配了 `SkillsDir` 时，检查每个角色的技能目录（`skill.Check`）。
-4. `sqlite.Open(Home)`：打开 `Home/data/store.sqlite`，跑迁移，第一次打开时导入旧引擎的库。feed 随 store 一起建。
+4. `sqlite.Open(Home)`：打开 `Home/data/store.sqlite`，跑迁移。feed 随 store 一起建。
 5. 附件存储 `blob.Dir(Home/attachments)`；定时任务的日历，时区取 `Location`，默认本地。
-6. 工具：`Tools` 里宿主自己的 provider，加上内置的 `plan`、`ask`、`loader`、`subagent`、`outputs`、`memory`，配了技能目录时加 `skills`，最后是 `cronjobs`。`mcp.NewUsers` 用它们和每个用户的 MCP 服务器，按用户给出工具集。
-7. `app.New`、`run.New`、`schedule.New`。槽位 `Slots` 默认 32，`UserSlots` 默认等于 `Slots`，`RunLimit` 默认 4 小时。
+6. 工具：`Tools` 里宿主自己的 provider，加上内置的 `plan`、`ask`、`loader`、`subagent`、`outputs`、`memory`、`web`（`web.New(cfg.Boxes)`，按用户在各自的 Box 里发请求），配了技能目录时加 `skills`，配了 `Hub` 时加 `hub`，最后是 `cronjobs`。`mcp.NewUsers` 用它们和每个用户的 MCP 服务器，按用户给出工具集；hub provider 拿到的 `App` 在 `app.New` 之后才回填。
+7. `app.New`、`usage.New`、`run.New`，然后是两个 `schedule.New`：会话的用 `schedule.Threads(runner.Run)`，槽位 `Slots` 默认 32，`UserSlots` 默认等于 `Slots`，`RunLimit` 默认 4 小时；后台任务的用 `schedule.Tasks(runner.Task)`，`TaskSlots` 默认 32，`UserTaskSlots` 默认 4，`TaskLimit` 默认 1 小时。
 8. 配了 `Memory` 时建 `extract.Extractor`；配了 `Gateway` 时建 `gateway.Server`。
 
-`Host.Run(ctx)` 在一个 errgroup 里运行调度器、定时任务（每分钟查一次到点的任务）和记忆提取，任何一个返回错误，其余跟着停；`ctx` 被取消时返回 `nil`。网关不在 `Run` 里，宿主另外调用 `Gateway.Serve(ctx, ln)`，`ctx` 结束后 HTTP 关停最多等 5 秒。`Host.Close` 关掉每个用户的 MCP 会话和 store。
+`Host.Run(ctx)` 在一个 errgroup 里运行会话调度器、后台任务调度器、定时任务（每分钟查一次到点的任务）、用量记录器，配了记忆时再加记忆提取，任何一个返回错误，其余跟着停；`ctx` 被取消时返回 `nil`。网关不在 `Run` 里，宿主另外调用 `Gateway.Serve(ctx, ln)`，`ctx` 结束后 HTTP 关停最多等 5 秒。`Host.Close` 关掉每个用户的 MCP 会话和 store。
 
 ```go
 h, err := host.New(ctx, host.Config{
 	Home: home, Name: "ollupi",
 	Models:      []llm.Model{{Name: model, Connection: "model"}},
 	Connections: map[string]llm.Client{"model": client},
-	Tools:       []kit.Provider{files, web.New()},
+	Tools:       []kit.Provider{files},
 	Permissions: policy.Settings{ApprovalPolicy: string(policy.Never)},
 	Boxes:       func(string) (sandbox.Box, error) { return sandbox.Here() },
 })
 if err != nil {
-	return err
+	log.Fatalf("eval: %v", err)
 }
 defer h.Close()
-go h.Run(ctx)
+running := make(chan error, 1)
+go func() { running <- h.Run(ctx) }()
 ```
 
 这段取自 `eval/main.go`。每个参数的默认值和调大调小的后果见[把引擎嵌进服务](/zh/integrate/embed)。
@@ -155,6 +160,8 @@ flowchart TD
   J --> L["回答和工具调用一次提交"]
   L --> M["RunTools：执行，结果一次提交"]
   M --> I
+  M --> P["后台工具：launchTask 建 Task，先回一句已开始"]
+  P --> I
   I --> N["Finish：run.End 追加 TurnEnded"]
   N --> E
 ```
@@ -180,7 +187,7 @@ flowchart TD
 `Send` 分两段：
 
 1. 在事务之外执行 `attach`：把附件从用户的沙箱复制进附件存储，最多 10 个，总共最多等 1 分钟。慢的沙箱或对象存储不该占着数据库唯一的连接。
-2. 在 `store.Update` 里执行 `queue`：`topThread` 确认会话属于这个用户、不是子 agent 会话；消息非空；会话没有归档，工作区可用；排在后面的轮次不到 20 个；确定模型（请求里指定的连接，否则沿用上一轮，否则第一个模型）；检查消息长度和图片（`fits`）；然后追加两条记录：`TurnQueued`（模型，以及按模型输入预算选的主 agent 角色）和 `UserMessage`。
+2. 在 `store.Update` 里执行 `queue`：`thread` 确认会话属于这个用户；消息非空；会话没有归档，工作区可用；排在后面的轮次不到 20 个；确定模型（请求里指定的连接，否则沿用上一轮，否则第一个模型）；定这一轮的角色（会话自带 `role` 时用它，中枢工作区用 `hub-main-agent`，否则按模型输入预算选主 agent）；检查消息长度和图片（`fits`）；然后追加两条记录：`TurnQueued`（模型与角色）和 `UserMessage`。
 
 返回的轮次如果就是会话的当前轮次，`turn/start` 结果里的状态是 `inProgress`，否则是 `queued`。
 
@@ -212,6 +219,8 @@ flowchart TD
 
 模型调用结束后，`ModelResponded`、思考、回答正文和每个工具调用在一次提交里写下，网关随之发出 `turn/changed` 和 `item/changed`。一轮结束时，`run.End` 追加 `TurnEnded`；调度器在 feed 上看到这一轮结束，取消对应的运行，槽位放出后再 `admit` 一次。会话后面还排着轮次的话，下一个轮次在同一次提交里成为当前轮次，会话仍然可运行，照常排队。
 
+工具可以声明后台执行（`tool.Spec.Background` 为 `always`，或为 `optional` 且调用带了 `background` 参数）。这种调用不进上面的工具组：`runTools` 交给 `launchTask`，在一个事务里建一条 `store.Task`，追加 `ToolStarted`、`TaskLaunched` 和一句"已在后台运行"的 `ToolResult`，本轮接着走。任务由后台任务调度器取走，调 `Runner.Task`：先 `StartTask`，再在这个用户自己的工具集里执行，结果以 `TaskReported` 追加回原轮次，会话重新可运行，同一轮接着跑，报告作为一条条目交给 agent。进程在执行前就停了的话，那次任务带着 `Started` 标记留在库里，`Runner.Task` 直接报它被切断、可能已经生效一部分，让人先检查再重试。见[执行模型](/zh/engine/execution)。
+
 feed 上的事件和发给客户端的消息：
 
 | feed 事件 | 发给客户端 |
@@ -221,7 +230,7 @@ feed 上的事件和发给客户端的消息：
 | `Change` | 通知 `thread/changed`（会话删除时不带 `thread`），每个变了的轮次一条 `turn/changed`，每个变了的条目一条 `item/changed`，都带这次提交的 `seq` |
 | `Change` 里等审批的条目 | 服务端请求 `item/toolCall/requestApproval` |
 | `Change` 里等回答的条目 | 服务端请求 `item/tool/requestUserInput` |
-| `Owned` | 通知 `settings/changed`、`workspace/changed`、`environment/changed`、`mcpServer/changed`、`cron/changed`、`memory/changed` |
+| `Owned` | 通知 `settings/changed`、`workspace/changed`、`environment/changed`、`mcpServer/changed`、`cron/changed`、`memory/changed`、`todo/changed` |
 
 `error` 通知只在客户端对审批或提问的回复没能生效时发出。事件只发给本人：连接订阅的只是自己用户的事件。`thread/read` 返回读取时的 `seq`，客户端据此丢掉不比它新的通知。完整协议见[协议](/zh/integrate/protocol)。
 
@@ -233,15 +242,17 @@ feed 上的事件和发给客户端的消息：
 | `sqlite.Store` | 每分片一个，一条数据库连接 | `sqlite.Open` | `Host.Close` |
 | `store.Feed` | 每个 store 一个 | 随 store | 随 store |
 | `app.App`、`run.Runner` | 各一个 | `host.New` | 随进程 |
-| `schedule.Scheduler` | 一个 | `host.New` | `Host.Run` 的 `ctx` 结束，等所有运行返回 |
+| `schedule.Scheduler` | 两个：会话一个、后台任务一个 | `host.New` | `Host.Run` 的 `ctx` 结束，等所有运行返回 |
+| `usage.Recorder` | 一个 | `host.New` | `Host.Run` 的 `ctx` 结束 |
 | `extract.Extractor` | 配了 `Memory` 才有 | `host.New` | `Host.Run` 的 `ctx` 结束 |
 | `mcp.Users` | 一个，按用户持有工具集和 MCP 会话 | `host.New` | `Host.Close` |
 | 槽位上的运行 | 每个占槽位的会话一个 | `Scheduler.start` | `Runner.Run` 返回 |
+| 后台任务 | 每个占任务槽的任务一个 | `Scheduler.start` | `Runner.Task` 返回 |
 | `llm.Client` | 每个连接一个，或每用户每连接一个（`ClientFor`） | 宿主 | 进程结束 |
 | `gateway.Server` | 配了 `Gateway` 才有 | `gateway.NewServer` | `Serve` 的 `ctx` 结束 |
 | `conn`、`jsonrpc.Conn` | 每条连接一个，每用户最多 4 条 | `ServeHTTP` | 断开、被替换或到龄 |
 
-常驻 goroutine：调度器一个；定时任务一个；记忆提取一个（如果有）；每个占槽位的会话一个，并行执行的工具每个再一个；每条连接一个处理请求、一个读、一个写、一个保活；作为分片运行时续约一个。等待中的会话不占 goroutine。
+常驻 goroutine：会话调度器一个、后台任务调度器一个；定时任务一个；用量记录一个；记忆提取一个（如果有）；每个占槽位的会话一个，每个占任务槽的后台任务一个，并行执行的工具每个再一个；每条连接一个处理请求、一个读、一个写、一个保活；作为分片运行时续约一个。等待中的会话不占 goroutine。
 
 ## 边界与已知问题
 
@@ -264,13 +275,17 @@ feed 上的事件和发给客户端的消息：
 | ollupi | `store/sqlite/conversations.go` | `Append`、投影的物化、`Runnable` |
 | ollupi | `app/turns.go` | 发消息、插话、中断、审批、回答 |
 | ollupi | `app/attachments.go` | 附件复制 |
-| ollupi | `schedule/schedule.go` | 调度器 |
+| ollupi | `schedule/schedule.go` | 调度器（会话、后台任务两个实例） |
+| ollupi | `usage/usage.go` | 用量记录器：从 `ModelResponded` 派生 `usage` 表 |
+| ollupi | `app/usage.go` | `App.Usage`：按时间段查用量 |
 | ollupi | `run/run.go` | 一次运行的循环 |
 | ollupi | `run/model.go` | 模型调用、流式增量 |
+| ollupi | `run/tools.go` | 工具执行、后台任务的启动（`launchTask`）与交回（`Task`） |
 | ollupi | `gateway/server.go` | 连接、方法分发、事件翻译 |
 | ollupi | `gateway/serve.go` | 选项、监听、连接上限的默认值 |
 | ollupi | `gateway/auth.go`、`auth/auth.go` | Host 校验、令牌 |
 | ollupi | `gateway/protocol.go` | 方法表、通知名、错误码 |
+| ollupi | `tool/builtin/hub/hub.go` | 中枢工具（`Hub` 打开时注册） |
 | ollupi | `gateway/threads.go` | `thread/*`、`turn/*` 方法 |
 | ollupi | `pkg/jsonrpc/jsonrpc.go` | JSON-RPC 连接和发件箱 |
 | ollupi | `pkg/wshub/wshub.go` | 每用户连接数、保活、到龄关闭、准入速率 |

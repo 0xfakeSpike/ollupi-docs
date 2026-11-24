@@ -28,7 +28,7 @@ Ollupi 的配置和数据都在本机的 `~/.ollupi`。大多数设置在应用�
 ~/.ollupi/
 ├── config.yaml        配置，权限 0600
 ├── data/
-│   ├── ollupi.sqlite  引擎的数据库，旁边有 -shm 和 -wal
+│   ├── store.sqlite   会话和记忆的数据库，旁边有 -shm 和 -wal
 │   └── feishu.json    飞书话题和会话的对应
 ├── attachments/       随消息发送的图片和文件的副本
 ├── skills/            技能文件夹，skills_dir 指向这里
@@ -130,7 +130,7 @@ skills_dir: skills
 |---|---|---|---|
 | `name` | string | 必填 | API 识别的名称，同一提供方内不重复 |
 | `calls` | int | `0`，取引擎默认的 4 | 对这个模型的最大并发请求数，不能为负 |
-| `thinking` | bool | 不写时不发送，用 API 默认 | 思考开关 |
+| `thinking` | bool | 不写时：`anthropic`、`gemini` 开启思考；`openai` 不发送这一项，由 API 自己决定 | 思考开关，`false` 关闭 |
 | `images` | bool | `false` | 模型接受图片。引擎拒绝给没有这个标记的模型发图片 |
 | `limits.context` | int | 必填 | 上下文窗口，token |
 | `limits.output` | int | 必填 | 一次回答的上限，token |

@@ -1,4 +1,4 @@
-# 发布
+# 构建与发布
 
 桌面端发布到 GitHub Releases，只提供 Apple 芯片版本，每个版本包含一个 dmg、一个 zip 和 `latest-mac.yml`。dmg 给首次安装，zip 给应用自动更新。应用是 ad hoc 签名，没有经过 Apple 公证，所以更新器是自己写的，不用 Squirrel.Mac。
 
@@ -27,11 +27,13 @@ flowchart TD
 
 ```bash
 cd sidecar && GOWORK=off CGO_ENABLED=1 MACOSX_DEPLOYMENT_TARGET=12.0 GOARCH=arm64 \
-  CC='clang -arch arm64' go build -trimpath -ldflags=-s \
+  CC='clang -arch arm64' go build -tags sqlite_fts5 -trimpath -ldflags=-s \
   -o ../apps/desktop/resources/bin/arm64/ollupid ./cmd/ollupid
 ```
 
 `GOWORK=off` 让发布构建忽略 `sidecar` 旁边的 `go.work`（不进仓库，指向本地的 ollupi 检出），只按 `go.mod` 钉住的引擎版本构建。界面的协议类型也是从这个钉住的版本生成的，两边因此一致。
+
+`-tags sqlite_fts5` 是引擎要求的构建标签：SQLite 的全文检索表 `items_search` 用 FTS5 建，没有这个标签时 `store/sqlite/fts5.go` 的构建约束不满足，编译直接失败。`sidecar:build` 和 `sidecar:test` 也带这个标签。
 
 ::: info 演进
 发布构建曾经用了 `go.work`，0.7.8 因此带上了一个未发布的 ollupi，和界面生成类型时用的协议不一致。之后发布构建加上 `GOWORK=off`。
@@ -44,12 +46,15 @@ cd sidecar && GOWORK=off CGO_ENABLED=1 MACOSX_DEPLOYMENT_TARGET=12.0 GOARCH=arm6
 | 配置 | 值 | 说明 |
 |---|---|---|
 | `appId` | `dev.ollupi.desktop` | |
+| `productName` | `Ollupi` | 应用名，产物文件名和 dmg 标题的前缀 |
 | `mac.target` | `[dmg, zip]` | |
 | `mac.minimumSystemVersion` | `12.0` | |
-| `mac.artifactName` | `${productName}-${version}-${arch}.${ext}` | 如 `Ollupi-0.7.17-arm64.dmg` |
+| `mac.artifactName` | `${productName}-${version}-${arch}.${ext}` | 如 `Ollupi-0.8.15-arm64.dmg` |
+| `mac.icon` | `../../assets/brand/Ollupi.icns` | 图标在品牌目录里，见 [品牌](/zh/desktop/brand) |
 | `mac.identity` | `'-'` | ad hoc 签名 |
 | `mac.hardenedRuntime` | `false` | 强化运行时需要真实身份 |
 | `extraResources` | `resources/bin/${arch}` 到 `bin` | 把对应架构的 sidecar 放进应用 |
+| `extraResources` | `../../assets/brand/png` 到 `brand`，只带 `app-icon-1024.png`、`app-icon-dusk-1024.png` | Dock 图标跟着主题换，见 [品牌](/zh/desktop/brand) |
 | `asarUnpack` | `node_modules/node-pty/**` | 终端的原生模块和 `spawn-helper` 要从磁盘加载 |
 | `npmRebuild` | `false` | `node-pty` 的预构建二进制用 Node-API，Electron 直接能加载 |
 | `publish` | `provider: github` | 让构建生成 `latest-mac.yml`；上传是手动的 |
@@ -65,7 +70,7 @@ cd sidecar && GOWORK=off CGO_ENABLED=1 MACOSX_DEPLOYMENT_TARGET=12.0 GOARCH=arm6
 更新器按 `process.arch` 在 `latest-mac.yml` 里找 `-<arch>.zip`。发布里没有 x64 的 zip，所以 Intel 机器上检查更新会失败。
 
 ::: info 演进
-0.7.14 是最后一个带 Intel 构建的版本，`0cd622f`（Ship releases for Apple silicon only）之后只构建 arm64。Intel 机器上的 0.7.14 找不到 x64 的 zip，检查更新会失败，发布说明让 Intel 用户继续用 0.7.14。
+0.7.14 是最后一个带 Intel 构建的版本，`5be97ee`（Ship releases for Apple silicon only）之后只构建 arm64。Intel 机器上的 0.7.14 找不到 x64 的 zip，检查更新会失败，发布说明让 Intel 用户继续用 0.7.14。
 :::
 
 ## 发布产物
@@ -110,9 +115,9 @@ stateDiagram-v2
 **检查。** 启动时清掉暂存目录后检查一次，之后每 6 小时一次。也可以在设置里手动触发。请求 `releases/latest/download/latest-mac.yml`，超时 15 秒。正在检查、下载或已就绪时跳过。
 
 ```yaml
-version: 0.7.17
+version: 0.8.15
 files:
-  - url: Ollupi-0.7.17-arm64.zip
+  - url: Ollupi-0.8.15-arm64.zip
     sha512: <base64>
     size: <字节数>
 ```
@@ -158,10 +163,31 @@ Git 和发布记录能确认的是这样：
 | 0.4.0 到 0.6.0 | 2026-10-31 到 11-01 | v0.7.0 | 升级不用改数据 |
 | 0.7.0 | 2026-11-01 | v0.8.0 | 升级不用改数据 |
 | 0.7.1 到 0.7.17 | 2026-11-01 到 11-07 | v0.8.0 到 v0.10.4 | 全部是 patch |
+| 0.7.18 到 0.7.25 | 2026-11-08 | v0.11.2 | 全部是 patch |
+| 0.7.26 到 0.7.30 | 2026-11-08 到 11-09 | v0.12.0 | 全部是 patch |
+| 0.7.31 到 0.7.34 | 2026-11-10 到 11-11 | v0.12.2 | 全部是 patch |
+| 0.7.35 到 0.7.51 | 2026-11-12 到 11-14 | v0.12.3 | 全部是 patch |
+| 0.7.52 | 2026-11-17 | v0.15.1 | patch |
+| 0.7.53 到 0.7.56 | 2026-11-18 | v0.17.1 | 全部是 patch |
+| 0.7.57 到 0.7.58 | 2026-11-19 | v0.17.2 | 全部是 patch |
+| 0.7.59 到 0.7.61 | 2026-11-19 到 11-20 | v0.18.0 | 全部是 patch |
+| 0.7.62 | 2026-11-20 | v0.20.1 | patch |
+| 0.8.0 | 2026-11-20 | v0.21.0 | 升 minor，要清数据：引擎删掉待办表，0.7.62 留下的待办被清空 |
+| 0.8.1 到 0.8.3 | 2026-11-20 到 11-21 | v0.21.1 | 全部是 patch |
+| 0.8.4 | 2026-11-21 | v0.21.2 | patch |
+| 0.8.5 到 0.8.7 | 2026-11-21 | v0.21.3 | 全部是 patch |
+| 0.8.8 | 2026-11-21 | v0.22.0 | patch |
+| 0.8.9 | 2026-11-22 | v0.23.0 | patch |
+| 0.8.10 到 0.8.11 | 2026-11-22 | v0.23.1 | 全部是 patch |
+| 0.8.12 到 0.8.13 | 2026-11-22 | v0.24.0 | 全部是 patch |
+| 0.8.14 | 2026-11-22 | v0.26.1 | patch |
+| 0.8.15 到 0.8.16 | 2026-11-22 到 11-23 | v0.26.2 | 全部是 patch |
+
+从 0.7.18 起桌面按引擎的发布节奏走：几个桌面 patch 共用一个引擎 tag，一段换一次。引擎也有没进桌面的版本：整段跳过的 v0.13、v0.14、v0.16、v0.19、v0.25，以及同一个 minor 里排在前面、没跟上的 patch（如 v0.11.0、v0.12.1、v0.26.0）。0.8.0 起几乎每个引擎 tag 都对上一个桌面版本，引擎换一版，桌面就补一到三个 patch。这一段只有 0.8.0 升 minor，发布提交写明要清数据：引擎 v0.21.0 删掉待办表，0.7.62 留下的待办被清空；其余版本号都是 patch。
 
 0.7.0 之前每次发布都升 minor，这几次的说明都不要求清数据（0.3.0 除外），也就是说这条规则是从 0.7.x 开始执行的。0.7.3 的说明写明后端数据库改为按版本号逐步升级，表结构变化时带着数据走，不再需要清空。0.7.12 的数据库升级之后不能再用旧版本打开，版本号仍然是 patch。
 
-`v0.7.10` 有发布提交，没有 tag 和 GitHub Release，0.7.11 的说明写的是从 0.7.9 升级。
+`v0.7.10` 有发布提交，没有 tag 和 GitHub Release，0.7.11 的说明写的是从 0.7.9 升级。`v0.7.20` 同样只有发布提交、没有 tag；0.7.21 和 0.7.22 没有发布提交也没有 tag，所以表里把 0.7.18 到 0.7.25 记成一段。
 :::
 
 ## 签名和公证

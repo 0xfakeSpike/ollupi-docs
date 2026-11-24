@@ -2,7 +2,7 @@
 
 定时任务按调度表达式定时向一个会话发一条消息，到点时就是这个会话里普通的一轮。客户端用 `cron/*` 列出、新建、暂停和删除任务，用 `cron/changed` 跟上变化。调度表达式的语法和触发链路见[定时任务的实现](/zh/engine/cron)，这里只讲协议上看到的东西。
 
-本页按引擎 v0.17.2 写，示例来自对 v0.17.1 网关的脚本试验（时区 UTC，ID 缩短了）。
+示例来自对本机网关的脚本试验（时区 UTC，ID 缩短了）。
 
 ## 概念与状态
 
@@ -24,7 +24,7 @@
 由代码推断：归档的会话取消归档后，过期的 `nextRunAt` 会在下一次检查时立刻发一次。
 
 ::: info 演进
-v0.12.1 里会话拒绝的那一次也计入 `runs`。`35bab6a` 把到点处理放进一个事务：发不发、跳过还是结束都在同一个事务里决定，同一个时间点不会发两次，被拒的那次不再计数。
+v0.12.1 里会话拒绝的那一次也计入 `runs`。`ebff4fb` 把到点处理放进一个事务：发不发、跳过还是结束都在同一个事务里决定，同一个时间点不会发两次，被拒的那次不再计数。
 :::
 
 ## 典型流程
@@ -59,7 +59,7 @@ v0.12.1 里会话拒绝的那一次也计入 `runs`。`35bab6a` 把到点处理�
 
 ## 方法
 
-定时任务总是可用，不需要宿主额外配置。
+定时任务总是可用，不需要宿主额外配置。协议的 `cron/*` 只查会话归属于调用方，不区分顶层会话和子 agent 会话；挡住子 agent 的是模型侧，八个子 agent 角色的提供方里没有 `cron`，见[定时任务](/zh/engine/cron#谁能建任务)。
 
 ### cron/list
 
@@ -72,13 +72,12 @@ v0.12.1 里会话拒绝的那一次也计入 `runs`。`35bab6a` 把到点处理�
 | 错误 | 什么时候 |
 |---|---|
 | `-32004` | `threadId` 指向不存在或别人的会话：`store: thread nope: store: not found` |
-| `-32013` | `threadId` 是子 agent 会话 |
 
 ### cron/create
 
 | 参数 | 类型 | 说明 |
 |---|---|---|
-| `threadId` | string | 所属会话，必须是顶层会话 |
+| `threadId` | string | 所属会话 |
 | `name` | string | 去掉首尾空白后匹配 `^[a-z0-9][a-z0-9_-]{0,63}$` |
 | `spec` | string | 5 段 cron 表达式（分 时 日 月 周），或 `@yearly`、`@annually`、`@monthly`、`@weekly`、`@daily`、`@midnight`、`@hourly` 之一。语法细节见[调度表达式](/zh/engine/cron#调度表达式) |
 | `prompt` | string | 到点发给会话的消息，去掉首尾空白后 1 到 4000 字符 |
@@ -91,7 +90,6 @@ v0.12.1 里会话拒绝的那一次也计入 `runs`。`35bab6a` 把到点处理�
 | `-32602` | 名称、表达式、`prompt`、`times` 不合法；表达式带 `CRON_TZ=` 或 `TZ=` 前缀；`times` 只剩一次的任务算出的时间在将近一年以后（日期已经过去，表达式没有年份，否则会明年再发）。消息以 `cron: invalid scheduled job:` 开头，写明原因 |
 | `-32602` | 这个会话已有同名任务，或已有 64 个任务：`invalid scheduled job: this conversation already has a scheduled job named "…"`、`invalid scheduled job: a conversation has at most 64 scheduled jobs` |
 | `-32004` | 会话不存在或属于别人 |
-| `-32013` | 子 agent 会话 |
 
 ### cron/pause
 
@@ -106,14 +104,13 @@ v0.12.1 里会话拒绝的那一次也计入 `runs`。`35bab6a` 把到点处理�
 |---|---|
 | `-32602` `paused is required` | 没给 `paused` |
 | `-32004` | 会话不存在或属于别人；或者会话里没有这个名字的任务：`this conversation has no scheduled job named "…": store: not found` |
-| `-32013` | 子 agent 会话 |
 
 ### cron/delete
 
 参数 `threadId`、`name`，结果 `{}`，同时发 `job` 为 `null` 的 `cron/changed`。错误和 `cron/pause` 相同（没有 `paused` 那一条）。
 
 ::: info 演进
-v0.12.1 里同名任务和"最多 64 个"这两种拒绝是普通错误，客户端只收到 `-32000`；没配 `Options.Jobs` 的宿主上写方法返回 `scheduled tasks are unavailable`。`d110977` 把两种拒绝归入无效任务，返回 `-32602` 并写明原因。v0.16.0 的 `host.New` 总会装上定时任务，那个配置项已经没有了。`cron/create`、`cron/pause` 的结果由 `9b5b50b` 改成 `{job}`，`b02dbfd` 让它和 `cron/list`、通知一样带上会话标题和最近一次运行。
+v0.12.1 里同名任务和"最多 64 个"这两种拒绝是普通错误，客户端只收到 `-32000`；没配 `Options.Jobs` 的宿主上写方法返回 `scheduled tasks are unavailable`。`b9b330f` 把两种拒绝归入无效任务，返回 `-32602` 并写明原因。v0.16.0 的 `host.New` 总会装上定时任务，那个配置项已经没有了。`cron/create`、`cron/pause` 的结果由 `499f96f` 改成 `{job}`，`c6a54b2` 让它和 `cron/list`、通知一样带上会话标题和最近一次运行。
 :::
 
 ## 通知

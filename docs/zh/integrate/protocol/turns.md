@@ -2,7 +2,7 @@
 
 一轮（turn）是交给 agent 的一件事：由一条用户消息开始，到 agent 给出回答为止。这一轮里的每一步，用户消息、回答、思考、工具调用、子 agent 的报告、压缩、记忆载入、运行时的提示、错误，都是一条条目（item）。客户端用 `turn/start`、`turn/steer`、`turn/interrupt` 驱动它，用 `turn/changed`、`item/changed` 和增量通知跟上它。
 
-本页按引擎 v0.17.2 写。会话本身见[会话](/zh/integrate/protocol/threads)，审批和提问这两种要用户回答的服务端请求见[审批与提问](/zh/integrate/protocol/approvals)，怎样把通知合进本地状态见[写一个客户端](/zh/integrate/client#本地状态)。
+会话本身见[会话](/zh/integrate/protocol/threads)，审批和提问这两种要用户回答的服务端请求见[审批与提问](/zh/integrate/protocol/approvals)，怎样把通知合进本地状态见[写一个客户端](/zh/integrate/client#本地状态)。
 
 ## 概念与状态
 
@@ -15,7 +15,7 @@
 | `TurnStatus` | 含义 |
 |---|---|
 | `queued` | 没结束，排在当前一轮后面 |
-| `inProgress` | 是当前一轮：在等槽位（slot）、在运行，或在等审批、回答、子 agent |
+| `inProgress` | 是当前一轮：在等槽位（slot）、在运行，或在等审批、回答、子 agent、后台调用 |
 | `completed` | 正常结束 |
 | `failed` | 失败，`error` 是原因 |
 | `interrupted` | 被中断，`error` 是原因 |
@@ -25,7 +25,7 @@ stateDiagram-v2
   [*] --> inProgress: 会话空闲时提交
   [*] --> queued: 已有当前一轮时提交
   queued --> inProgress: 前面的轮次结束
-  inProgress --> completed: 回答完，启动的子 agent 都回报了
+  inProgress --> completed: 回答完，启动的子 agent 和后台调用都回报了
   inProgress --> failed: 运行出错或超时
   inProgress --> interrupted: turn/interrupt，或父会话的一轮结束
 ```
@@ -33,7 +33,7 @@ stateDiagram-v2
 `inProgress` 不区分"在跑"和"在等"。要知道这一轮是不是在等用户，看会话的 `status`（`waitingOnApproval`、`waitingOnUserInput`，见[会话状态](/zh/integrate/protocol/threads#会话状态)），或者看条目里有没有在等审批、等回答的调用。占不占槽位、什么时候让出，见[执行模型](/zh/engine/execution)。
 
 ::: info 演进
-v0.12.1 的轮次有九个状态：`queued`、`ready`、`inProgress`、三种等待、三种结束，但只推送其中几种。v0.14.0 去掉了 `queued`、排队的轮次直接写成 `ready`（`07d497b`）；v0.16.0 从日志算状态，剩下现在这五个（`9b5b50b`），等待只看会话状态和条目。
+v0.12.1 的轮次有九个状态：`queued`、`ready`、`inProgress`、三种等待、三种结束，但只推送其中几种。v0.14.0 去掉了 `queued`、排队的轮次直接写成 `ready`（`9beb11e`）；v0.16.0 从日志算状态，剩下现在这五个（`499f96f`），等待只看会话状态和条目。
 :::
 
 ### 条目
@@ -44,11 +44,11 @@ v0.12.1 的轮次有九个状态：`queued`、`ready`、`inProgress`、三种等
 
 | `ItemKind` | 是什么 |
 |---|---|
-| `userMessage` | 用户的消息：开启一轮的那条、插话，或交给子 agent 的任务 |
+| `userMessage` | 用户的消息：开启一轮的那条、插话、交给子 agent 的任务，或中枢代用户发来的消息（带 `sentByThreadId`） |
 | `agentMessage` | 模型的回答正文 |
 | `reasoning` | 模型的思考内容 |
 | `toolCall` | 一次工具调用；参数、执行内容、审批、提问、结果都在这一个条目里 |
-| `agentReport` | 一个子 agent 的报告，写回启动它的那一轮 |
+| `agentReport` | 一个子 agent 或一个后台调用的报告，写回启动它的那一轮，见[后台调用与报告](#后台调用与报告) |
 | `contextCompaction` | 一次上下文压缩，`text` 是摘要 |
 | `memoryContext` | 这一轮载入的长期记忆快照，见[记忆](/zh/integrate/protocol/memory) |
 | `notice` | 运行时对模型说的话，比如工具调用为什么停了，`text` 以 `[runtime]` 开头 |
@@ -57,7 +57,7 @@ v0.12.1 的轮次有九个状态：`queued`、`ready`、`inProgress`、三种等
 五种状态：`pending`（只有工具调用：已记录，还没执行，或在等审批）、`inProgress`（只有工具调用：在执行，或在等用户回答）、`completed`、`failed`、`declined`（只有工具调用：被用户拒绝、跳过，或这一轮结束时还没执行）。除了工具调用，条目写下时就已经结束。每种类型的细节见下文 [ItemRow](#itemrow)。
 
 ::: info 演进
-`agentReport` 来自 v0.14.0（`975de2e`），`notice` 来自 v0.16.0（`9b5b50b`）。v0.12.1 的 `agentMessage` 和 `reasoning` 在流式输出时就落库为 `inProgress`；现在回答结束才写下，流式期间只有增量。
+`agentReport` 来自 v0.14.0（`37e5983`），`notice` 来自 v0.16.0（`499f96f`）。v0.12.1 的 `agentMessage` 和 `reasoning` 在流式输出时就落库为 `inProgress`；现在回答结束才写下，流式期间只有增量。
 :::
 
 ## 典型流程
@@ -167,7 +167,7 @@ sequenceDiagram
 插话会和这一轮的结束赛跑：用户按下发送时这一轮可能刚好结束，这时返回 `-32010` 或 `-32011`。桌面端遇到这两个错误时改用 `turn/start` 把消息作为新的一轮发出去。
 
 ::: info 演进
-v0.12.1 的插话代替回答时，等着的调用以 `declined` 结束，`error` 写明是被消息取代的（`the user sent a message instead of approving this call, so it did not run`），`approval` 里没有 `decision`。v0.16.0 改成按拒绝和跳过记下，复用审批决定和提问跳过这两种记录（`9b5b50b`）。
+v0.12.1 的插话代替回答时，等着的调用以 `declined` 结束，`error` 写明是被消息取代的（`the user sent a message instead of approving this call, so it did not run`），`approval` 里没有 `decision`。v0.16.0 改成按拒绝和跳过记下，复用审批决定和提问跳过这两种记录（`499f96f`）。
 :::
 
 ### 中断
@@ -179,7 +179,7 @@ v0.12.1 的插话代替回答时，等着的调用以 `declined` 结束，`error
 | 运行（调模型、跑工具） | 调度器从变化里看到这一轮结束，取消这次运行：在途的模型请求和工具执行收到取消。正在流式输出的回答不会写下，客户端已经收到的增量要丢掉 |
 | 等审批 | 在等的调用以 `declined` 结束，`error` 为 `interrupted by the user` |
 | 等回答 | 在等的提问按跳过记下，调用以 `declined` 结束 |
-| 等子 agent | 还没回报的子 agent 一并停下，各自的一轮以 `interrupted` 结束，`error` 为 `stopped with the turn that launched it`，并各给这一轮写一条 `failed` 的 `agentReport` |
+| 等子 agent 或后台调用 | 还没回报的子 agent 一并停下，各自的一轮以 `interrupted` 结束，`error` 为 `stopped with the turn that launched it`，并各给这一轮写一条 `failed` 的 `agentReport`；还没回报的后台调用也各写一条 `failed` 的 `agentReport`，`error` 相同，结果不再写回 |
 
 还没结束的其他调用也以 `declined` 结束，`error` 为 `interrupted by the user`。排在后面的下一轮在同一次提交里成为当前一轮。实测，中断一个正在流式输出的轮次：
 
@@ -199,7 +199,7 @@ v0.12.1 的插话代替回答时，等着的调用以 `declined` 结束，`error
 
 | 参数 | 类型 | 说明 |
 |---|---|---|
-| `threadId` | string | 顶层会话 |
+| `threadId` | string | 会话，子 agent 会话也可以：它的新一轮沿用它自己的角色 |
 | `input` | `UserInput[]` | 消息的各部分，见下 |
 | `connection?` | string | 用哪个模型，取 `model/list` 里的 `connection`。省略时沿用这个会话上一轮的模型；会话还没有轮次时用第一个模型 |
 
@@ -218,7 +218,6 @@ v0.12.1 的插话代替回答时，等着的调用以 `declined` 结束，`error
 |---|---|
 | `-32602` | `input` 里有别的 `type`；文本和文件都为空；文本太长；附件超过 10 个、太大、是空文件、既不是支持的图片也不是文本、路径不是绝对路径或读不到；`connection` 不存在；模型不收图片而消息或这个会话里已经有图片 |
 | `-32004` | 会话不存在 |
-| `-32013` | 子 agent 会话，不接受输入 |
 | `-32015` | 会话已归档 |
 | `-32014` | 会话所在的工作区已归档 |
 | `-32016` | 已经有 20 条消息在排队；或会话所在的工作区正在移动 |
@@ -227,7 +226,7 @@ v0.12.1 的插话代替回答时，等着的调用以 `declined` 结束，`error
 定时任务到点时引擎自己提交一轮，和 `turn/start` 走同一条路，`TurnRow.cronJobId` 写着任务 ID，见[定时任务](/zh/integrate/protocol/cron)。
 
 ::: info 演进
-v0.12.1 的文本上限是固定的 4000 个字符；现在按模型的输入上限估算（`fits`）。v0.15.0 的回复带过一个 `submission`（`started`、`queued`、`joined`），v0.16.0 去掉了它，由 `turn.status` 表示（`9b5b50b`）。
+v0.12.1 的文本上限是固定的 4000 个字符；现在按模型的输入上限估算（`fits`）。v0.15.0 的回复带过一个 `submission`（`started`、`queued`、`joined`），v0.16.0 去掉了它，由 `turn.status` 表示（`499f96f`）。
 :::
 
 ### turn/steer
@@ -236,7 +235,7 @@ v0.12.1 的文本上限是固定的 4000 个字符；现在按模型的输入上
 
 | 参数 | 类型 | 说明 |
 |---|---|---|
-| `threadId` | string | 顶层会话 |
+| `threadId` | string | 会话 |
 | `input` | `UserInput[]` | 同 `turn/start` |
 | `expectedTurnId` | string | 必填，客户端以为在进行中的那一轮 |
 
@@ -246,7 +245,6 @@ v0.12.1 的文本上限是固定的 4000 个字符；现在按模型的输入上
 |---|---|
 | `-32602` | 没给 `expectedTurnId`；`input` 不合法（同 `turn/start`）；当前一轮的模型不收图片而消息带图片 |
 | `-32004` | 会话不存在 |
-| `-32013` | 子 agent 会话 |
 | `-32010` | 会话没有当前一轮 |
 | `-32011` | `expectedTurnId` 不是当前那一轮 |
 
@@ -334,7 +332,7 @@ v0.12.1 的文本上限是固定的 4000 个字符；现在按模型的输入上
 模型调用失败不走这条通知，而是记成 `error` 条目，并让这一轮 `failed`。
 
 ::: info 演进
-v0.12.1 的轮次走 `turn/queued`、`turn/started`、`turn/completed` 三种通知，带 `thread` 整行；条目走 `item/started`、`item/updated`、`item/completed`；`error` 还用来报 agent 内部故障。v0.16.0 换成从提交来的 `turn/changed`、`item/changed`，带 `seq`，内部故障不再通知客户端（`9b5b50b`）。
+v0.12.1 的轮次走 `turn/queued`、`turn/started`、`turn/completed` 三种通知，带 `thread` 整行；条目走 `item/started`、`item/updated`、`item/completed`；`error` 还用来报 agent 内部故障。v0.16.0 换成从提交来的 `turn/changed`、`item/changed`，带 `seq`，内部故障不再通知客户端（`499f96f`）。
 :::
 
 ## 类型
@@ -349,7 +347,7 @@ v0.12.1 的轮次走 `turn/queued`、`turn/started`、`turn/completed` 三种通
 | `threadId` | string | 所属会话 |
 | `status` | `TurnStatus` | 见[一轮的状态](#一轮的状态) |
 | `model` | `Model` | 这一轮用的模型，提交时选定，见[模型、工具与 MCP](/zh/integrate/protocol/models-tools) |
-| `agent` | `AgentRole` | 跑这一轮的角色：`full-main-agent`、`compact-main-agent`（按模型的输入上限选）、`general-sub-agent`、`browser-sub-agent` |
+| `agent` | `AgentRole` | 跑这一轮的角色，排队时定下：顶层会话是 `full-main-agent` 或 `compact-main-agent`（按模型的输入上限选），hub 工作区里的顶层会话是 `hub-main-agent`；子 agent 会话沿用启动它的角色：`general-sub-agent`、`browser-sub-agent`、`design-sub-agent`、`codebase-sub-agent`、`frontend-sub-agent`、`backend-sub-agent`、`writing-sub-agent`、`research-sub-agent` |
 | `usage` | `Usage` | 这一轮所有模型回答的用量之和，包括压缩 |
 | `responses` | `ResponseRow[]` | 这一轮的每次模型回答，按顺序 |
 | `error?` | string | 失败或中断的原因 |
@@ -399,10 +397,12 @@ v0.12.1 的轮次走 `turn/queued`、`turn/started`、`turn/completed` 三种通
 | `preparedExecution?` | `PreparedExecution` \| null | 判定时算出的执行内容，见[审批与提问](/zh/integrate/protocol/approvals#preparedexecution) |
 | `approval?` | `Approval` \| null | 审批记录，只在要审批的 `toolCall` 上 |
 | `input?` | `Input` \| null | 提问记录，只在 `request_user_input` 上，见[审批与提问](/zh/integrate/protocol/approvals#input) |
-| `result?` | `Result` \| null | 工具或子 agent 的结果 |
-| `childThreadId?` | string | 启动子 agent 的调用和 `agentReport` 上：子会话的 ID |
+| `result?` | `Result` \| null | 工具、子 agent 或后台调用的结果 |
+| `childThreadId?` | string | 启动子 agent 的调用和子 agent 的 `agentReport` 上：子会话的 ID |
+| `taskId?` | string | 转成后台调用的 `toolCall` 和它的 `agentReport` 上：后台调用的 ID，见[后台调用与报告](#后台调用与报告) |
 | `launchItemId?` | string | `agentReport` 上：启动它的那次调用 |
 | `attachments?` | `Attachment[]` | 用户消息的附件 |
+| `sentByThreadId?` | string | 只在 `userMessage` 上：中枢代用户发这条消息时，中枢那一侧的会话 ID；用户自己写的消息没有 |
 | `contextStats?` | `ContextStats` \| null | 只在 `contextCompaction` 上：压缩请求的上下文统计 |
 | `memory?` | `MemoryReference[]` | 只在 `memoryContext` 上：快照里的记忆，见[记忆](/zh/integrate/protocol/memory) |
 | `startedAt` | string | |
@@ -412,11 +412,11 @@ v0.12.1 的轮次走 `turn/queued`、`turn/started`、`turn/completed` 三种通
 
 | `type` | 状态 | 设置的字段 |
 |---|---|---|
-| `userMessage` | 写下即 `completed` | `text`、`attachments?` |
+| `userMessage` | 写下即 `completed` | `text`、`attachments?`、`sentByThreadId?` |
 | `agentMessage` | 写下即 `completed` | `text`、`responseId`。流式期间只有增量 |
 | `reasoning` | 写下即 `completed` | `text`、`responseId`；`startedAt` 是开始思考的时刻，`completedAt` 是开始回答的时刻 |
-| `toolCall` | 见下文 | `callId`、`tool`、`server`、`arguments`、`annotations`、`responseId`，按需有 `preparedExecution`、`approval`、`input`、`result`、`childThreadId`、`error` |
-| `agentReport` | `completed` 或 `failed` | `text` 是交给子 agent 的任务，`childThreadId`、`launchItemId`；完成时 `result.output` 是子 agent 最后的回答（JSON 字符串），失败时 `error` 是原因 |
+| `toolCall` | 见下文 | `callId`、`tool`、`server`、`arguments`、`annotations`、`responseId`，按需有 `preparedExecution`、`approval`、`input`、`result`、`childThreadId`、`taskId`、`error` |
+| `agentReport` | `completed` 或 `failed` | 子 agent 的报告：`text` 是交给子 agent 的任务，`childThreadId`、`launchItemId`；完成时 `result.output` 是子 agent 最后的回答（JSON 字符串）。后台调用的报告：没有 `text` 和 `childThreadId`，有 `taskId`、`launchItemId`；完成时 `result.output` 是工具的输出。失败时 `error` 是原因 |
 | `contextCompaction` | 写下即 `completed` | `text` 是压缩摘要，`responseId`、`contextStats`。机制见[上下文管理](/zh/engine/context) |
 | `memoryContext` | 写下即 `completed` | `text` 和 `memory` 是这一轮载入的记忆快照。压缩之后会再载入一次 |
 | `notice` | 写下即 `completed` | `text` 以 `[runtime]` 开头，比如用户拒绝了一次调用、调用次数到了上限之后，要模型不再用工具、直接回答 |
@@ -459,7 +459,8 @@ stateDiagram-v2
 - **审批。** "在等审批"的条件是：`toolCall`、`pending`、`approval` 存在且没有 `decision`。批准后 `approval` 带上 `decision`、`decidedBy`、`decidedAt`，状态仍是 `pending`，等这一轮跑到它。拒绝时直接 `declined`。见[审批与提问](/zh/integrate/protocol/approvals)。
 - **执行。** 开始执行时变成 `inProgress`。连续的只读调用一起执行，最多 8 个。
 - **提问。** `request_user_input` 执行后不马上出结果，而是写入 `input`，状态仍是 `inProgress`，发 `item/tool/requestUserInput`。"在等回答"的条件是：`toolCall`、`inProgress`、`input` 存在且 `answered` 为 `false`。回答后直接 `completed`，答案成为 `result.output`。
-- **子 agent。** 子 agent 工具执行时建子会话，调用当即 `completed`，`childThreadId` 和 `result.output`（`SubagentLaunched`）指向子会话，见[子 agent 会话](/zh/integrate/protocol/threads#子-agent-会话)。
+- **子 agent。** 子 agent 工具执行时建子会话，调用当即 `completed`，`childThreadId` 和 `result.output`（`SubagentLaunched`）指向子会话，见[会话的概念与状态](/zh/integrate/protocol/threads#概念与状态)。
+- **后台调用。** 模型给可以后台运行的工具传 `background: true` 时，调用当即 `completed`，带上 `taskId`，见下文[后台调用与报告](#后台调用与报告)。
 - **结束。** `completed` 时 `result.output` 是工具输出。`failed` 时 `error` 写原因。
 
 `declined` 和跳过的几种来源，靠 `error` 区分：
@@ -477,6 +478,17 @@ stateDiagram-v2
 进程重启时，已经开始执行、还没有结果的调用不会重跑，而是以 `failed` 结束，`error` 提示它可能已经部分或全部生效、先核实再重试，见[持久化](/zh/engine/persistence)。
 
 内置工具的 `arguments` 和 `result.output` 的结构见[模型、工具与 MCP](/zh/integrate/protocol/models-tools)。
+
+#### 后台调用与报告
+
+声明了可以后台运行的工具（`run_command`、`claude`）多一个布尔参数 `background`，模型传 `true` 时这次调用成为后台调用：
+
+- **启动。** 一次提交里调用从 `pending` 直接变成 `completed`，带上 `taskId`；`result.output` 是 `{task, note}`，告诉模型它在后台运行、结束时报告会回到这个会话，这个结构不进契约。后台调用不和只读调用一起执行，也不占这一轮的槽位，由另一组槽位运行，见[后台调用](/zh/engine/execution#后台调用)。
+- **报告。** 跑完时，启动它的那一轮里多一条 `agentReport` 条目：`taskId`、`launchItemId` 指回启动它的调用，没有 `text` 和 `childThreadId`；成功时 `completed`，`result.output` 是工具的输出，失败时 `failed`，`error` 是原因。启动它的调用条目随报告再发一次 `item/changed`，`updated` 不变。
+- **这一轮等报告。** 模型回答完、还有子 agent 或后台调用没回报时，这一轮不结束，仍是 `inProgress`，不占槽位；报告到了，模型再调一次来回应它，全部回报之后这一轮才 `completed`。
+- **被切断。** 这一轮被中断或结束时，没回报的后台调用各得到一条 `failed` 的报告，`error` 是 `stopped with the turn that launched it`，之后它的结果不再写回。进程在后台调用执行中停掉时，它不会重跑，报告 `failed`，`error` 提示它可能已经部分或全部生效、先核实再重试。
+
+子 agent 的报告是同一种条目，区别是带 `childThreadId` 和 `text`（交给子 agent 的任务），见上面的[各类型用到的字段](#itemrow)。
 
 ### UserInput
 

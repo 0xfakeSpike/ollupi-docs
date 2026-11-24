@@ -268,7 +268,7 @@ class ThreadCopy {
 连接的 `onmessage` 把每条通知交给对应会话的 `apply`。刚用 `thread/start` 建的会话还没有页，可以直接从 `seq` 为 0 开始，收到的通知全部合进去。桌面端 `timeline.ts` 的 `applyEvent` 用的是同一套规则。
 
 ::: info 演进
-v0.12.1 的网关在 `thread/read`、`thread/resume`、`cron/list` 读库到回复入队之间持有这条连接的 `deliver` 锁，保证回复之后的通知都是回复之后的变化，客户端只要"先订阅、再读"。v0.16.0 去掉了这把锁，改成每次提交编号、读回复带 `seq`，由客户端过滤（`9b5b50b`）。
+v0.12.1 的网关在 `thread/read`、`thread/resume`、`cron/list` 读库到回复入队之间持有这条连接的 `deliver` 锁，保证回复之后的通知都是回复之后的变化，客户端只要"先订阅、再读"。v0.16.0 去掉了这把锁，改成每次提交编号、读回复带 `seq`，由客户端过滤（`499f96f`）。
 :::
 
 ### 按行替换
@@ -309,7 +309,7 @@ v0.12.1 的网关在 `thread/read`、`thread/resume`、`cron/list` 读库到回�
 
 子 agent 的会话是普通会话：它的 `thread/changed` 照样发，行里的 `parentThreadId` 和 `parentItemId` 指向父会话和启动它的那次调用；它的轮次和条目也走同样的 `turn/changed`、`item/changed`，`threadId` 是子会话自己的。`thread/list` 只列顶层会话，子会话要从父会话的调用条目（`childThreadId`）或 `agentReport` 条目找到。
 
-子会话里的审批和提问，请求里的 `threadId` 是子会话的。要在父会话里提示用户，就按 `parentThreadId` 往上找。子会话不接受输入、改名、归档等操作，返回 `-32013`。
+子会话里的审批和提问，请求里的 `threadId` 是子会话的。要在父会话里提示用户，就按 `parentThreadId` 往上找。子会话和普通会话走同一套方法：能收输入（按它自带的角色跑）、改名、归档、改权限；归档同样要求会话空闲。
 
 ### 会话状态
 
@@ -354,7 +354,7 @@ v0.12.1 的网关在 `thread/read`、`thread/resume`、`cron/list` 读库到回�
 
 `serverInfo.version` 是最终二进制主模块的版本，引擎嵌在别人的程序里时不是引擎的版本，本地构建是 `(devel)`，不能用来判断兼容。
 
-类型从契约生成，不要手写。契约是 JSON Schema（2020-12），所有类型都在 `$defs` 下，方法、通知、服务端请求在另外几段里按名字引用它们，见[一张表分发和生成 schema](/zh/integrate/protocol#一张表分发和生成-schema)。桌面端的 `packages/protocol/scripts/generate.mjs` 用 `go list -m` 找到 sidecar 依赖的那个引擎版本，读它的契约，用 `json-schema-to-typescript` 生成类型，再从 `methods`、`notifications` 等段生成方法表。
+类型从契约生成，不要手写。契约是 JSON Schema（2020-12），所有类型都在 `$defs` 下，方法、通知、服务端请求在另外几段里按名字引用它们，见[契约的生成与测试](/zh/integrate/protocol#契约的生成与测试)。桌面端的 `packages/protocol/scripts/generate.mjs` 用 `go list -m` 找到 sidecar 依赖的那个引擎版本，读它的契约，用 `json-schema-to-typescript` 生成类型，再从 `methods`、`notifications` 等段生成方法表。
 
 TypeScript 的最小做法：把 `$defs` 包进一个列出所有类型的根对象，交给 `json-schema-to-typescript`。下面这段对 v0.17.1 的契约跑过（`json-schema-to-typescript` 16.0.0），生成 135 个导出类型（134 个 `$defs` 加根对象）：
 

@@ -81,7 +81,7 @@
 | `RunLimit` 是否太小 | 失败轮次的原因是 `the turn reached its time limit of ...` | 查询见[运维](/zh/integrate/operations#监控) |
 
 ::: info 演进
-v0.16.0 之前调度状态在 `turns.status` 里（`ready` 就是等槽位），判断要靠 `turn started`、`run ended`、`model call` 等日志。`3c3ed62` 让调度器只从 feed 得知可运行的会话，状态从日志折叠出来，会话变成可运行的时刻记在 `threads.runnable_since`；`34d96a9` 去掉了日志。
+v0.16.0 之前调度状态在 `turns.status` 里（`ready` 就是等槽位），判断要靠 `turn started`、`run ended`、`model call` 等日志。`82081ec` 让调度器只从 feed 得知可运行的会话，状态从日志折叠出来，会话变成可运行的时刻记在 `threads.runnable_since`；`bb13d13` 去掉了日志。
 :::
 
 ## 代码位置

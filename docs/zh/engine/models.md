@@ -24,12 +24,12 @@ type Client interface {
 代价：三个客户端在思考、缓存、回答上限、结束原因上的行为要各自对齐和测试；原始消息随每次回答存进日志，体积大；用户必须自己填每个模型的上限；重试期间调用一直占着名额和槽位。
 
 ::: info 演进
-- 初版只有 Chat Completions 客户端，`9ac61ec` 加了 `NewAnthropic` 和 `NewGemini`，以及每次回答的原始消息。
-- 早期内置过一张常见模型的上限表，按模型名查；`cd0efe2` 删掉了它。
-- 早期 4 个 worker 按整个步骤计数，4 个跑长工具的步骤就能卡住所有会话；`64f8593` 改成只有模型调用占名额。
-- 以前 OpenAI 和 Anthropic 的 SDK 在约 1.5 秒内只重试两次，Gemini 的 SDK 不重试，服务商短暂缺配额就让工具已经跑完的轮次失败。`a7bf0b2` 统一成 8 次；同一负载下加重试前 326 个轮次失败，加重试后 0 个。
-- 以前模型调用只在 `ctx` 没有截止时间时才有 180 秒超时，而一轮的 `ctx` 总带着 4 小时的时限，不回话的服务商能把一个名额占 4 小时。`0f277ac` 换成每次尝试 3 分钟无数据即放弃。
-- 以前空密钥的 Anthropic 客户端仍会发送进程的 `ANTHROPIC_AUTH_TOKEN`，OpenAI 客户端总带 `OPENAI_ORG_ID` 和 `OPENAI_PROJECT_ID`，Gemini 客户端会读 `GEMINI_API_KEY`，没填地址时三者都读进程的 `*_BASE_URL`。`4ca83dc` 关掉了这些默认。
+- 初版只有 Chat Completions 客户端，`287d0ed` 加了 `NewAnthropic` 和 `NewGemini`，以及每次回答的原始消息。
+- 早期内置过一张常见模型的上限表，按模型名查；`be273dd` 删掉了它。
+- 早期 4 个 worker 按整个步骤计数，4 个跑长工具的步骤就能卡住所有会话；`52faf5a` 改成只有模型调用占名额。
+- 以前 OpenAI 和 Anthropic 的 SDK 在约 1.5 秒内只重试两次，Gemini 的 SDK 不重试，服务商短暂缺配额就让工具已经跑完的轮次失败。`5b34df7` 统一成 8 次；同一负载下加重试前 326 个轮次失败，加重试后 0 个。
+- 以前模型调用只在 `ctx` 没有截止时间时才有 180 秒超时，而一轮的 `ctx` 总带着 4 小时的时限，不回话的服务商能把一个名额占 4 小时。`5058402` 换成每次尝试 3 分钟无数据即放弃。
+- 以前空密钥的 Anthropic 客户端仍会发送进程的 `ANTHROPIC_AUTH_TOKEN`，OpenAI 客户端总带 `OPENAI_ORG_ID` 和 `OPENAI_PROJECT_ID`，Gemini 客户端会读 `GEMINI_API_KEY`，没填地址时三者都读进程的 `*_BASE_URL`。`7ed7bc9` 关掉了这些默认。
 :::
 
 ## 三种客户端
@@ -116,7 +116,7 @@ Gemini 的 SDK 默认只发一次，不配 `RetryOptions` 就没有重试，所�
 重试只发生在拿到响应之前。流已经开始之后断开，`Chat` 返回错误，`run` 不重发，这一轮失败，已经写进日志的记录保留。
 
 ::: info 演进
-来自 `a7bf0b2`：Gemini 的 `RetryOptions` 由这个提交补上，目标是服务商短暂缺配额时一轮变慢而不是失败。
+来自 `5b34df7`：Gemini 的 `RetryOptions` 由这个提交补上，目标是服务商短暂缺配额时一轮变慢而不是失败。
 :::
 
 ## 思考内容和签名回放
@@ -177,10 +177,42 @@ OpenAI 兼容接口和 Gemini 用服务商的隐式前缀缓存，客户端不�
 | `CacheWritePromptTokens` | `cacheWriteInputTokens` | 无 | `cache_creation_input_tokens` | 无 |
 | `CompletionTokens` | `outputTokens` | `completion_tokens` | `output_tokens` | `CandidatesTokenCount + ThoughtsTokenCount` |
 
-服务商没上报用量的回答，用量就是 0。OpenAI 请求设置了 `stream_options.include_usage`。用量记在每次回答的 `ModelResponded` 上，轮次的用量是它们的和。
+服务商没上报用量的回答，用量就是 0。OpenAI 请求设置了 `stream_options.include_usage`。用量记在每次回答的 `ModelResponded` 上，轮次的用量是它们的和；后台再从这些条目派生出一张用量表，见[用量](#用量)。
 
 ::: info 演进
-来自 `b5727fc`：以前 `UsageReported` 区分"没上报"和"上报了 0"，失败的调用也带回已上报的用量；这两样都去掉了，没上报就是 0，失败的回答整个丢掉。
+来自 `efda360`：以前 `UsageReported` 区分"没上报"和"上报了 0"，失败的调用也带回已上报的用量；这两样都去掉了，没上报就是 0，失败的回答整个丢掉。
+:::
+
+## 用量
+
+用量表（`usage`）是会话日志的派生结果，不是写入时顺手记的：后台的记录器（`usage.Recorder`）从 `ModelResponded` 条目补出 `usage` 表里缺的行，一次模型回复一行。写得晚、写失败或重启过，下一次扫描都会补齐，日志始终是唯一的事实。
+
+### 记录器怎么工作
+
+记录器在宿主启动时创建（`host/host.go`），在同一个 errgroup 里跑 `Run`，日志里出现 `ModelResponded` 时被唤醒：
+
+- 订阅存储的变更事件（`Feed().SubscribeAll`），事件里带新的 `ModelResponded` 就把这个会话标脏并唤醒循环。回调运行在提交那批条目的 goroutine 上，所以它只记下会话名，不碰存储。
+- 循环按会话补齐：一页 `batchSize` = 256 条，位置是 `(thread, seq)` 键而不是 rowid（删掉末行后 SQLite 会复用 rowid，会跳过条目）。
+- `stale` 刚开始为真，先扫全部会话；标脏的会话排满 256 个（`maxQueued`）时也退回全量扫。某个会话写失败时把它放回标脏队列（队列满或失败的就是全量扫时才置 `stale`）。
+- 写失败只记一条警告（`usage: a model response's tokens are not recorded yet; retrying`），`retryAfter` = 30 秒后重试。记录器不让宿主失败。
+
+### 一行是什么
+
+| 列 | 来源 |
+|---|---|
+| `thread_id`、`seq`、`user_id`、`workspace_id`、`turn_id`、`item_id`、`at` | 条目自身的字段 |
+| `source` | `response`；压缩的回答是 `compaction`（`store.UsageResponse` / `store.UsageCompaction`） |
+| `model` | 这次回答的 `Stats.Model` |
+| `input_tokens`、`cached_input_tokens`、`cache_write_input_tokens`、`output_tokens` | `ModelResponded.Usage`，四种 token 的归一见[上报](#上报) |
+
+`usage_at`、`usage_user_at` 上的索引支撑按时间查；`entries_model_responded` 是 `entries(thread_id, seq)` 上 `kind = 'modelResponded'` 的部分索引，记录器靠它找缺行的条目。
+
+记忆提炼的调用不写 `ModelResponded`，所以不进这张表；它的花费只在服务商的账单里。
+
+`usage/query` 按 `from`（含）、`to`（不含）查当前用户的行，按 `day`、`workspace`、`model` 三种方式分组，`offsetMinutes` 决定按天分组时的时区。行永不删除：删掉会话之后，它的用量仍然计入。参数和返回格式见[用量查询](/zh/integrate/protocol/usage)。
+
+::: info 演进
+来自 `d2e0f0c`：以前用量只存在于每次回答的 `ModelResponded` 条目里，统计要自己扫日志求和；迁移 `0011_usage.sql` 加了 `usage` 表和三个索引，由后台记录器派生。
 :::
 
 ## 每模型配置项
@@ -206,7 +238,7 @@ OpenAI 兼容接口和 Gemini 用服务商的隐式前缀缓存，客户端不�
 
 `host.New` 用 `newModels` 检查模型列表：至少一个模型，每个都有连接名和名字，连接不重复，连接有客户端。配了记忆提炼的模型（`host.Config.Memory`）时，它的上限在启动时就读一遍，没声明就启动失败。其余模型的上限到第一次用它时才读。
 
-一轮用哪个模型，在它排队时（`app.pickModel`）按顺序决定：这次请求指定的连接，会话上一轮的连接，`Models` 的第一个。指定的连接不在列表里时拒绝这条消息（`connection "..." is unavailable`）。选定之后，`app` 读这个模型的上限，检查消息大小和图片，再按输入预算选主 agent 的角色，模型和角色都记在这一轮上，见[精简模式](/zh/engine/context#精简模式)。已经排队的轮次到运行时发现连接不在了，这一轮失败。
+一轮用哪个模型，在它排队时（`app.pickModel`）按顺序决定：这次请求指定的连接，会话上一轮的连接，`Models` 的第一个。指定的连接不在列表里时拒绝这条消息（`connection "..." is unavailable`）。选定之后，`app` 读这个模型的上限，检查消息大小和图片，再按输入预算选主 agent 的角色，模型和角色都记在这一轮上，见[精简模式](/zh/engine/context#精简模式)。hub 工作区里的会话不走这条：`app.queue` 直接给它 `hub-main-agent`，不管输入预算，见[中枢工作区](/zh/engine/hub)。已经排队的轮次到运行时发现连接不在了，这一轮失败。
 
 `host.Config.ClientFor(user, connection)` 可以给用户配自己的客户端，让模型调用走用户自己的密钥。窗口仍按 `Connections` 里共享客户端声明的上限计算。
 
@@ -220,6 +252,7 @@ Token 估算在加附件时算好，记在附件的 `Tokens` 上（`app/attachme
 
 ## 边界与已知问题
 
+- **用量行滞后于日志。** 记录器异步补行，还在跑的轮次要等它的条目提交、记录器扫到之后才出现在 `usage` 里；记忆提炼的调用不写 `ModelResponded`，不计入用量。
 - **流开始之后断开不重试。** 重试只覆盖拿到响应之前；流中途断开时这一轮失败，见[重试](#重试)。
 - **重试期间一直占着名额和槽位。** 等待全部算上约 40 秒，每次尝试最多再等 3 分钟空闲，同一连接上的其他调用要排队等。
 - **会话中途换服务商会丢掉签名。** 旧的原始消息被忽略，按 `Content` 和 `ToolCalls` 重建，思考内容的签名不再回放，见[思考内容和签名回放](#思考内容和签名回放)。
@@ -230,17 +263,21 @@ Token 估算在加附件时算好，记在附件的 `Tokens` 上（`app/attachme
 
 ## 代码位置
 
-| 位置 | 职责 |
-| --- | --- |
-| ollupi `pkg/llm/chat.go` | `Client` 接口、消息、模型、用量、Native 封装 |
-| ollupi `pkg/llm/connection.go` | 调用名额、`begin`、重试次数、错误过滤 |
-| ollupi `pkg/llm/limits.go` | `Limits`、`Input`、`Answer`、上限检查 |
-| ollupi `pkg/llm/idle.go` | 每次尝试的空闲超时 |
-| ollupi `pkg/llm/openai.go` | OpenAI 兼容客户端 |
-| ollupi `pkg/llm/anthropic.go` | Anthropic 客户端、`replayable` 哈希链 |
-| ollupi `pkg/llm/gemini.go` | Gemini 客户端 |
-| ollupi `pkg/llm/tokens.go` | `EstimateTokens` |
-| ollupi `host/models.go` | 模型列表检查、按连接取上限和客户端、`ClientFor` |
-| ollupi `app/app.go`、`app/turns.go` | 选择模型、消息大小和图片检查 |
-| ollupi `app/attachments.go` | 附件校验、token 估算 |
-| ollupi `run/model.go` | 发送请求、脱敏、检查回答、记录用量和 Native |
+| 仓库 | 路径 | 职责 |
+| --- | --- | --- |
+| ollupi | `pkg/llm/chat.go` | `Client` 接口、消息、模型、用量、Native 封装 |
+| ollupi | `pkg/llm/connection.go` | 调用名额、`begin`、重试次数、错误过滤 |
+| ollupi | `pkg/llm/limits.go` | `Limits`、`Input`、`Answer`、上限检查 |
+| ollupi | `pkg/llm/idle.go` | 每次尝试的空闲超时 |
+| ollupi | `pkg/llm/openai.go` | OpenAI 兼容客户端 |
+| ollupi | `pkg/llm/anthropic.go` | Anthropic 客户端、`replayable` 哈希链 |
+| ollupi | `pkg/llm/gemini.go` | Gemini 客户端 |
+| ollupi | `pkg/llm/tokens.go` | `EstimateTokens` |
+| ollupi | `host/models.go` | 模型列表检查、按连接取上限和客户端、`ClientFor` |
+| ollupi | `app/app.go`、`app/turns.go` | 选择模型、消息大小和图片检查、选择角色 |
+| ollupi | `app/attachments.go` | 附件校验、token 估算 |
+| ollupi | `run/model.go` | 发送请求、脱敏、检查回答、记录用量和 Native |
+| ollupi | `usage/usage.go` | `Recorder`：从 `ModelResponded` 条目派生 `usage` 表 |
+| ollupi | `app/usage.go` | `usage/query` 的参数校验 |
+| ollupi | `store/sqlite/usage.go` | `UsageBuckets`、`MissingUsage` 的 SQL |
+| ollupi | `store/sqlite/migrations/0011_usage.sql` | `usage` 表、索引 |

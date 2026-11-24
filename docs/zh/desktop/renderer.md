@@ -1,318 +1,151 @@
 # 渲染进程
 
-渲染进程是 React 19 写的界面，在沙箱里运行。它做两件事：把引擎的状态镜像到本地，再把镜像画出来。服务器状态都来自网关，按领域分成若干 Zustand store；纯逻辑放在 `@ollupi/core`，组件只读 store。
+React 19 写的界面，运行在沙箱里。它把引擎的状态镜像到本地，再把镜像画出来：服务器状态都来自网关，按领域分成若干 Zustand store；纯逻辑放在 `@ollupi/core`，组件只读 store。
 
 ## 屏幕和路由
 
-没有 URL 路由。当前屏幕是 `navigation` store 里的一个值，`App.tsx` 用 `switch` 选组件。
+没有 URL 路由。当前屏幕是 `navigation` 里的 `Screen`（`draft`、`thread`、`search`、`memory`、`cron`、`capabilities`、`settings`），`App.tsx` 用 `switch` 选组件：`draft`（`DraftScreen`）是还没创建的会话，选工作区和模型，发第一条消息才创建；`thread`（`ConversationScreen`）是标题栏、时间线、输入框和侧边面板；`search` 是全局搜索，`memory`、`cron` 是记忆与定时任务，`capabilities` 是技能、MCP、内置工具，`settings` 是所有设置一页。`found` 是搜索带来的定位目标，列表就绪后滚到那一条并闪一下（`.found` 动画）。
 
-```ts
-export type Screen =
-  | { kind: 'draft'; workspaceId: string | undefined }
-  | { kind: 'thread'; threadId: string }
-  | { kind: 'search' }
-  | { kind: 'memory'; found?: { id: string; scope: string } }
-  | { kind: 'cron'; found?: string }
-  | { kind: 'capabilities'; tab: CapabilityTab }
-  | { kind: 'settings' }
-```
-
-| 屏幕 | 组件 | 内容 |
-|---|---|---|
-| `draft` | `DraftScreen` | 还没创建的会话：选工作区和模型，发第一条消息时才创建 |
-| `thread` | `ConversationScreen` | 标题栏、时间线、输入框、侧边面板 |
-| `search` | `SearchScreen` | 全局搜索，⌘K 从任何地方打开 |
-| `memory` | `MemoryScreen` | 记忆浏览和设置 |
-| `cron` | `CronScreen` | 定时任务 |
-| `capabilities` | `CapabilitiesScreen` | 技能、MCP、内置工具 |
-| `settings` | `SettingsScreen` | 所有设置在一页，左侧列表跳转 |
-
-`found` 字段是搜索结果带来的定位目标，屏幕列表就绪后滚到那一条并闪一下（`.found` 动画）。
-
-外层结构：
-
-- 第一次同步完成之前，或后端处于 `failed` 时，显示 `BackendScreen`。
-- 同步过一次之后，界面在重连和重启期间保持原样，连接状态只显示在侧边栏底部。
+- 第一次同步完成前，或后端 `failed` 时，显示 `BackendScreen`；同步过一次之后，重连和重启期间界面保持原样，连接状态只在侧边栏底部。
 - 协议版本不一致时，窗口顶部加一条横幅。
-- `Toasts` 始终在最上层，最多 3 条。info 4 秒消失，错误要手动关。
+- `Toasts` 最多 3 条（`MAX_SHOWN`），新的挤掉最旧的；info 4 秒消失，错误 1 分钟后消失（`ERROR_TTL_MS`），都能手动关。提示画在输入框上方（`ToastHost`，`absolute right-4 bottom-4 w-90`）：输入框是后面的定位元素，放在列的最底就会被它盖住。
+- 对话框、菜单和 `Picker` 用 `createPortal` 画到根节点（带 `data-region`、`data-overlay`），在侧栏里打开的对话框因此不被遮罩和裁剪切掉；有对话框打开时（`useDialogOpen`），浏览器面板里的系统页面先让开。
 
-`navigation` store 还放这些只属于客户端的状态：`model`（输入框里选的模型，切换到别的会话时清空）、`panel`（侧边面板）、`focus`（要滚到的条目）、`file`（文件面板打开的文件）。
+`navigation` 还放客户端自己的状态：`model`（换会话时清空）、`environment`、`approval`（草稿页选的审批策略）、`panels`（每个会话的面板，见[侧边面板](/zh/desktop/side-panels)）、`focus`（`{ threadId, itemId }`）。`go()` 把当前会话写进 `sessionStorage` 的 `ollupi.openThread`，重载后回到原处。
 
 ## 状态管理
 
-每块服务器状态是一个域（domain）：拥有自己的 store，声明如何跟随连接。会话只运行这些钩子。
-
-```ts
-export interface Domain {
-  /** 订阅网关事件。在 sync 之前运行，两者之间不漏事件。 */
-  bind?(client: OllupiClient): () => void
-  /** 在新连接上加载状态。 */
-  sync?(client: OllupiClient): Promise<void>
-  /** 丢弃只对刚结束的连接有效的状态。 */
-  disconnect?(): void
-}
-```
+每块服务器状态是一个域（domain）：有自己的 store，并声明三个可选方法——`bind` 订阅网关事件（在 `sync` 之前跑，两者之间不漏事件）、`sync` 在新连接上加载状态、`disconnect` 丢弃只对刚结束的连接有效的状态。
 
 | 域 | 镜像什么 | 同步方式 |
 |---|---|---|
+| `environments` | 环境列表 | `environment/list`，之后 `environment/changed` |
 | `workspaces` | 工作区列表 | `workspace/list`，之后 `workspace/changed` |
-| `threads` | 侧边栏会话列表和状态 | 每个工作区一次 `thread/list`，每页 50 |
+| `threads` | 侧边栏会话 | 每个工作区一次 `thread/list`，每页 50 |
 | `conversation` | 打开过的会话的时间线 | 重读当前会话，丢弃其他 |
-| `requests` | 等待用户的审批和提问 | 网关在初始化后重发 |
-| `notices` | 网关报的错误 | 只收带 `itemId` 的 `error` 通知 |
-| `notifications` | 系统通知 | 只订阅事件 |
-| `models` | 可用模型和默认模型 | `model/list`，每条连接读一次 |
+| `requests` | 等用户的审批和提问 | 网关初始化后重发 |
+| `notices`、`notifications` | 网关错误、系统通知 | 只收带 `itemId` 的 `error`；通知只订阅事件 |
+| `models` | 模型列表和默认模型 | `model/list`，每条连接一次 |
 | `tools` | 工具列表 | `tool/list` |
 | `cron` | 定时任务 | `cron/list`，之后 `cron/changed` |
 | `settings` | 脱敏开关 | `settings/read`，之后 `settings/changed` |
+| `mcp` | MCP 服务器 | `mcpServer/list` 和 `tool/list`，之后 `mcpServer/changed` |
+| `todos` | 待办 | `todo/list`（`LIMIT` 2000），之后 `todo/changed` |
 
-同步按这个顺序串行执行。`workspaces` 必须在 `threads` 之前，因为会话按工作区列出。
-
-工作区、定时任务和设置的写操作不直接改 store。它们的注释都写明：调用的结果不应用，等引擎发来的变更通知，所以别处发起的改动走同一条路径。
-
-用户动作用 `run()` 包起来，失败变成一条 toast，文案说明是什么动作失败。
+同步按数组顺序串行执行，`workspaces` 必须在 `threads` 之前。工作区、定时任务和设置的写操作不直接改 store：结果不应用，等引擎的变更通知，所以别处发起的改动走同一条路径。用户动作包在 `run()` 里，失败变成一条 toast。用量不在域里，只读，设置页要用时自己问。
 
 ### 连接
 
 `gateway/session.ts` 跟随主进程上报的后端状态：
 
-```mermaid
-flowchart TD
-  A["onBackend 收到新状态"] --> B["epoch 加一，丢弃当前连接"]
-  B --> C{"status 是 ready"}
-  C -->|"否"| D["gateway 置为 idle"]
-  C -->|"是"| E["connect 循环"]
-  E --> F["OllupiClient.connect，initialize"]
-  F --> G["比较 protocolSha256"]
-  G --> H["每个域 bind"]
-  H --> I["每个域依次 sync"]
-  I --> J["watchClose，状态置 connected"]
-  F -->|"失败"| K["退避后重试"]
-  I -->|"失败"| K
-  K --> E
-```
+- 后端每换一次状态 `epoch` 加一，旧循环看到就退出——重启后地址和令牌都换了。
+- `ready` 就进 connect 循环：连接、`initialize`、比较 `protocolSha256`、各域 `bind` 后依次 `sync`，最后置 `connected`。
+- 失败后退避 `min(5000, 250 * 2^attempt)` 毫秒。
+- `watchClose` 在同步之后才挂：同步中途断开由它重试。此时再开一个循环，两条连接会在网关互相顶替（网关每个用户只留一条）。
 
-- **退避**：`min(5000, 250 * 2^attempt)` 毫秒。
-- **epoch**：后端每次状态变化加一，旧的循环看到 epoch 变了就退出。后端重启后地址和令牌都换了，旧循环不能继续。
-- **`watchClose` 在同步之后才挂**：同步中途断开时由这个循环重试。如果此时再开一个循环，两条连接会在网关互相顶替，网关每个用户只留一条。
-
-连接断开后 `requests` 清空，新连接初始化之后网关重发全部待处理请求。
+断开后 `requests` 清空，新连接初始化时网关重发全部待处理请求。
 
 ## 协议类型
 
-`packages/protocol/scripts/generate.mjs` 从 ollupi 的 `gateway/protocol.schema.json` 生成全部类型。这份契约来自网关分发用的同一张表，详见 [协议](/zh/integrate/protocol)。脚本用 `go list -m` 找到 sidecar 构建所用的 ollupi，只读这份 JSON，不读 Go 代码。
+`packages/protocol/scripts/generate.mjs` 从 ollupi 的 `gateway/protocol.schema.json` 生成全部类型：`types.ts`、方法名与通知名（`messages.ts`，含 `PROTOCOL_SHA256`）、内置工具的 ajv 校验器（`tools.validate.js`，提前编译成普通 JS，因为 CSP 禁止 eval）和类型守卫（`tools.ts`）。契约与网关分发给客户端的是同一张表，见 [协议](/zh/integrate/protocol)；`pnpm protocol:generate` 写入，`pnpm protocol:check` 在过期时失败。
 
-| 生成文件 | 内容 |
-|---|---|
-| `protocol.schema.json` | 契约原文 |
-| `types.ts` | `$defs` 经 `json-schema-to-typescript` 生成的类型 |
-| `messages.ts` | `PROTOCOL_SHA256`、`ClientMethods`、`ServerNotifications`、`ServerRequests`、`ErrorCode`、`BuiltinTools`、`Providers` |
-| `tools.validate.js` | 内置工具参数和输出的 ajv 独立校验器 |
-| `tools.ts` | 类型守卫 `isToolPart` |
-
-校验器提前编译成普通 JS，因为渲染页的 CSP 禁止 eval。ajv 写出的 `require()` 在 ES 模块里不能用，生成脚本把它内联；碰到不认识的 `require` 直接中止生成。
-
-`pnpm protocol:generate` 写入，`pnpm protocol:check` 在过期时失败。
-
-类型和实际流量是否一致，有三道检查：
-
-| 检查 | 什么时候 | 做什么 |
-|---|---|---|
-| `contract.test.ts` | 测试时 | 用录下的真实会话 `fixtures/session.json` 校验每条消息的两个方向 |
-| `gateway/contract.ts` | 开发构建运行时 | 用 `Inspector` 校验所有收发的消息，不符时弹 toast。动态 import，生产包不带 |
-| `initialize` 的 `protocolSha256` | 每次连接 | 和 `PROTOCOL_SHA256` 比较，不同时显示顶部横幅 |
-
-工具的参数是模型自己写的 JSON 文本，不能只靠类型。`callOf` 用 `isToolPart` 校验通过后才按内置工具读，否则当作普通工具显示。
+三道检查守着类型和实际流量：测试时 `contract.test.ts` 拿录下的 `fixtures/session.json` 校验两个方向；开发构建（`gateway/contract.ts`）用 `Inspector` 校验每条消息，不符就弹 toast，生产包不带；每次连接比较 `initialize` 的 `protocolSha256` 与 `PROTOCOL_SHA256`，不同就挂横幅。
 
 ## 时间线
 
-`Timeline` 是客户端手里的一份会话副本。每个函数返回新对象，未变的部分保持引用不变，所以任何状态容器都能放，React 的 `memo` 也能生效。
-
-```ts
-export interface Timeline {
-  thread: ThreadRow
-  turns: TurnRow[]
-  items: ItemRow[]
-  /** items[0] 之前还有更早的条目。 */
-  hasMore: boolean
-}
-```
+`Timeline` 是客户端手里的一份会话副本（`thread`、`turns`、`items`、`hasMore`）。每个函数返回新对象，未变的部分保持引用，所以任何状态容器都能放，`memo` 也能生效。
 
 ### 事件归并
 
-`applyEvent` 是归并的唯一入口。通知带的是落库后的完整行，所以大多数情况是替换，不是打补丁。
-
-| 通知 | 动作 |
-|---|---|
-| `turn/queued`、`turn/started`、`turn/completed` | `setThread` 加 `upsertTurn`，通知里带着存好的轮次和 thread |
-| `item/started`、`item/updated`、`item/completed` | `upsertItem`，按 ID 替换，再按 `seq` 排序 |
-| `item/agentMessage/delta`、`item/reasoning/textDelta` | `appendDelta`，把文字接到条目末尾 |
-
-`item/updated` 用于尚未完成的条目发生变化，比如审批前冻结的执行内容。
-
-流式增量不用保证完整：网关先发 `item/started`，`item/completed` 带全文。增量找不到对应条目时直接丢弃，最后的全文覆盖它。
-
-`thread/changed` 单独处理：有行时 `setThread`，没有行表示会话已删除，从 store 移除。如果删除的是当前屏幕，回到草稿页。
+`applyEvent` 是唯一入口。通知带落库后的完整行，所以多是替换，不是打补丁：`turn/changed` 用 `upsertTurn`；`item/changed` 用 `upsertItem` 按 ID 替换再按 `seq` 排序，比手里那份更旧（`updated` 更小）的行不覆盖；三种 `changed` 都只应用 `seq` 比时间线新的。条目从开始、未完成时的变化（比如审批前冻结的执行内容）到结束都走 `item/changed`，每次带完整的一行。`item/agentMessage/delta` 和 `item/reasoning/textDelta` 用 `appendDelta`：增量不保证完整，条目还没到时先给它建一个临时条目往里写，直到 `item/changed` 带着全文把它替换掉。`thread/changed` 有行时 `setThread`，没行是会话已删除，从 store 移除并回草稿页。
 
 ### 分页
 
-打开会话用 `thread/resume`，每页 100 条（`PAGE_SIZE`）。网关还会在约 4 MB 处截断页面并报 `hasMore`。这个调用同时让网关重发这个会话里还在等的请求。
+打开会话用 `thread/resume`，每页 100 条（`PAGE_SIZE`）；网关还会在约 4 MB 处截断并报 `hasMore`，这个调用同时让网关重发这个会话里还在等的请求。
 
 | 情况 | 函数 |
 |---|---|
 | 首次打开 | `timelineFromPage` |
-| 加载更早 | `thread/read` 带 `beforeSeq`，`prependPage` 合并，按 ID 去重 |
-| 重连后 | `refreshFromPage`：用新页替换活动的尾部，保留比它更早的已加载条目，这些属于已结束的轮次，不再变化 |
-| 定位到某条 | `openThreadAt` 循环读更早的页，直到 `seq` 进入已加载范围，再设置 `focus` |
-| 导出 | `readWhole` 独立读完整个会话，不管界面加载了多少 |
-
-重连时只重读当前打开的会话，其他会话的时间线全部丢弃，下次打开时重新读。
+| 加载更早 | `thread/read` 带 `beforeSeq`，`prependPage` 合并去重 |
+| 重连后 | `refreshFromPage`：新页替换活动尾部，更早的已加载条目保留 |
+| 定位到某条 | `openThreadAt` 循环读更早的页，进入范围后设 `focus` |
+| 导出 | `readWhole` |
 
 ### 从时间线到屏幕
 
-```mermaid
-flowchart LR
-  T["Timeline"] --> G["groupByTurn"]
-  G --> R["groupReads"]
-  R --> I["ItemView"]
-  I --> C["callOf 分类"]
-  C --> V["每种工具一个视图"]
-```
+`groupByTurn` 把条目挂到各自的轮次下（排队中的轮次用 `queuedTurns` 取）。`groupReads` 把相邻两个以上的 `read_file`、`glob`、`grep` 合成一行，等审批的调用不合并。`ItemView` 按 `item.type` 分派并 `memo` 包住。`callOf` 分 `command`、`file`、`read`、`glob`、`grep`、`plan`、`question`、`subagent`、`tool`，`views` 按种类穷举。
 
-- `groupByTurn`：把已加载的条目挂到各自的轮次下。排队的轮次还没有条目，单独用 `queuedTurns` 取，它的输入在轮次行上，开始后才变成用户消息条目。
-- `groupReads`：相邻的两个以上 `read_file`、`glob`、`grep` 合成一行。正在等审批的调用不合并，保证它的审批卡片显示出来。
-- `ItemView`：按 `item.type` 分派，用 `memo` 包住。类型有 `userMessage`、`agentMessage`、`reasoning`、`toolCall`、`contextCompaction`、`memoryContext`、`error`。
-- `callOf`：把工具调用分成 `command`、`file`、`read`、`glob`、`grep`、`plan`、`question`、`subagent`、`tool`。`views` 是按种类穷举的 Record，少一个视图编译不过。
-
-`run_command` 和 `edit_file`、`write_file` 读的是 `preparedExecution`，也就是审批前冻结的内容，这才是实际执行的东西。
-
-每轮的结果由 `TurnOutcome` 画：失败是红色提示，停止是一行灰字，完成时一行写模型、耗时和用量。
+`run_command`、`edit_file`、`write_file` 读的是 `preparedExecution`（审批前冻结的内容），那才是实际执行的。每轮结果由 `TurnOutcome` 画：失败红字，停止灰字，完成时一行写模型、耗时和用量。
 
 ### 审批和提问
 
-`requests` 域按条目 ID 存待处理请求，每项持有 JSON-RPC 请求的 resolve：
+`requests` 域按条目 ID 存待处理请求，每项持有 JSON-RPC 请求的 `resolve`；工具调用的行用 `usePendingRequest(item.id)` 找到它，卡片画在行下面，`item/changed` 带来的条目不再等审批或回答时把它移除。子 agent 的请求画在父会话的 `Agent` 调用下面，子 agent 的会话只读。
 
-```ts
-client.handle('item/toolCall/requestApproval', (params) =>
-  new Promise((resolve) => add({
-    kind: 'approval', params,
-    respond: (decision) => { remove(params.itemId); resolve({ decision }) },
-  })))
-```
-
-工具调用的行通过 `usePendingRequest(item.id)` 找到请求，卡片画在这一行下面。在别处解决的请求（飞书、这一轮结束）会让条目完成，`item/completed` 把它移除。
-
-子 agent 的请求画在父会话的 `Agent` 调用下面，因为父会话把子 agent 的等待报告成自己的状态。子 agent 的会话只读。
-
-审批卡片里，需要完全访问的调用是危险级别：不提供"在此会话中允许"，主按钮是"允许完全访问"。
+需要全权（full access）的调用是危险级别（`fullAccess` 取自冻结执行里的 `escalated`）：不提供"这件事里都可以"，主按钮是"允许完全访问"，回车也不会替人确认这一下。
 
 ### 发送消息
 
-| 情况 | 动作 |
-|---|---|
-| 空闲时 Enter 或 ⌥Enter | `turn/start` |
-| 运行中 Enter | `turn/steer`，插话 |
-| 运行中 ⌥Enter | `turn/start`，排队 |
-| 插话输给了轮次结束 | 收到 `noActiveTurn` 或 `turnMismatch` 时改发 `turn/start` |
+空闲时 Enter 和 ⌥Enter 都是 `turn/start`；运行中 Enter 是 `turn/steer`（插话），⌥Enter 是 `turn/start`（排队）；插话输给轮次结束时（`noActiveTurn`、`turnMismatch`）改发 `turn/start`。
 
-输入法组合期间的 Enter 不发送，Shift+Enter 换行。
-
-草稿页发第一条消息的顺序是：`thread/start`，把草稿的浏览器标签页交给这个会话，跳转，再发第一轮。这样 agent 开始动作时标签页已经归它。
-
-`titleFromMessage` 取第一条非空行，空白折叠，最多 60 字符，没有文字时用第一个附件的文件名。
+输入法组合期间的 Enter 不发送，Shift+Enter 换行。草稿页的顺序是 `thread/start`、把草稿的浏览器标签页交给这个会话、跳转、再发第一轮。`titleFromMessage` 取第一条非空行，空白折叠，最多 60 字符，没有文字时用第一个附件的文件名。
 
 ## 滚动
 
-时间线没有虚拟化。已加载的条目全部渲染，靠 `ItemView` 的 `memo` 和分页控制数量。
-
-`useStickToBottom` 负责贴底：
-
-- 离底部 80 像素（`NEAR_PX`）以内算贴底。用户往上滚之后不再跟随，出现"回到最新"按钮。
-- 用 `ResizeObserver` 和 `MutationObserver` 监听内容变化，不依赖具体事件，所以流式文字、展开的工具输出、异步加载的图都能跟上。
-- `key` 变化（切换会话）时重新贴底。
-
-滚动区用 `.scroll-centered`（`scrollbar-gutter: stable both-edges`），让列内容和滚动区外的输入框对齐。
+时间线没有虚拟化，靠 `ItemView` 的 `memo` 和分页控量。`useStickToBottom` 负责贴底：离底部 80 像素（`NEAR_PX`）以内算贴底，往上滚后不再跟随并出现"回到最新"；监听用 `ResizeObserver` 和 `MutationObserver`，流式文字、展开的输出、异步加载的图都跟得上。滚动区用 `.scroll-centered`（`scrollbar-gutter: stable both-edges`），让列内容和输入框对齐。
 
 ## Markdown
 
-agent 的回复由 `Streamdown` 解析。流式输出时它先把没闭合的代码块、表格、强调补全，避免闪出纯文本。每个元素都画成普通标签，样式只来自 `.markdown` 里基于 token 的规则。
-
-| 内容 | 处理 |
-|---|---|
-| 代码块 | Shiki，`github-light` 和 `github-dark` 两套主题同时生成，`defaultColor: false`，跟随明暗。语言在第一次用到时加载，不认识的语言不高亮 |
-| Shiki 引擎 | JavaScript 正则引擎，因为 CSP 不允许 WebAssembly |
-| diff | 用 transformer 给 `+` 和 `-` 开头的行加 class，整行着色 |
-| Mermaid | 见下 |
-| 脚注 | 每条消息都从 1 编号，id 会重复，所以点击时在当前 `.markdown` 内滚动 |
-| 行内代码和链接 | 如果指向工作区文件，变成可点击的文件链接 |
+回复由 `Streamdown` 解析，流式时先把没闭合的代码块、表格、强调补全；样式只来自 `.markdown` 里基于 token 的规则。代码块用 Shiki，`github-light` 和 `github-dark` 同时生成（`defaultColor: false`），跟随明暗，语言用时才加载，用 JavaScript 正则引擎，因为 CSP 不允许 WebAssembly。diff 由 transformer 给 `+`、`-` 开头的整行着色；脚注每条消息都从 1 编号，id 会重复，点击时在当前 `.markdown` 内滚动。
 
 ### Mermaid
 
-| 类型 | 渲染器 |
-|---|---|
-| `flowchart`、`graph`、`stateDiagram`、`sequenceDiagram`、`classDiagram`、`erDiagram`、`xychart-beta` | `beautiful-mermaid`，同步绘制，颜色写成 CSS 变量，换配色不用重画 |
-| 其他类型，以及上面失败的 | `mermaid`，第一次用到时动态加载，`securityLevel: 'strict'`，主题变量从 token 解析成不透明的 `#rrggbb`，换配色或明暗时重画 |
+`flowchart`、`graph`、`stateDiagram`、`sequenceDiagram`、`classDiagram`、`erDiagram`、`xychart-beta` 由 `beautiful-mermaid` 同步绘制，颜色是 CSS 变量，换配色不用重画；其他类型和它画失败的交给 `mermaid`，用时动态加载，`securityLevel: 'strict'`，主题变量从 token 解析成不透明的 `#rrggbb`，换配色或明暗时重画。流式中（`useIsCodeFenceIncomplete`）显示源码；都解析不了时保留源码并写原因。
 
-流式输出中（`useIsCodeFenceIncomplete`）显示源码。两个渲染器都解析不了时保留源码，下面写原因。
+`balanceDecisions` 处理判断节点：按标签宽度定边长，没换行的标签按词断行（中文用 `Intl.Segmenter`），取接近最小正方形、行数最少的方案。
 
-`balanceDecisions` 处理判断节点：它是按标签宽度定边长的正方形，一行写完的问句会撑得很大。作者没换行的标签按词均匀断行，中文用 `Intl.Segmenter` 分词。取接近最小正方形（1.2 倍以内）时行数最少的方案。
+图按自身尺寸绘制：`mermaid` 初始化时各类图都传同一份 `natural` 选项（`useMaxWidth: false`），`fontSize: 13`，宽图不会为了塞进列而把字缩小、窄图也不会被放大。图能原地缩放：`ctrl` 或 `meta` 按住滚轮，以及触控板双指捏合（Chromium 报成带 `ctrlKey` 的 `wheel`），都在滚动容器上以 `passive: false` 监听 `wheel`，`exp(-deltaY * unit * 0.002)` 求倍率，夹在 `least`（0.5）到 `most`（4）之间；没有修饰键的滚轮直接放行，页面照常滚动。`paint` 改的是 SVG 的 `width`、`height` 而不是 `transform`，线条按最终尺寸重画，容器的滚动条覆盖整张图；指针落在图上的相对位置先换算成比例（`fx`、`fy`），缩放后据此修正 `scrollLeft`、`scrollTop`，指着哪里就停在哪里。`Block` 的动作区有百分比胶囊 `ScaleReadout`，100% 时也在，因为它是发现图能缩放的入口；点一下回 100%，双击图面同样复位。倍率不是 1 时容器改成 `overflow-auto` 并以 `maxHeight: 70vh` 限高，超出部分横竖滚动，按住左键拖动平移（`setPointerCapture`）；1× 时不拦指针，图里的文字仍可选中。换工作区配色或明暗会换一张新 SVG，`useEffect` 先量出原始尺寸再按保留的倍率重画，量出零尺寸时直接跳过。
 
 ### 工作区文件链接
 
-`workspacePath` 判断一段文字是不是工作区里的路径：相对路径或根目录下的绝对路径，去掉开头的 `./` 和结尾的 `:行号`。不含 `/` 也没有扩展名的词不算，那多半是代码。
-
-是否真的存在由 `files.kind` 问主进程。找到的结果记住，找不到的下次再问，因为 agent 可能之后才写出来。
-
-单击在文件面板打开，⌘+点击用默认应用打开。
+`workspacePath` 判断一段文字是不是工作区路径：相对路径或根目录下的绝对路径，去掉开头的 `./` 和结尾的 `:行号`；不含 `/` 又没有扩展名的词不算。是否存在由 `files.kind` 问主进程，找到的记住，找不到的下次再问。单击在文件面板打开，⌘+点击用默认应用打开。
 
 ## 搜索
 
-搜索页在侧边栏，⌘K 从任何界面打开（`views/App.tsx` 的 `useSearchShortcut`）。
+⌘K 从任何界面打开（`useSearchShortcut`）。输入停顿 250 ms 才发请求（`PAUSE_MS`），每组最多 20 条（`LIMIT`）。结果按会话、消息、任务、记忆分组，只列非空分组并标条数；点会话打开它，点消息打开并定位，点任务或记忆跳到列出它的页面（`focus` 与 `useFound`）。记忆页的搜索框用同一个 `search`，`workspaceId` 传当前标签页的范围。
 
-- 输入停顿 250 ms 才发请求（`PAUSE_MS`），每组最多 20 条（`LIMIT`）；上一个结果保留到新结果到达，列表不会闪空。
-- 结果按会话、消息、任务、记忆分组，只列非空分组并标出条数。点会话打开它，点消息打开会话并定位到那一条，点任务或记忆跳到列出它的页面（`focus` 与 `useFound`）。
-- 记忆页的搜索框用同一个 `search` 方法，把 `workspaceId` 传成当前标签页的范围，返回的记忆再按 scope 过滤。
+## 能力页
 
-## 语言
+技能按 agent 分组，每个技能是一张卡片（`grid-cols-[repeat(auto-fill,minmax(17.5rem,1fr))]`），只写该 agent 实际收到的东西：名字，和它据以判断要不要用的描述；`SKILL.md` 旁边的文件用上才读，留在菜单里打开。内置工具按 provider 分组：`ToolsSection` 只从 store 选存储列表本身（`serverList`），再用 `useMemo` 造组，免得每次同步都重算；MCP 服务器名与 provider 名相同，一个组就是一台服务器，参数说明收在展开项里。
 
-界面有 `en` 和 `zh-CN` 两份词表，放在 `i18n/messages/` 下，按区域分文件。中文词表类型是 `typeof en`，少一个键编译不过。
+## 设置页
 
-组件用 `useT()`，React 之外用 `t()`。`t()` 在需要时才读，所以切换语言立即生效。语言偏好跟随系统时，`zh` 开头的系统语言对应中文，其余对应英文。只有应用自己的文字会翻译，用户、agent 和后端写的内容原样显示。
+设置在一页（`SettingsScreen`），左侧列表按 `sections` 顺序：`general`、`redaction`、`notifications`、`appearance`、`language`、`permissions`、`models`、`usage`、`feishu`。等后端回答的几节排在后面，免得到位时把上方内容顶下去。
 
-## 本地存储
+### 用量
 
-这些偏好只属于这台机器的这个应用，存在 `localStorage`，不进引擎的库。
+`UsageSection` 只读引擎记下的用量，不写库也不缓存。`useUsage` 用同一段时间连发三次 `usage/query`，`groupBy` 分别是 `day`、`workspace`、`model`，三次覆盖同样的行，合计对得上。范围只有 7 天和 30 天（`periods`，默认 `d7`），今天算在内，按本地日期切（`offsetMinutes` 取 `-now.getTimezoneOffset()`）。
 
-| 键 | 内容 |
-|---|---|
-| `ollupi.palette` | 配色 |
-| `ollupi.colorScheme` | 明暗 |
-| `ollupi.language` | 语言 |
-| `ollupi.notifications` | 四种通知的开关 |
-| `ollupi.panelWidths` | 每个面板的宽度 |
+- 总量是一条四段条：缓存输入（`bg-chart-1/45`）、写入缓存的输入（`bg-chart-1/70`）、未缓存的输入（`bg-chart-1`）、输出（`bg-chart-2`）；`tokensOf` 只加输入和输出，缓存已算在 `inputTokens` 里。
+- 每日柱按最忙的一天定高，输入在下、输出在上，最后一天标"今天"；30 天视图每 5 天标一次日期。按工作区、按模型两个列表按用量降序，空 key 表示没记下。
+- 没有记录是空状态；后端没运行是离线提示加重启；查询失败可重试。
+
+字段和错误码见 [用量协议](/zh/integrate/protocol/usage)。
+
+## 语言与本地存储
+
+界面有 `en` 和 `zh-CN` 两份词表，放在 `i18n/messages/` 下按区域分文件；中文词表的类型是 `typeof en`，少一个键编译不过。组件用 `useT()`，React 之外用 `t()`，切换立即生效。语言跟随系统时 `zh` 开头对应中文，其余英文。偏好只属于这台机器，存在 `localStorage`：`ollupi.theme`、`ollupi.colorScheme`、`ollupi.language`、`ollupi.notifications`、`ollupi.panelWidths`。
 
 ## 代码位置
 
 | 位置 | 职责 |
 |---|---|
-| ollupi-desktop `apps/desktop/src/renderer/src/views/App.tsx` | 顶层组合和屏幕切换 |
-| ollupi-desktop `apps/desktop/src/renderer/src/gateway/session.ts` | 连接、重连、运行各域 |
-| ollupi-desktop `apps/desktop/src/renderer/src/gateway/contract.ts` | 开发时的流量校验 |
-| ollupi-desktop `apps/desktop/src/renderer/src/domains/` | 各域的 store 和动作 |
-| ollupi-desktop `apps/desktop/src/renderer/src/domains/navigation.ts` | 屏幕和面板状态 |
-| ollupi-desktop `apps/desktop/src/renderer/src/domains/conversation.ts` | 时间线和发送 |
-| ollupi-desktop `apps/desktop/src/renderer/src/domains/requests.ts` | 审批和提问 |
-| ollupi-desktop `apps/desktop/src/renderer/src/views/conversation/TimelineView.tsx` | 时间线视图 |
-| ollupi-desktop `apps/desktop/src/renderer/src/views/conversation/tools/` | 每种工具调用的视图 |
-| ollupi-desktop `apps/desktop/src/renderer/src/views/common/useStickToBottom.ts` | 贴底滚动 |
-| ollupi-desktop `apps/desktop/src/renderer/src/views/common/Markdown.tsx` | Markdown 和代码高亮 |
-| ollupi-desktop `apps/desktop/src/renderer/src/views/common/Mermaid.tsx` | 图 |
-| ollupi-desktop `apps/desktop/src/renderer/src/domains/search.ts` | `useSearch`、250 ms 停顿、每组 20 条 |
-| ollupi-desktop `apps/desktop/src/renderer/src/views/search/SearchScreen.tsx`、`Highlight.tsx` | 搜索结果分组展示、点击定位、高亮 |
-| ollupi-desktop `apps/desktop/src/renderer/src/views/memory/MemoryScreen.tsx` | 记忆页搜索框 |
-| ollupi-desktop `apps/desktop/src/renderer/src/views/common/found.ts` | 把命中的条目滚进视野并标出 |
+| ollupi-desktop `apps/desktop/src/renderer/src/views/App.tsx` | 屏幕切换 |
+| ollupi-desktop `apps/desktop/src/renderer/src/gateway/session.ts` | 连接、重连、跑各域 |
+| ollupi-desktop `apps/desktop/src/renderer/src/domains/navigation.ts` | 屏幕、面板、重载去处 |
+| ollupi-desktop `apps/desktop/src/renderer/src/domains/` | 各域 store 与动作（`conversation`、`requests`、`usage` 等） |
+| ollupi-desktop `apps/desktop/src/renderer/src/views/conversation/`、`views/common/` | 时间线、工具视图、提示、贴底、Markdown 与图、定位 |
+| ollupi-desktop `apps/desktop/src/renderer/src/views/settings/`、`views/capabilities/`、`views/search/` | 设置、能力、搜索 |
 | ollupi-desktop `apps/desktop/src/renderer/src/i18n/` | 词表 |
-| ollupi-desktop `packages/core/src/timeline.ts` | 时间线归并 |
-| ollupi-desktop `packages/core/src/calls.ts` | 工具调用分类 |
-| ollupi-desktop `packages/protocol/scripts/generate.mjs` | 协议类型生成 |
+| ollupi-desktop `packages/core/src/timeline.ts`、`calls.ts` | 归并、工具分类 |
+| ollupi-desktop `packages/protocol/scripts/generate.mjs` | 生成协议类型 |
 | ollupi-desktop `packages/client/src/client.ts` | 类型化客户端 |

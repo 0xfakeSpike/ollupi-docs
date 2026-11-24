@@ -15,9 +15,9 @@
 代价：日志里是明文；每次模型调用都要过一遍检测器，整段历史每次请求都重新扫描；识别不到的形式原样发给模型。
 
 ::: info 演进
-- 记忆曾有自己的凭据过滤，`831b554` 删掉了它。
-- `e36dd28` 起占位符用的是进程启动时随机生成的密钥，重启后会变；`9ac61ec` 改成存进设置。
-- 截断时避开敏感范围来自 `31f9092`；开关每次调用前读来自 `2d7d064`。
+- 记忆曾有自己的凭据过滤，`8caf728` 删掉了它。
+- `ee05459` 起占位符用的是进程启动时随机生成的密钥，重启后会变；`287d0ed` 改成存进设置。
+- 截断时避开敏感范围来自 `aec429e`；开关每次调用前读来自 `922fc07`。
 :::
 
 ## 识别类型
@@ -49,8 +49,8 @@
 输入常常是 JSON 文本，`\n13812345678` 里的 `n` 会让 `\b` 失效。`escapeView` 把 `\n`、`\t`、`\"`、`\\` 这类转义换成两个空格再匹配，位置不变，取值仍从原文取。
 
 ::: info 演进
-- `a73ef69` 加了 `github_pat_`、`AIza`、`Bearer` 三种，并让 `sk-` 允许 `-` 和 `_`：此前 OpenAI 的 `sk-proj-…` 和 Anthropic 的 `sk-ant-api03-…` 原样发给模型。
-- `66ded7e` 之前，任何通过 Luhn 的 13 到 19 位数字都算银行卡，任何长十六进制串里的六组都算 MAC。Terminal-Bench 的任务里，`readelf` 的补零地址和证书的 SHA-256 指纹被换成占位符，模型只能猜它看不到的地址。
+- `097705c` 加了 `github_pat_`、`AIza`、`Bearer` 三种，并让 `sk-` 允许 `-` 和 `_`：此前 OpenAI 的 `sk-proj-…` 和 Anthropic 的 `sk-ant-api03-…` 原样发给模型。
+- `1307a29` 之前，任何通过 Luhn 的 13 到 19 位数字都算银行卡，任何长十六进制串里的六组都算 MAC。Terminal-Bench 的任务里，`readelf` 的补零地址和证书的 SHA-256 指纹被换成占位符，模型只能猜它看不到的地址。
 :::
 
 ## HMAC 占位符
@@ -91,7 +91,7 @@ func (r *Redactor) placeholder(cat category, value string) string {
 `Redactor` 不落库。一轮运行的每一步开始时，`run` 用用户的密钥新建一个（`Runner.load`），只在这一步里用。每次发送都先把整段请求脱敏一遍，所以这次请求里出现过的占位符都在 `reverse` 里，回答引用它们时能还原。
 
 ::: info 演进
-`547c914` 起原值的两种写法在生成占位符时算好，还原时用一个正则扫描找占位符；此前每段流式文本都要把表里每个值重新编码一遍再逐个替换。
+`6cd80df` 起原值的两种写法在生成占位符时算好，还原时用一个正则扫描找占位符；此前每段流式文本都要把表里每个值重新编码一遍再逐个替换。
 :::
 
 ## 替换的时机和位置
@@ -144,7 +144,7 @@ flowchart LR
 记忆提取发给模型的是另一条路径（`extract/extract.go`）。它用同样的密钥新建一个 `Redactor`，开关打开时对整个载荷 `Mask`。模型返回的操作里 `topic` 和 `text` 经 `Restore` 还原后再入库，所以记忆表里也是原文。见[记忆](/zh/engine/memory)。
 
 ::: info 演进
-`a73ef69` 之前，记忆证据先按预算裁剪再脱敏：一把被切掉 `END` 行的私钥不再匹配 PEM 规则，几乎整个发给了提取模型。裁剪时避开敏感范围原本只在上下文这边有，这次挪进 `pkg/redact`（`Cuts`），记忆也用上。
+`097705c` 之前，记忆证据先按预算裁剪再脱敏：一把被切掉 `END` 行的私钥不再匹配 PEM 规则，几乎整个发给了提取模型。裁剪时避开敏感范围原本只在上下文这边有，这次挪进 `pkg/redact`（`Cuts`），记忆也用上。
 :::
 
 ## 开关
@@ -166,13 +166,13 @@ flowchart LR
 
 ## 代码位置
 
-| 位置 | 职责 |
-| --- | --- |
-| ollupi `pkg/redact/redact.go` | 识别、占位符、`Mask`、`Restore`、`RestoreJSON`、`Stream`、`Spans`、`Cuts` |
-| ollupi `run/model.go` | `send` 里的双向替换 |
-| ollupi `run/run.go` | 每一步新建 `Redactor`、读开关 |
-| ollupi `prompt/observation.go` | 截断时避开敏感范围 |
-| ollupi `memory/extract.go`、`extract/extract.go` | 记忆证据的裁剪、记忆提取的脱敏和还原 |
-| ollupi `account/account.go` | `Settings.Redaction`、`RedactionKey` |
-| ollupi `store/sqlite/owned.go` | 开关和密钥的存储，创建用户时生成密钥 |
-| ollupi `app/settings.go`、`gateway/owned.go` | `settings/read`、`settings/update` |
+| 仓库 | 路径 | 职责 |
+| --- | --- | --- |
+| ollupi | `pkg/redact/redact.go` | 识别、占位符、`Mask`、`Restore`、`RestoreJSON`、`Stream`、`Spans`、`Cuts` |
+| ollupi | `run/model.go` | `send` 里的双向替换 |
+| ollupi | `run/run.go` | 每一步新建 `Redactor`、读开关 |
+| ollupi | `prompt/observation.go` | 截断时避开敏感范围 |
+| ollupi | `memory/extract.go`、`extract/extract.go` | 记忆证据的裁剪、记忆提取的脱敏和还原 |
+| ollupi | `account/account.go` | `Settings.Redaction`、`RedactionKey` |
+| ollupi | `store/sqlite/owned.go` | 开关和密钥的存储，创建用户时生成密钥 |
+| ollupi | `app/settings.go`、`gateway/owned.go` | `settings/read`、`settings/update` |

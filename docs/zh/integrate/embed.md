@@ -47,7 +47,7 @@ flowchart TD
 `host.Config` 的全部字段见 [Config 参考](/zh/integrate/config)。
 
 ::: info 演进
-v0.16.0 之前，宿主自己 `repo.Open` 打开库，填 `agent.Config`（v0.14.0 起是 `service.Config`），调 `agent.New`、`Start`、`Wait`，再用 `OnEvent` 把事件转给 `gateway.Server.Deliver`。`18d6757` 加入 `host` 包，把这些装配收进 `host.New`；`9b5b50b` 让网关只从库的 feed 得知变化，`OnEvent` 和 `Deliver` 随之消失。分片租约也不再是引擎的配置（`Lease`、`OnLeaseLost`），移到了 `shard` 包（`48c8454`）。
+v0.16.0 之前，宿主自己 `repo.Open` 打开库，填 `agent.Config`（v0.14.0 起是 `service.Config`），调 `agent.New`、`Start`、`Wait`，再用 `OnEvent` 把事件转给 `gateway.Server.Deliver`。`9fa9186` 加入 `host` 包，把这些装配收进 `host.New`；`499f96f` 让网关只从库的 feed 得知变化，`OnEvent` 和 `Deliver` 随之消失。分片租约也不再是引擎的配置（`Lease`、`OnLeaseLost`），移到了 `shard` 包（`68a4035`）。
 :::
 
 ## 最小宿主程序

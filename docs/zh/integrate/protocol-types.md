@@ -1,194 +1,127 @@
 # 协议类型索引
 
-网关契约 `protocol.schema.json` 的全部 134 个命名类型（`$defs`，引擎 v0.17.2），以及讲它的模块页。字段、取值和例子在模块页里；所有模块共用的约定（可选字段、时间、ID）见[通用约定](/zh/integrate/protocol#通用约定)。
+网关契约 `protocol.schema.json` 的全部 166 个命名类型（`$defs`），以及讲它们的模块页。字段、取值和例子在模块页里；所有模块共用的约定（可选字段、时间、ID）见[通用约定](/zh/integrate/protocol#通用约定)。
 
-只做参数包装的类型（如 `ThreadRenameParams`）字段很少，模块页在对应方法的参数表里讲，没有单独的标题。几个类型的契约名和 Go 名不同，由生成器的 `defNames` 改名：`PermissionSettings`（`policy.Settings`）、`AgentRole`（`agent.Name`）、`PreparedExecution`（`workspace.Prepared`）、`UserInputRequest`（`ask.Request`）等，见[一张表分发和生成 schema](/zh/integrate/protocol#一张表分发和生成-schema)。
-
-::: info 演进
-v0.12.1 的契约有 129 个类型。之后删掉的有 `AttachmentKind`、`Await`、`AwaitBy`、`ContextArtifact`、`CronJobView`、`ItemNotification`、`ItemType`、`MemoryFailureCode`、`MemoryReport`、`MemoryRowStatus`、`MemoryScope`、`Prepared`、`ServerStatus`、`ThreadFilter`、`ThreadStatusNotification`、`ThreadSummary`、`ToolResult`、`TurnNotification`；有的改了名（`ItemType` 成了 `ItemKind`，`Prepared` 成了 `PreparedExecution`，`ToolResult` 成了 `Result`，`ThreadFilter` 成了 `ThreadListParams`，记忆的几个枚举去掉了 `Memory` 前缀），有的随机制一起消失（`Await` 被条目上的 `input` 和 `childThreadId` 取代，`ThreadSummary` 和 `ThreadStatusNotification` 随状态进入 `ThreadRow`）。大部分变化来自 v0.16.0 的网关重建（`9b5b50b`）。
-:::
+只做参数包装、字段很少的类型（如 `ThreadRenameParams`）在模块页对应方法的参数表里讲，这里按模块登记归属。契约名和 Go 名不同的由生成器的 `defNames` 改名：`PermissionSettings`（`policy.Settings`）、`AgentRole`（`agent.Name`）、`WorkspaceProviders`（`account.Providers`）、`PreparedExecution`（`workspace.Prepared`）、`UserInputRequest`（`ask.Request`）、`HubWorkspace`（`hub.Workspace`）；两个类型撞名时生成器直接失败，要求在 `defNames` 里给其中一个写名字。见[契约的生成与测试](/zh/integrate/protocol#契约的生成与测试)。
 
 ## 握手（总览页）
 
 | 类型 | 见 |
 |---|---|
-| `ClientInfo` | [握手（总览页）](/zh/integrate/protocol#握手) |
-| `Empty` | [握手（总览页）](/zh/integrate/protocol#握手)；空对象，用作没有参数的方法的参数和没有结果的方法的结果 |
-| `InitializeParams` | [握手（总览页）](/zh/integrate/protocol#握手) |
-| `InitializeResult` | [握手（总览页）](/zh/integrate/protocol#握手) |
-| `ServerInfo` | [握手（总览页）](/zh/integrate/protocol#握手) |
+| `ClientInfo`、`InitializeParams`、`InitializeResult`、`ServerInfo` | [网关协议](/zh/integrate/protocol#握手) |
+| `Empty` | [网关协议](/zh/integrate/protocol#握手)；空对象，用作没有参数的方法的参数和没有结果的方法的结果 |
 
 ## 会话
 
 | 类型 | 见 |
 |---|---|
-| `ThreadArchiveParams` | [会话](/zh/integrate/protocol/threads#thread-archive) |
-| `ThreadChangedNotification` | [会话](/zh/integrate/protocol/threads#thread-changed) |
-| `ThreadCursor` | [会话](/zh/integrate/protocol/threads#threadcursor) |
-| `ThreadDeleteParams` | [会话](/zh/integrate/protocol/threads#thread-delete) |
-| `ThreadListParams` | [会话](/zh/integrate/protocol/threads#thread-list) |
-| `ThreadListResult` | [会话](/zh/integrate/protocol/threads#thread-list) |
-| `ThreadMarkReadParams` | [会话](/zh/integrate/protocol/threads#thread-markread) |
-| `ThreadPageParams` | [会话](/zh/integrate/protocol/threads#thread-read-和-thread-resume) |
-| `ThreadPageResult` | [会话](/zh/integrate/protocol/threads#thread-read-和-thread-resume) |
-| `ThreadRenameParams` | [会话](/zh/integrate/protocol/threads#thread-rename) |
-| `ThreadResult` | [会话](/zh/integrate/protocol/threads#参数和结果的包装) |
-| `ThreadRow` | [会话](/zh/integrate/protocol/threads#threadrow) |
-| `ThreadStartParams` | [会话](/zh/integrate/protocol/threads#thread-start) |
-| `ThreadStatus` | [会话](/zh/integrate/protocol/threads#threadstatus) |
+| `ThreadStartParams` | [thread/start](/zh/integrate/protocol/threads#thread-start) |
+| `ThreadPageParams`、`ThreadPageResult` | [thread/read 和 thread/resume](/zh/integrate/protocol/threads#thread-read-和-thread-resume) |
+| `ThreadListParams`、`ThreadListResult` | [thread/list](/zh/integrate/protocol/threads#thread-list) |
+| `ThreadRenameParams` | [thread/rename](/zh/integrate/protocol/threads#thread-rename) |
+| `ThreadMarkReadParams` | [thread/markRead](/zh/integrate/protocol/threads#thread-markread) |
+| `ThreadArchiveParams` | [thread/archive](/zh/integrate/protocol/threads#thread-archive) |
+| `ThreadDeleteParams` | [thread/delete](/zh/integrate/protocol/threads#thread-delete) |
+| `ThreadChangedNotification` | [thread/changed](/zh/integrate/protocol/threads#thread-changed) |
+| `ThreadRow` | [ThreadRow](/zh/integrate/protocol/threads#threadrow)；`thread/list` 和 `thread/changed` 的行 |
+| `ThreadStatus` | [会话状态](/zh/integrate/protocol/threads#会话状态) |
+| `ThreadCursor` | [thread/list](/zh/integrate/protocol/threads#thread-list) 的 `after` |
+| `ThreadResult` | [thread/start](/zh/integrate/protocol/threads#thread-start)；`thread/start`、`rename`、`markRead`、`archive`、`updatePermissions` 的结果 `{thread}` |
 
 ## 一轮与条目
 
 | 类型 | 见 |
 |---|---|
-| `AgentRole` | [一轮与条目](/zh/integrate/protocol/turns#turnrow) |
-| `Artifact` | [一轮与条目](/zh/integrate/protocol/turns#result-和-artifact) |
-| `Attachment` | [一轮与条目](/zh/integrate/protocol/turns#attachment) |
-| `AttachmentReadParams` | [一轮与条目](/zh/integrate/protocol/turns#attachment-read) |
-| `AttachmentReadResult` | [一轮与条目](/zh/integrate/protocol/turns#attachment-read) |
-| `ContextStats` | [一轮与条目](/zh/integrate/protocol/turns#contextstats) |
-| `DeltaNotification` | [一轮与条目](/zh/integrate/protocol/turns#通知的包装) |
-| `ErrorNotification` | [一轮与条目](/zh/integrate/protocol/turns#error) |
-| `ItemChangedNotification` | [一轮与条目](/zh/integrate/protocol/turns#item-changed) |
-| `ItemKind` | [一轮与条目](/zh/integrate/protocol/turns#条目) |
-| `ItemRow` | [一轮与条目](/zh/integrate/protocol/turns#itemrow) |
-| `ItemStatus` | [一轮与条目](/zh/integrate/protocol/turns#条目) |
-| `MemoryStats` | [一轮与条目](/zh/integrate/protocol/turns#contextstats) |
-| `ResponseRow` | [一轮与条目](/zh/integrate/protocol/turns#responserow) |
-| `Result` | [一轮与条目](/zh/integrate/protocol/turns#result-和-artifact) |
-| `TurnChangedNotification` | [一轮与条目](/zh/integrate/protocol/turns#turn-changed) |
-| `TurnInterruptParams` | [一轮与条目](/zh/integrate/protocol/turns#turn-interrupt) |
-| `TurnResult` | [一轮与条目](/zh/integrate/protocol/turns#turnrow) |
-| `TurnRow` | [一轮与条目](/zh/integrate/protocol/turns#turnrow) |
-| `TurnStartParams` | [一轮与条目](/zh/integrate/protocol/turns#turn-start) |
-| `TurnStatus` | [一轮与条目](/zh/integrate/protocol/turns#一轮的状态) |
-| `TurnSteerParams` | [一轮与条目](/zh/integrate/protocol/turns#turn-steer) |
-| `TurnSteerResult` | [一轮与条目](/zh/integrate/protocol/turns#turn-steer) |
-| `Usage` | [一轮与条目](/zh/integrate/protocol/turns#usage) |
-| `UserInput` | [一轮与条目](/zh/integrate/protocol/turns#userinput) |
+| `TurnStartParams` | [turn/start](/zh/integrate/protocol/turns#turn-start) |
+| `TurnSteerParams`、`TurnSteerResult` | [turn/steer](/zh/integrate/protocol/turns#turn-steer) |
+| `TurnInterruptParams` | [turn/interrupt](/zh/integrate/protocol/turns#turn-interrupt) |
+| `AttachmentReadParams`、`AttachmentReadResult` | [attachment/read](/zh/integrate/protocol/turns#attachment-read) |
+| `TurnStatus` | [一轮的状态](/zh/integrate/protocol/turns#一轮的状态) |
+| `TurnRow`、`TurnResult`、`AgentRole` | [TurnRow](/zh/integrate/protocol/turns#turnrow) |
+| `Usage` | [Usage](/zh/integrate/protocol/turns#usage)；一轮和一次模型回复各带一份 |
+| `ItemKind`、`ItemStatus` | [条目](/zh/integrate/protocol/turns#条目) |
+| `ItemRow` | [ItemRow](/zh/integrate/protocol/turns#itemrow) |
+| `Result`、`Artifact` | [Result 和 Artifact](/zh/integrate/protocol/turns#result-和-artifact) |
+| `Attachment` | [Attachment](/zh/integrate/protocol/turns#attachment) |
+| `ResponseRow` | [ResponseRow](/zh/integrate/protocol/turns#responserow) |
+| `ContextStats`、`MemoryStats` | [ContextStats](/zh/integrate/protocol/turns#contextstats) |
+| `UserInput` | [UserInput](/zh/integrate/protocol/turns#userinput)；条目上等回答时的内容 |
+| `TurnChangedNotification` | [turn/changed](/zh/integrate/protocol/turns#turn-changed) |
+| `ItemChangedNotification` | [item/changed](/zh/integrate/protocol/turns#item-changed) |
+| `DeltaNotification` | [通知的包装](/zh/integrate/protocol/turns#通知的包装) |
+| `ErrorNotification` | [error](/zh/integrate/protocol/turns#error) |
 
 ## 审批与提问
 
 | 类型 | 见 |
 |---|---|
-| `Approval` | [审批与提问](/zh/integrate/protocol/approvals#approval) |
-| `ApprovalRequestParams` | [审批与提问](/zh/integrate/protocol/approvals#approvalrequestparams) |
-| `ApprovalResponse` | [审批与提问](/zh/integrate/protocol/approvals#approvalresponse) |
-| `Decision` | [审批与提问](/zh/integrate/protocol/approvals#decision) |
-| `FileChange` | [审批与提问](/zh/integrate/protocol/approvals#filechange) |
-| `Input` | [审批与提问](/zh/integrate/protocol/approvals#input) |
-| `PreparedExecution` | [审批与提问](/zh/integrate/protocol/approvals#preparedexecution) |
-| `UserInputAnswer` | [审批与提问](/zh/integrate/protocol/approvals#userinputresponse) |
-| `UserInputAnswers` | [审批与提问](/zh/integrate/protocol/approvals#userinputresponse) |
-| `UserInputOption` | [审批与提问](/zh/integrate/protocol/approvals#userinputoption) |
-| `UserInputQuestion` | [审批与提问](/zh/integrate/protocol/approvals#userinputquestion) |
-| `UserInputRequest` | [审批与提问](/zh/integrate/protocol/approvals#userinputrequestparams) |
-| `UserInputRequestParams` | [审批与提问](/zh/integrate/protocol/approvals#userinputrequestparams) |
-| `UserInputResponse` | [审批与提问](/zh/integrate/protocol/approvals#userinputresponse) |
+| `ApprovalRequestParams`、`Approval` | [ApprovalRequestParams](/zh/integrate/protocol/approvals#approvalrequestparams) |
+| `ApprovalResponse`、`Decision` | [ApprovalResponse](/zh/integrate/protocol/approvals#approvalresponse) |
+| `FileChange`、`PreparedExecution`、`Input` | [审批的内容](/zh/integrate/protocol/approvals#filechange) |
+| `UserInputRequestParams`、`UserInputRequest` | [UserInputRequestParams](/zh/integrate/protocol/approvals#userinputrequestparams) |
+| `UserInputQuestion`、`UserInputOption` | [UserInputQuestion](/zh/integrate/protocol/approvals#userinputquestion) |
+| `UserInputResponse`、`UserInputAnswer`、`UserInputAnswers` | [UserInputResponse](/zh/integrate/protocol/approvals#userinputresponse) |
 
 ## 权限
 
 | 类型 | 见 |
 |---|---|
-| `ApprovalPolicy` | [权限](/zh/integrate/protocol/permissions#approvalpolicy) |
-| `PermissionRules` | [权限](/zh/integrate/protocol/permissions#permissionrules) |
-| `PermissionSettings` | [权限](/zh/integrate/protocol/permissions#permissionsettings) |
-| `SettingsPermissionsParams` | [权限](/zh/integrate/protocol/permissions) |
-| `ThreadPermissionsParams` | [权限](/zh/integrate/protocol/permissions) |
-| `WorkspacePermissionsParams` | [权限](/zh/integrate/protocol/permissions) |
+| `ApprovalPolicy` | [ApprovalPolicy](/zh/integrate/protocol/permissions#approvalpolicy) |
+| `PermissionRules` | [PermissionRules](/zh/integrate/protocol/permissions#permissionrules) |
+| `PermissionSettings` | [PermissionSettings](/zh/integrate/protocol/permissions#permissionsettings) |
+| `ThreadPermissionsParams`、`WorkspacePermissionsParams`、`SettingsPermissionsParams` | [权限](/zh/integrate/protocol/permissions) |
 
 ## 工作区与执行环境
 
 | 类型 | 见 |
 |---|---|
-| `EnvironmentAddParams` | [工作区与执行环境](/zh/integrate/protocol/workspaces) |
-| `EnvironmentChangedNotification` | [工作区与执行环境](/zh/integrate/protocol/workspaces) |
-| `EnvironmentDeleteParams` | [工作区与执行环境](/zh/integrate/protocol/workspaces) |
-| `EnvironmentKind` | [工作区与执行环境](/zh/integrate/protocol/workspaces#environmentkind) |
-| `EnvironmentListResult` | [工作区与执行环境](/zh/integrate/protocol/workspaces) |
-| `EnvironmentRenameParams` | [工作区与执行环境](/zh/integrate/protocol/workspaces) |
-| `EnvironmentResult` | [工作区与执行环境](/zh/integrate/protocol/workspaces) |
-| `EnvironmentRow` | [工作区与执行环境](/zh/integrate/protocol/workspaces#environmentrow) |
-| `WorkspaceAddParams` | [工作区与执行环境](/zh/integrate/protocol/workspaces) |
-| `WorkspaceArchiveParams` | [工作区与执行环境](/zh/integrate/protocol/workspaces) |
-| `WorkspaceListResult` | [工作区与执行环境](/zh/integrate/protocol/workspaces) |
-| `WorkspaceMoveParams` | [工作区与执行环境](/zh/integrate/protocol/workspaces) |
-| `WorkspaceRenameParams` | [工作区与执行环境](/zh/integrate/protocol/workspaces) |
-| `WorkspaceResult` | [工作区与执行环境](/zh/integrate/protocol/workspaces)；也是 `workspace/changed` 的载荷 |
-| `WorkspaceRow` | [工作区与执行环境](/zh/integrate/protocol/workspaces#workspacerow) |
+| `WorkspaceAddParams`、`WorkspaceRenameParams`、`WorkspaceMoveParams`、`WorkspaceArchiveParams`、`WorkspaceListResult`、`WorkspaceResult` | [工作区的方法](/zh/integrate/protocol/workspaces#工作区的方法) |
+| `WorkspaceRow` | [WorkspaceRow](/zh/integrate/protocol/workspaces#workspacerow) |
+| `WorkspaceKind` | [工作区的种类](/zh/integrate/protocol/workspaces#工作区的种类) |
+| `WorkspaceSetKindParams` | [workspace/setKind](/zh/integrate/protocol/workspaces#workspace-setkind) |
+| `WorkspaceInstructionsParams` | [workspace/updateInstructions](/zh/integrate/protocol/workspaces#workspace-updateinstructions) |
+| `WorkspaceProvidersParams`、`WorkspaceProviders` | [workspace/updateProviders](/zh/integrate/protocol/workspaces#workspace-updateproviders)；`WorkspaceProviders` 是 `{enabled?, disabled?}` |
+| `EnvironmentAddParams`、`EnvironmentRenameParams`、`EnvironmentDeleteParams`、`EnvironmentResult`、`EnvironmentListResult`、`EnvironmentChangedNotification` | [执行环境的方法](/zh/integrate/protocol/workspaces#执行环境的方法) |
+| `EnvironmentRow` | [EnvironmentRow](/zh/integrate/protocol/workspaces#environmentrow) |
+| `EnvironmentKind` | [EnvironmentKind](/zh/integrate/protocol/workspaces#environmentkind) |
 
 ## 模型、工具与 MCP
 
 | 类型 | 见 |
 |---|---|
-| `Annotations` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools#annotations) |
-| `CommandOutput` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools#commandoutput) |
-| `FileOutput` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools#fileoutput) |
-| `Glob` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools#glob-和-globoutput) |
-| `GlobOutput` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools#glob-和-globoutput) |
-| `Grep` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools#grep、grepoutput、grepfile、grepline) |
-| `GrepFile` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools#grep、grepoutput、grepfile、grepline) |
-| `GrepLine` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools#grep、grepoutput、grepfile、grepline) |
-| `GrepOutput` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools#grep、grepoutput、grepfile、grepline) |
-| `MCPServer` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools) |
-| `MCPServerChangedNotification` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools) |
-| `MCPServerConfig` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools)；也是 `mcpServer/set` 的参数和结果 |
-| `MCPServerDeleteParams` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools) |
-| `MCPServerListResult` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools) |
-| `MCPServerStatus` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools) |
-| `Model` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools#model) |
-| `ModelListResult` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools) |
-| `Plan` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools#plan-和-planstep) |
-| `PlanStep` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools#plan-和-planstep) |
-| `PlanStepStatus` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools#plan-和-planstep) |
-| `ReadFile` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools#readfile-和-readfileoutput) |
-| `ReadFileOutput` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools#readfile-和-readfileoutput) |
-| `SubagentCall` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools#subagentcall) |
-| `SubagentLaunched` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools)；子 agent 工具的输出，也见[子 agent 会话](/zh/integrate/protocol/threads#子-agent-会话) |
-| `ToolDescriptor` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools#tooldescriptor) |
-| `ToolListResult` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools) |
+| `Model`、`ModelListResult` | [model/list](/zh/integrate/protocol/models-tools#model-list) |
+| `ToolDescriptor`、`ToolListResult` | [tool/list](/zh/integrate/protocol/models-tools#tool-list) |
+| `MCPServerConfig` | [mcpServer/set](/zh/integrate/protocol/models-tools#mcpserver-set) |
+| `MCPServer`、`MCPServerStatus`、`MCPServerListResult`、`MCPServerDeleteParams`、`MCPServerChangedNotification` | [模型、工具与 MCP](/zh/integrate/protocol/models-tools) |
+| `Annotations`、`Plan`、`PlanStep`、`PlanStepStatus`、`CommandOutput`、`FileOutput`、`ReadFile`、`ReadFileOutput`、`Glob`、`GlobOutput`、`Grep`、`GrepOutput`、`GrepFile`、`GrepLine` | [内置工具的参数和输出](/zh/integrate/protocol/models-tools#内置工具的参数和输出) |
+| `SubagentCall` | [SubagentCall](/zh/integrate/protocol/models-tools#subagentcall) |
+| `SubagentLaunched` | [SubagentLaunched](/zh/integrate/protocol/models-tools#subagentlaunched) |
 
 ## 定时任务
 
 | 类型 | 见 |
 |---|---|
-| `CronChangedNotification` | [定时任务](/zh/integrate/protocol/cron) |
-| `CronCreateParams` | [定时任务](/zh/integrate/protocol/cron) |
-| `CronDeleteParams` | [定时任务](/zh/integrate/protocol/cron) |
-| `CronJobRow` | [定时任务](/zh/integrate/protocol/cron) |
-| `CronListParams` | [定时任务](/zh/integrate/protocol/cron) |
-| `CronListResult` | [定时任务](/zh/integrate/protocol/cron) |
-| `CronPauseParams` | [定时任务](/zh/integrate/protocol/cron) |
-| `CronResult` | [定时任务](/zh/integrate/protocol/cron) |
+| `CronCreateParams`、`CronPauseParams`、`CronDeleteParams`、`CronJobRow`、`CronListParams`、`CronListResult`、`CronResult`、`CronChangedNotification` | [定时任务](/zh/integrate/protocol/cron) |
 
 ## 记忆
 
+`Kind`、`Scope`、`Status`、`FailureCode` 四个枚举属记忆，契约名没有 `Memory` 前缀。
+
 | 类型 | 见 |
 |---|---|
-| `FailureCode` | [记忆](/zh/integrate/protocol/memory)；记忆提取失败的原因代码；名字没有前缀 |
-| `Kind` | [记忆](/zh/integrate/protocol/memory)；记忆的种类；名字没有前缀 |
-| `MemoryFailure` | [记忆](/zh/integrate/protocol/memory) |
-| `MemoryForgetParams` | [记忆](/zh/integrate/protocol/memory) |
-| `MemoryListParams` | [记忆](/zh/integrate/protocol/memory) |
-| `MemoryListResult` | [记忆](/zh/integrate/protocol/memory) |
-| `MemoryMoveParams` | [记忆](/zh/integrate/protocol/memory) |
-| `MemoryReference` | [记忆](/zh/integrate/protocol/memory#memoryreference) |
-| `MemoryResult` | [记忆](/zh/integrate/protocol/memory)；也是 `memory/changed` 的载荷 |
-| `MemoryRow` | [记忆](/zh/integrate/protocol/memory#memoryrow) |
-| `MemorySkip` | [记忆](/zh/integrate/protocol/memory) |
-| `MemorySource` | [记忆](/zh/integrate/protocol/memory#memorysource) |
-| `MemoryStatus` | [记忆](/zh/integrate/protocol/memory#memorystatus) |
-| `MemoryUpdateParams` | [记忆](/zh/integrate/protocol/memory) |
-| `Scope` | [记忆](/zh/integrate/protocol/memory)；记忆的范围；名字没有前缀 |
-| `Status` | [记忆](/zh/integrate/protocol/memory)；记忆的状态；名字没有前缀 |
+| `MemoryRow` | [MemoryRow](/zh/integrate/protocol/memory#memoryrow) |
+| `MemoryReference` | [MemoryReference](/zh/integrate/protocol/memory#memoryreference) |
+| `MemorySource` | [MemorySource](/zh/integrate/protocol/memory#memorysource) |
+| `MemoryStatus` | [MemoryStatus](/zh/integrate/protocol/memory#memorystatus) |
+| `MemoryFailure`、`MemorySkip`、`MemoryForgetParams`、`MemoryListParams`、`MemoryListResult`、`MemoryMoveParams`、`MemoryResult`、`MemoryUpdateParams`、`Kind`、`Scope`、`Status`、`FailureCode` | [记忆](/zh/integrate/protocol/memory) |
 
 ## 搜索
 
 | 类型 | 见 |
 |---|---|
-| `MessageHit` | [搜索](/zh/integrate/protocol/search#messagehit) |
 | `SearchParams` | [搜索](/zh/integrate/protocol/search) |
-| `SearchResult` | [搜索](/zh/integrate/protocol/search#searchresult) |
+| `SearchResult` | [SearchResult](/zh/integrate/protocol/search#searchresult) |
+| `MessageHit` | [MessageHit](/zh/integrate/protocol/search#messagehit) |
 
 ## 设置
 
@@ -196,3 +129,48 @@ v0.12.1 的契约有 129 个类型。之后删掉的有 `AttachmentKind`、`Awai
 |---|---|
 | `SettingsRow` | [设置](/zh/integrate/protocol/settings#类型-settingsrow)；也是 `settings/changed` 的载荷 |
 | `SettingsUpdateParams` | [设置](/zh/integrate/protocol/settings) |
+
+## 待办
+
+| 类型 | 见 |
+|---|---|
+| `TodoListParams`、`TodoListResult` | [todo/list](/zh/integrate/protocol/todos#todo-list) |
+| `TodoAddParams` | [todo/add](/zh/integrate/protocol/todos#todo-add) |
+| `TodoUpdateParams` | [todo/update](/zh/integrate/protocol/todos#todo-update) |
+| `TodoResult` | [todo/changed](/zh/integrate/protocol/todos#todo-changed)；`todo/add`、`todo/update` 的结果 |
+| `TodoRow` | [TodoRow](/zh/integrate/protocol/todos#todorow)；`id` 是整数，其他 ID 是字符串 |
+| `TodoStatus` | [概念与状态](/zh/integrate/protocol/todos#概念与状态) |
+
+## 用量
+
+| 类型 | 见 |
+|---|---|
+| `UsageQueryParams`、`UsageQueryResult` | [usage/query](/zh/integrate/protocol/usage#usage-query) |
+| `UsageRow` | [一行是什么](/zh/integrate/protocol/usage#一行是什么) |
+| `UsageGroup` | [三种分组](/zh/integrate/protocol/usage#三种分组) |
+
+## 中枢工具
+
+这十六个类型是 hub 工具的参数和输出，只出现在工具描述里，不经过网关方法。工具本身见[中枢](/zh/engine/hub#工具)。
+
+| 类型 | 见 |
+|---|---|
+| `HubWorkspaces`、`HubWorkspace` | [list_workspaces](/zh/engine/hub#工具) |
+| `HubStartConversation`、`HubMessageSent` | [start_conversation](/zh/engine/hub#工具) |
+| `HubSendMessage` | [send_message](/zh/engine/hub#工具) |
+| `HubListConversations`、`HubConversations`、`HubConversation` | [list_conversations](/zh/engine/hub#工具) |
+| `HubReadConversation`、`HubTurns`、`HubTurn`、`HubMessage`、`HubTurnEnded`、`End` | [read_conversation](/zh/engine/hub#工具)；`End` 是轮次怎么结束：`completed`、`failed`、`interrupted` |
+| `HubTodo`、`HubTodoStatus` | [add_todo、update_todo、list_todos](/zh/engine/hub#工具)；比 `TodoRow` 窄，字段名是 `workspace`、`conversation`、`created` |
+
+::: info 演进
+这一页原先列 134 个类型。中枢的十五个 `Hub*`、待办的七个、用量的四个、工作区的五个和 `End` 后来进入契约，共 166 个；旧的 `HubAddTodo`、`HubListTodos`、`HubUpdateTodo`、`HubTodos` 四个已不在契约里。
+:::
+
+## 代码位置
+
+| 仓库 | 路径 | 职责 |
+|---|---|---|
+| ollupi | `gateway/protocol.go` | 方法、通知、参数和结果类型 |
+| ollupi | `gateway/wire.go` | 发给客户端的行：`ThreadRow`、`ItemRow`、`WorkspaceRow`、`TodoRow` 等 |
+| ollupi | `gateway/schema_test.go` | `defNames` 改名表；生成 `protocol.schema.json` 并校验枚举 |
+| ollupi | `tool/builtin/hub/hub.go` | hub 工具的参数和输出 |

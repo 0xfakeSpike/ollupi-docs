@@ -17,9 +17,9 @@
 代价：会话进行中新提炼的记忆要到下一次压缩才进快照；放不下快照的记忆要靠模型主动搜，而搜索是词匹配，不是语义检索；提炼是额外的模型调用，不属于任何轮次，也不记用量；校验从严，一轮坏输出会反复重试，第 10 次失败后这一轮被跳过，其中的信息就不会再被学到。
 
 ::: info 演进
-- 召回时机：最早每次迭代都召回，`635fdc3` 改成每轮第一次模型调用前召回，`db21f76` 改成每个会话一份快照、压缩后刷新。
-- 三层范围来自 `0166926`。
-- 提炼请求曾把原始个人数据发出去，`31f9092` 让它和普通模型调用一样先脱敏；记忆原来有一道自己的凭据过滤，`831b554` 删掉了。
+- 召回时机：最早每次迭代都召回，`c14c9da` 改成每轮第一次模型调用前召回，`e5dbf12` 改成每个会话一份快照、压缩后刷新。
+- 三层范围来自 `cce6f5f`。
+- 提炼请求曾把原始个人数据发出去，`aec429e` 让它和普通模型调用一样先脱敏；记忆原来有一道自己的凭据过滤，`8caf728` 删掉了。
 :::
 
 ## 两个开关
@@ -37,7 +37,7 @@
 "不提供 `memory_search`"是靠权限层做的：`memory` 关掉时，用户这一层的 `Layer()` 把 `memory` 提供者整个去掉。"被越过"由提炼做：它读到用户的 `memory` 或 `learn` 关着时，把游标直接推过这些已结束的轮次。所以关掉期间结束的轮次永远不会被学到；重新打开后，只学打开之后结束的轮次。
 
 ::: info 演进
-原来两件事是宿主配置 `memory.Options` 里的两个开关：`Generate` 管提炼、`Use` 管快照和 `memory_search`。`1ae27b2` 把开关搬进每个用户的设置，只剩一个 `memory`；`1681a3d` 加了 `learn`，让用户能停止学习而继续用已有的记忆。
+原来两件事是宿主配置 `memory.Options` 里的两个开关：`Generate` 管提炼、`Use` 管快照和 `memory_search`。`3580e6f` 把开关搬进每个用户的设置，只剩一个 `memory`；`e451d91` 加了 `learn`，让用户能停止学习而继续用已有的记忆。
 :::
 
 ## 类型与范围
@@ -59,6 +59,10 @@
 一个会话自己的范围由 `memory.Local(workspace)` 算出：有工作区就是那个工作区，没有就是 `general`；全局范围是 `memory.GlobalPlace`。
 
 提炼时只有 `preference` 和 `fact` 能写成全局。默认写到这一轮所在的范围，模型明确写 `"scope":"global"` 才放到全局；其他类型的 `add` 写了全局时被改回本地。用户手动移动不受这条限制。
+
+### 与技能的边界
+
+技能（skill）是用户按角色装在 `host.Config.SkillsDir` 下的文件和资源，列在系统提示词的 `# AVAILABLE SKILLS` 里，模型用 `activate_skill` 载入；记忆是模型从轮次里提炼出来的笔记，模型只有 `memory_search` 一条读的路径，没有写记忆的工具。`procedure` 类记忆是文字流程，不会变成技能，也不会写进技能目录——对工作区工具来说那个目录是只读的。技能的完整机制见[技能与 MCP](/zh/engine/skills-mcp)。
 
 ## 表结构
 
@@ -208,7 +212,7 @@ flowchart TD
 一轮的所有片都成功后，`commit` 在一个事务里写入改动和新的游标。写之前重读一遍记忆：提炼期间被用户改过或删掉的条目不写，新建的条目如果主题已被占用也不写。没有证据的轮次也走 `commit`，只推进游标。
 
 ::: info 演进
-原来提炼每分钟按游标取一批，一批最多 24 条证据，放不下预算就减半，游标落在条目上，`skipped` 记跳过的条目数。`a1fcbb9` 改成听 feed、一次学一整轮：一轮的证据按预算切片、依次调用，整轮在一个事务里写入，游标和 `skipped` 都按轮次算；用量也不再报告。
+原来提炼每分钟按游标取一批，一批最多 24 条证据，放不下预算就减半，游标落在条目上，`skipped` 记跳过的条目数。`50c35eb` 改成听 feed、一次学一整轮：一轮的证据按预算切片、依次调用，整轮在一个事务里写入，游标和 `skipped` 都按轮次算；用量也不再报告。
 :::
 
 ## 用户编辑保护
@@ -237,7 +241,7 @@ flowchart TD
 
 `run` 在每次调用模型之前检查（`Runner.recall`）：
 
-1. 轮次的角色要召回（完整主 agent、精简主 agent、通用子 agent 召回，浏览器子 agent 不召回），用户的 `memory` 要开着。
+1. 轮次的角色要召回（`Role.Recalls`，`agent` 包里的每个角色都是 `true`，从主 agent 到浏览器子 agent），用户的 `memory` 要开着。
 2. 从这个会话的条目往回找：先遇到 `memoryContext` 就不再召回；先遇到压缩（`contextCompaction`）或找到头都没有，就召回。
 3. 召回读全局和这个会话范围的记忆，算出文本；文本不为空才追加一条 `memoryContext` 条目，然后下一步再调用模型。
 
@@ -246,7 +250,7 @@ flowchart TD
 预算 `MemoryBudget` 是 `min(4000, 输入预算的 8%)` token。`memory.Recall` 这样选：
 
 1. 只留 `active` 的记忆。
-2. 按 `kind` 排序：`preference`、`decision`、`procedure`、`fact`，同类型新的在前。
+2. 按 `kind` 排序：`preference`、`decision`、`procedure`、`fact`（`recallKinds` 里越靠后分越高，按分数从高到低），同类型新的在前。
 3. 预算先扣掉引言、标题和结尾提示的估算。
 4. 全局先按剩余预算的一半试一次，算出占用。
 5. 本地用剩下的预算。
@@ -273,7 +277,7 @@ flowchart TD
 协议的 `search` 方法（`app.Search`）用同样的切词和打分查记忆：带 `workspaceId` 时查全局记忆加这个工作区的记忆，不带时查用户的全部记忆。全局搜索的其余部分见[搜索](/zh/engine/search)。
 
 ::: info 演进
-`d110977` 之后带 `workspaceId` 的搜索只查这个工作区，不含全局记忆；`88fee2f` 把全局记忆加回来。
+`b9b330f` 之后带 `workspaceId` 的搜索只查这个工作区，不含全局记忆；`8328c82` 把全局记忆加回来。
 :::
 
 ## 失败重试和跳过
@@ -305,7 +309,7 @@ flowchart TD
 - **关掉期间的轮次永远学不到。** `memory` 或 `learn` 关着时游标越过结束的轮次，重新打开不补学。见[两个开关](#两个开关)。
 - **提炼按用户串行。** 脏用户一个一个处理，一个用户要学完他积压的全部轮次才轮到下一个，每次模型调用最长 2 分钟。按代码推断，一个积压很多的用户会让其他用户的提炼等很久；用户数多时的提炼吞吐没有测过。
 - **库出错会停下整个宿主。** 提炼读写库出错时 `Extractor.Run` 返回错误，它和调度器、定时任务在 `Host.Run` 的同一个 errgroup 里，按代码推断会让 `Host.Run` 整体返回。
-- **提炼的用量没有记录。** 提炼不属于任何轮次，也不报告用量。
+- **提炼的用量没有记录。** 提炼不属于任何轮次，也不写 `ModelResponded` 条目，所以不进 `usage` 表，见[用量](/zh/engine/models#用量)。
 - **检索是词匹配。** 快照之外的记忆靠 `searchTerms` 切词后的子串匹配和固定权重排序，没有语义检索；同义词、改写过的说法查不到；单个汉字切不出词，查不到记忆。
 - **坏轮次最终会被跳过。** 同一轮连续失败 10 次后游标越过它，其中的信息不会再被学到，只在 `skipped` 和 `lastSkip` 里留下记录。见[失败重试和跳过](#失败重试和跳过)。
 - **用户改过的条目不会被模型更新。** 这是有意的保护，代价是用户改过的记忆过时了，提炼也不能改它或退休它，只能由用户处理。
@@ -315,19 +319,20 @@ flowchart TD
 
 ## 代码位置
 
-| 路径 | 职责 |
-| --- | --- |
-| `memory/memory.go` | `Place`、`Local`、`GlobalPlace`、类型与状态、用户的编辑、移动、遗忘 |
-| `memory/extract.go` | 提示词、取证据、证据上限、切片、预算内组装、校验操作、合并 |
-| `memory/recall.go` | 快照、排序、切词、打分、`Search` |
-| `memory/state.go` | 游标、失败、重试和跳过 |
-| `extract/extract.go` | 提炼器：听 feed、按用户处理、开关、调用模型、事务内写入 |
-| `tool/builtin/memory/memory.go` | `memory_search` |
-| `run/model.go` | 调用模型前召回、写 `memoryContext` 条目 |
-| `prompt/transcript.go`、`prompt/window.go` | 快照放在消息最前面、`MemoryBudget`、上下文统计 |
-| `account/account.go` | `Settings.Memory`、`Settings.Learn`、关掉记忆时去掉 `memory` 提供者 |
-| `app/memory.go`、`app/settings.go` | 记忆的列出、状态、编辑、移动、遗忘、全局搜索；开关的修改 |
-| `store/sqlite/memories.go` | `memories`、`memory_state` 两张表的读写，已结束轮次的读取 |
-| `store/sqlite/migrations/0001_init.sql`、`0003_learn.sql` | 表结构；`settings.learn` |
-| `host/host.go` | `Config.Memory`、创建提炼器 |
-| `gateway/owned.go`、`gateway/wire.go` | `memory/*` 方法、`MemoryStatus`、`settings/update` |
+| 仓库 | 路径 | 职责 |
+| --- | --- | --- |
+| ollupi | `memory/memory.go` | `Place`、`Local`、`GlobalPlace`、类型与状态、用户的编辑、移动、遗忘 |
+| ollupi | `memory/extract.go` | 提示词、取证据、证据上限、切片、预算内组装、校验操作、合并 |
+| ollupi | `memory/recall.go` | 快照、`recallKinds`、切词、打分、`Search` |
+| ollupi | `memory/state.go` | 游标、失败、重试和跳过 |
+| ollupi | `extract/extract.go` | 提炼器：听 feed、按用户处理、开关、调用模型、事务内写入 |
+| ollupi | `tool/builtin/memory/memory.go` | `memory_search` |
+| ollupi | `run/model.go` | 调用模型前召回、写 `memoryContext` 条目 |
+| ollupi | `prompt/transcript.go`、`prompt/window.go` | 快照放在消息最前面、`MemoryBudget`、上下文统计 |
+| ollupi | `agent/agent.go` | 角色的 `Recalls` |
+| ollupi | `account/account.go` | `Settings.Memory`、`Settings.Learn`、关掉记忆时去掉 `memory` 提供者 |
+| ollupi | `app/memory.go`、`app/settings.go` | 记忆的列出、状态、编辑、移动、遗忘、全局搜索；开关的修改 |
+| ollupi | `store/sqlite/memories.go` | `memories`、`memory_state` 两张表的读写，已结束轮次的读取 |
+| ollupi | `store/sqlite/migrations/0001_init.sql`、`0003_learn.sql` | 表结构；`settings.learn` |
+| ollupi | `host/host.go` | `Config.Memory`、创建提炼器 |
+| ollupi | `gateway/owned.go`、`gateway/wire.go` | `memory/*` 方法、`MemoryStatus`、`settings/update` |

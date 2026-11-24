@@ -1,14 +1,14 @@
 # 模型、工具与 MCP
 
-客户端用 `model/list`、`tool/list`、`mcpServer/list` 知道这个用户能选哪些模型、agent 手上有哪些工具、他的 MCP 服务器配了什么、连上了没有，用 `mcpServer/set`、`mcpServer/delete` 增删改他的 MCP 服务器，用 `mcpServer/changed` 跟上。会话里的每条工具调用条目（item）按提供方和工具名解读，其中 10 个内置工具的参数或输出在契约里有类型，其余都是通用 JSON。模型怎样调用、工具怎样执行，见[模型接入](/zh/engine/models)、[工具](/zh/engine/tools)和[技能与 MCP](/zh/engine/skills-mcp)。
+客户端用 `model/list`、`tool/list`、`mcpServer/list` 知道这个用户能选哪些模型、agent 手上有哪些工具、他的 MCP 服务器配了什么、连上了没有，用 `mcpServer/set`、`mcpServer/delete` 增删改他的 MCP 服务器，用 `mcpServer/changed` 跟上。会话里的每条工具调用条目（item）按提供方和工具名解读，其中 21 个内置工具的参数或输出在契约里有类型，其余都是通用 JSON。模型怎样调用、工具怎样执行，见[模型接入](/zh/engine/models)、[工具](/zh/engine/tools)和[技能与 MCP](/zh/engine/skills-mcp)。
 
-本页按引擎 v0.17.2 写。示例来自对 v0.17.1 网关的脚本试验（假模型 `m`、单用户、本机沙箱），省略了 `"jsonrpc":"2.0"`。
+示例来自对本机网关的脚本试验（假模型 `m`、单用户、本机沙箱），省略了 `"jsonrpc":"2.0"`。
 
 ## 概念与状态
 
 **模型**由宿主（host）在 `host.Config.Models` 里配好，所有用户看到同一份列表。每个模型绑一条连接（connection），一条连接只给一个模型用（`host.New` 启动时检查，重复时报 `connection "…" is listed twice`），所以客户端用 `connection` 指代模型。列表的第一个是默认模型。一轮（turn）排队时选定模型并记进 `TurnRow.model`，这一轮之后不再改变，见[一轮与条目](/zh/integrate/protocol/turns)。
 
-**工具**按用户分：宿主内置的提供方、宿主在 `host.Config.Tools` 里加的提供方（比如工作区工具、网页读取），加上这个用户自己的 MCP 服务器，合成一张注册表。每个工具属于一个提供方（provider），条目和工具列表里都带着它的 id。注册表要求提供方 id 和工具名都唯一，重复时这个用户的注册表建不出来。
+**工具**按用户分：引擎内置的提供方、宿主在 `host.Config.Tools` 里加的提供方（比如工作区工具），加上这个用户自己的 MCP 服务器，合成一张注册表。每个工具属于一个提供方（provider），条目和工具列表里都带着它的 id。注册表要求提供方 id 和工具名都唯一，重复时这个用户的注册表建不出来。
 
 **MCP 服务器**按用户存在库里，每行是一份 `MCPServerConfig`：名字，加一个 stdio 命令或一个 HTTP 地址。服务器名就是它的提供方 id，它的工具名形如 `<服务器名>__<工具名>`。服务器在这个用户第一次需要工具时启动，stdio 服务器在用户自己的沙箱（`Box`）里运行，HTTP 服务器经这个 Box 的网络出去；连不上的服务器只是被跳过，它的工具不出现，状态里记下原因。增删改任何一个服务器后，这个用户的服务器全部关掉，下次需要时重新连。
 
@@ -21,7 +21,7 @@
 因为内置工具名不含 `__`，而 MCP 工具名总含 `__`，客户端只看工具名就能分出是不是 MCP 工具；提供方另见条目的 `server`。
 
 ::: info 演进
-v0.12.1 的 MCP 服务器由宿主在配置里给出，所有用户共用，协议里只能看状态。`1ae27b2` 把服务器按用户存进数据库，加了 `mcpServer/set`、`mcpServer/delete` 和 `mcpServer/changed`，`mcpServer/list` 改成同时给配置和状态；环境变量和请求头的值按原样使用，不再展开 `${NAME}`。
+v0.12.1 的 MCP 服务器由宿主在配置里给出，所有用户共用，协议里只能看状态。`3580e6f` 把服务器按用户存进数据库，加了 `mcpServer/set`、`mcpServer/delete` 和 `mcpServer/changed`，`mcpServer/list` 改成同时给配置和状态；环境变量和请求头的值按原样使用，不再展开 `${NAME}`。
 :::
 
 ## 典型流程
@@ -174,25 +174,30 @@ invalid message: connection "nope" is unavailable; restore it in Settings or sel
 
 ## 内置工具的参数和输出
 
-契约的 `builtinTools` 段给 10 个内置工具的参数（`arguments`，对应条目里 `arguments` 文本解析之后的对象）和输出（`output`，对应条目的 `result.output`）。只收界面要专门显示、用户要参与的工具：计划、两种子 agent、提问、命令和五个文件工具。
+契约的 `builtinTools` 段给 21 个内置工具的参数（`arguments`，对应条目里 `arguments` 文本解析之后的对象）和输出（`output`，对应条目的 `result.output`）。只收界面要专门显示、用户要参与的工具：计划、八种子 agent、提问、命令、五个文件工具，以及中枢的五个会话工具。
 
-其余工具调用，包括定时任务、`memory_search`、技能、`read_tool_output`、`web_fetch`、`claude`、MCP 和宿主自己的工具，不进契约：客户端把它们当通用调用，显示参数和输出的原始 JSON，不要依赖它们的结构。这些输出是写给模型的，引擎可以随时为模型调整。
+其余工具调用，包括定时任务、`memory_search`、技能、`read_tool_output`、`web_fetch`、`claude`、中枢的三个待办工具、MCP 和宿主自己的工具，不进契约：客户端把它们当通用调用，显示参数和输出的原始 JSON，不要依赖它们的结构。这些输出是写给模型的，引擎可以随时为模型调整。
 
 | 工具 | 提供方 | 参数 | 输出 |
 |---|---|---|---|
 | `update_plan` | `plan` | [`Plan`](#plan-和-planstep) | 不进契约，实际是字符串 `Plan updated` |
-| `general-sub-agent`、`browser-sub-agent` | `subagents` | [`SubagentCall`](#subagentcall) | [`SubagentLaunched`](#subagentlaunched) |
+| `general-sub-agent`、`browser-sub-agent`、`design-sub-agent`、`codebase-sub-agent`、`frontend-sub-agent`、`backend-sub-agent`、`writing-sub-agent`、`research-sub-agent` | `subagents` | [`SubagentCall`](#subagentcall) | [`SubagentLaunched`](#subagentlaunched) |
 | `request_user_input` | `user_input` | `UserInputRequest` | `UserInputAnswers`，见[审批与提问](/zh/integrate/protocol/approvals) |
 | `run_command` | `workspace` | 不进契约，审批时看 `preparedExecution` | [`CommandOutput`](#commandoutput) |
 | `edit_file`、`write_file` | `workspace` | 不进契约，审批时看 `preparedExecution` | [`FileOutput`](#fileoutput) |
 | `read_file` | `workspace` | `ReadFile` | `ReadFileOutput` |
 | `glob` | `workspace` | `Glob` | `GlobOutput` |
 | `grep` | `workspace` | `Grep` | `GrepOutput` |
+| `list_workspaces` | `hub` | 无参数 | `HubWorkspaces` |
+| `start_conversation` | `hub` | `HubStartConversation` | `HubMessageSent` |
+| `send_message` | `hub` | `HubSendMessage` | `HubMessageSent` |
+| `list_conversations` | `hub` | `HubListConversations` | `HubConversations` |
+| `read_conversation` | `hub` | `HubReadConversation` | `HubTurns` |
 
-`builtinTools` 按工具名作键。条目里的 `arguments` 是 JSON **文本**，要客户端自己解析；`result.output` 是工具返回的任意 JSON。
+中枢工具只有宿主开了 hub 时才有，而且只有 hub 工作区里的顶层会话（`hub-main-agent`）能调用，类型的字段见[中枢的工具](/zh/engine/hub#工具)。`builtinTools` 按工具名作键。条目里的 `arguments` 是 JSON **文本**，要客户端自己解析；`result.output` 是工具返回的任意 JSON。
 
 ::: info 演进
-v0.12.1 只有一个子 agent 工具 `Agent`，输出不进契约。`d18618f` 把子 agent 工具按角色命名为 `general-sub-agent`、`browser-sub-agent`，`25d8a4d` 给派发的输出定了类型 `SubagentLaunched`。更早，定时任务的四个工具和 `memory_search` 曾经在契约里，`0ae03bb` 把它们移出去，改成通用调用。
+v0.12.1 只有一个子 agent 工具 `Agent`，输出不进契约。`8c1414f` 把子 agent 工具按角色命名为 `general-sub-agent`、`browser-sub-agent`，`f7c5cb8` 给派发的输出定了类型 `SubagentLaunched`。更早，定时任务的四个工具和 `memory_search` 曾经在契约里，`f4afff2` 把它们移出去，改成通用调用。
 :::
 
 ### Plan 和 PlanStep
@@ -216,7 +221,7 @@ v0.12.1 只有一个子 agent 工具 `Agent`，输出不进契约。`d18618f` �
 | `description` | string | 1 到 80 字符，显示给用户，也是子 agent 会话的标题 |
 | `prompt` | string | 1 到 20000 字符，交给子 agent 的完整任务 |
 
-通用子 agent 能用父会话能用的工具，派生子 agent 和定时任务的除外；浏览器子 agent 只能用 `browser`、`context`、`skills`、`plan` 这几个提供方的工具。
+八个工具的参数和输出相同，区别在子 agent 的角色能用哪些提供方的工具：通用子 agent 能用父会话能用的工具，`subagents`、`cron`、`hub` 三个提供方除外；浏览器、设计、前端子 agent 只用 `workspace`、`browser`、`context`、`skills`、`plan`；代码库、后端、写作子 agent 只用 `workspace`、`context`、`skills`、`plan`；研究子 agent 用 `workspace`、`web`、`browser`、`context`、`skills`、`plan`。
 
 ### SubagentLaunched
 
@@ -240,7 +245,7 @@ v0.12.1 只有一个子 agent 工具 `Agent`，输出不进契约。`d18618f` �
 | `signal?` | string | 被信号终止时的信号名 |
 | `truncated?` | boolean | 输出被截过 |
 | `sandbox_denials?` | string[] | 沙箱拦下的操作，见[拒绝原因报告](/zh/engine/sandbox#拒绝原因报告) |
-| `sandbox?` | string | 关于沙箱的说明；提权运行时是 `escalated: ran with full access, without the sandbox's limits` |
+| `sandbox?` | string | 关于沙箱的说明；以全权运行时是 `escalated: ran with full access, without the sandbox's limits` |
 
 ### FileOutput
 
@@ -249,6 +254,7 @@ v0.12.1 只有一个子 agent 工具 `Agent`，输出不进契约。`d18618f` �
 | `path` | string | 改的文件，写法同 [`FileChange.path`](/zh/integrate/protocol/approvals#filechange) |
 | `created?` | boolean | 新建的文件 |
 | `added`、`removed` | integer | 增删的行数 |
+| `diff?` | string | 只在 `edit_file` 上：这次修改的 unified diff，和审批时 `FileChange.diff` 相同；`write_file` 不给 |
 
 `edit_file`、`write_file` 审批时看的 diff 在条目的 `preparedExecution` 里，见[审批与提问](/zh/integrate/protocol/approvals)。
 
@@ -379,7 +385,7 @@ MCP 工具只带服务器给的 `title`、`destructiveHint`、`idempotentHint`�
 |---|---|---|
 | `plan` | `update_plan` | 引擎总装 |
 | `user_input` | `request_user_input` | 引擎总装 |
-| `subagents` | `general-sub-agent`、`browser-sub-agent` | 引擎总装 |
+| `subagents` | `general-sub-agent`、`browser-sub-agent`、`design-sub-agent`、`codebase-sub-agent`、`frontend-sub-agent`、`backend-sub-agent`、`writing-sub-agent`、`research-sub-agent` | 引擎总装 |
 | `context` | `read_tool_output` | 引擎总装 |
 | `deferred_tools` | `load_tools` | 引擎总装 |
 | `memory` | `memory_search` | 引擎总装 |
@@ -387,7 +393,8 @@ MCP 工具只带服务器给的 `title`、`destructiveHint`、`idempotentHint`�
 | `tool_registry` | `list_tool_providers`、`list_tools_for_provider` | 引擎总装 |
 | `skills` | `list_skills`、`activate_skill`、`read_skill_resource`、`get_skills_root_dir` | 宿主配了 `SkillsDir` 时 |
 | `workspace` | `run_command`、`claude`、`read_file`、`glob`、`grep`、`edit_file`、`write_file` | 宿主在 `host.Config.Tools` 里加 |
-| `web` | `web_fetch` | 宿主在 `host.Config.Tools` 里加 |
+| `web` | `web_fetch`，经用户的 Box 出网 | 引擎总装 |
+| `hub` | `list_workspaces`、`start_conversation`、`send_message`、`list_conversations`、`read_conversation`、`add_todo`、`update_todo`、`list_todos` | 宿主开了 `host.Config.Hub` 时 |
 | 宿主自己的 id | 宿主加的提供方，比如桌面端的 `browser` | 宿主 |
 | MCP 服务器名 | 这个服务器的工具 | 用户 |
 
@@ -396,7 +403,7 @@ MCP 工具只带服务器给的 `title`、`destructiveHint`、`idempotentHint`�
 契约里另有一个 `providers` 段，只有 `cron`、`skills`、`memory` 三个。它不是全部提供方：上表里的 `workspace`、`plan`、`web` 等都不在里面。客户端不要拿它判断一个 `server` 合不合法。
 
 ::: info 演进
-`providers` 段原来只有 `cron` 和 `skills`，`db21f76` 加入 `memory`。
+`providers` 段原来只有 `cron` 和 `skills`，`e5dbf12` 加入 `memory`。
 :::
 
 ## 错误与边界

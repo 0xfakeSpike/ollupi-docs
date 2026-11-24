@@ -1,6 +1,6 @@
 # 飞书机器人
 
-飞书机器人让用户离开电脑时也能操作会话：在手机上发消息、看进度、处理审批和提问。它跑在 sidecar 里，是网关之外引擎的另一个客户端：直接调用引擎，收到网关收到的每个事件。
+飞书机器人让用户离开电脑时也能操作会话：在手机上发消息、看进度、处理审批和提问。它跑在 sidecar 里，是引擎的另一个客户端：直接调用引擎，订阅 store 的事件流，网关收到的变化它也收到。
 
 这页讲实现。开放平台的配置步骤见 [飞书配置](/zh/app/feishu)。
 
@@ -17,21 +17,25 @@
 
 `domain` 决定连 `open.feishu.cn` 还是 `open.larksuite.com`。SDK 的日志转进后端日志。
 
+配置是 `config.yaml` 里的 `feishu` 段：`app_id`、`app_secret`、`domain`（`feishu` 或 `lark`）、`users`、`workspace`。设置 → 飞书机器人把表单写成这段配置。
+
 连不上时记一条错误，后端继续运行，只是没有机器人。配置在启动时读取，改配置要重启后端。
 
 ## 并发模型
 
-`Deliver` 不能阻塞：引擎在自己的循环里发事件，而机器人调用引擎时要等这个循环，阻塞就会死锁。所以事件和消息都推进一个无界队列，由 `Run` 的一个 goroutine 串行处理。
+`Run` 起一个工作 goroutine（`work`），它调 `store.Feed().Subscribe(owner, b.hear)` 订阅会话所有者 `default` 的变更。`hear` 不能阻塞：store 的事件流在提交事务的 goroutine 里调用它，事件流不能等机器人。所以变更和收到的消息都推进一个无界队列，由这个工作 goroutine 串行处理。
 
 ```go
-func (b *Bridge) Deliver(e agent.Event) {
-	b.queue.push(func() { b.event(e) })
+func (b *Bridge) hear(e store.Event) {
+	if e.Change != nil {
+		b.queue.push(func() { b.changed(e.Thread, *e.Change) })
+	}
 }
 ```
 
-`turns`、`requests`、`ours`、`seen` 这些字段只由这个 goroutine 读写，不需要锁。
+每个 `store.Change` 带着这次提交改过的轮次（`Turns`）、条目（`Items`）、正在进行的那一轮（`Active`），或者会话已删除（`Deleted`）。`turns`、`inputs`、`requests`、`ours`、`decided`、`seen` 这些字段只由这个 goroutine 读写，不需要锁。
 
-这也解决了一个顺序问题。`send` 调 `StartTurn` 之后才把轮次 ID 记进 `ours`，而这一轮的 `turn_started` 事件排在队列里，一定在 `send` 返回之后处理，所以卡片能知道这一轮来自飞书。
+这也解决了一个顺序问题。`send` 调 `Send` 之后才把轮次 ID 记进 `ours`，而这一轮开始的那次变更排在队列里，一定在 `send` 返回之后处理，所以卡片能知道这一轮来自飞书。
 
 ## 名单校验
 
@@ -51,13 +55,13 @@ func (b *Bridge) Deliver(e agent.Event) {
 |---|---|
 | 不在话题里 | 开始新会话 |
 | 在话题里 | 作为这个会话的下一轮 |
-| 话题里发 `/stop` | `InterruptTurn`，`expectedTurnID` 为空，即当前轮 |
+| 话题里发 `/stop` | 读这个会话在跑的一轮（`View(threadID).Active()`），用它的 ID 调 `Interrupt`；没有在跑的一轮时回复 `没能停止：现在没有在跑的一轮` |
 | 话题不对应任何会话 | 回复说明，请直接发新消息 |
 | 既不是文字也不是富文本，或没有文字 | 回复 `目前只能发文字。` |
 
 文字取自 `text` 消息，或 `post` 消息里 `text`、`a`、`code_block` 这几种片段，标题放在第一行。图片和文件不处理。
 
-下一轮用 `StartTurn` 发送。这一轮排队时回复 `已排队，当前这轮结束后开始。`。
+下一轮用 `Send` 发送。这一轮排队时回复 `已排队，前面的消息处理完后回复。`。
 
 ## 话题和会话的映射
 
@@ -73,13 +77,13 @@ func (b *Bridge) Deliver(e agent.Event) {
 
 文件和数据库放在一起，重启后保留。每次改动整个重写，先写 `.tmp` 再改名，崩溃后要么是旧文件要么是新文件。权限 `0600`。
 
-内存里有两个方向的索引，`byThread` 和 `byRoot`。会话被删除时（`EventThreadDeleted`）映射一起删掉。
+内存里有两个方向的索引，`byThread` 和 `byRoot`。会话被删除时（变更带 `Deleted`）映射一起删掉。
 
 **从飞书开始的会话**：`startSession` 先建会话，标题用第一条消息的开头（规则和桌面端的 `titleFromMessage` 相同，最多 60 字符），再把这条消息记成话题根，最后发第一轮。先记映射，这一轮的事件才找得到话题。
 
-新会话的工作区由 `feishu.workspace` 决定：按 `RootPath` 精确匹配未归档的工作区。配了但找不到时回复错误，不开始会话。不配时不属于任何工作区。
+新会话的工作区由 `feishu.workspace` 决定：按工作区的 `Root` 精确匹配未归档的工作区。配了但找不到时回复错误，不开始会话。不配时不属于任何工作区。
 
-**从别处开始的会话**：桌面端或定时任务开始的会话，有内容要显示时才开话题。`shows` 决定什么算内容：
+**从别处开始的会话**：桌面端或定时任务开始的会话，有内容要显示时才开话题。算内容的事件：
 
 | 事件 | 根会话 | 子 agent 会话 |
 |---|---|---|
@@ -89,7 +93,7 @@ func (b *Bridge) Deliver(e agent.Event) {
 
 `openTopic` 给名单里第一个人发一条消息，内容是 `工作区 · 标题`，没有标题时写 `新会话`，这条消息就是话题根。名单为空时不开话题。
 
-子 agent 不单独开话题。`rootOf` 沿 `ParentThreadID` 找到根会话，审批和提问发到根会话的话题里。
+子 agent 不单独开话题。`rootOf` 沿 `store.Thread` 的 `Parent` 找到根会话，审批和提问发到根会话的话题里。
 
 ## 每轮一张卡片
 
@@ -97,11 +101,11 @@ func (b *Bridge) Deliver(e agent.Event) {
 
 ```mermaid
 flowchart TD
-  A["turn_started 发出卡片"] --> B["item_completed 追加一行"]
-  B --> C["changed 标记 dirty"]
+  A["变更里这一轮成了进行中的一轮：turnStarted 发出卡片"] --> B["变更里有条目结束：追加一行"]
+  B --> C["cardChanged 标记 dirty"]
   C --> D["约 1 秒后 flush，更新卡片"]
   D --> B
-  B --> E["turn_completed 立即 flush，清理"]
+  B --> E["变更里这一轮带上结束状态：立即 flush，清理"]
 ```
 
 卡片是飞书卡片 JSON 2.0，设置 `update_multi` 以便发出后更新。
@@ -126,7 +130,7 @@ flowchart TD
 | 已中断 | 已停止 | 灰 |
 | 失败 | 失败 | 红，正文加错误 |
 
-**节流**：`flushEvery` 是 1 秒，飞书允许一条消息每秒更新几次，手机上不需要那么频繁。`changed` 只开一个计时器，期间的改动合并。结束时不等计时器，直接更新。
+**节流**：`flushEvery` 是 1 秒，飞书允许一条消息每秒更新几次，手机上不需要那么频繁。`cardChanged` 只开一个计时器，期间的改动合并。结束时不等计时器，直接更新。
 
 **长度**：飞书每张卡片上限 30 KB。`bodyLimit` 是 20 KiB，留出其余部分的空间。超过时 `tail` 保留末尾，前面加 `…前面的内容在桌面端查看`，并按 UTF-8 字符边界切。手机上最新的内容最重要。
 
@@ -140,19 +144,19 @@ flowchart TD
 
 - 工具名，MCP 工具写成 `服务器__工具`。
 - 冻结的内容：命令（最长 2000 字符）和工作目录，或文件列表和增删行数，否则是原始参数。
-- 需要完全访问时加粗写"需要完全访问"，带上 agent 给的理由。
+- 命令要全权（见 [全权](/zh/engine/permissions#全权)）时加粗写「需要完全访问」，带上 agent 给的理由。
 - 工具的审批内容和原因。
 
-按钮来自 `AvailableDecisions`，去掉"总是允许"，因为它要写规则，这件事留在桌面端选。
+按钮来自审批条目给出的决定（`it.Approval.Decisions()`），去掉「总是允许」，因为它要写规则，这件事留在桌面端选。
 
-**提问卡片**标题 `需要回答`，用一个表单放所有问题。每个问题一个下拉框（有选项时）和一个输入框，一次提交。输入框的内容优先于下拉框。有问题没回答时 toast `还有问题没回答`，不提交。
+**提问卡片**标题 `需要回答`，靛蓝（`indigo`），用一个表单放所有问题。每个问题一个下拉框（有选项时）和一个输入框，一次提交。输入框的内容优先于下拉框。有问题没回答时 toast `还有问题没回答`，不提交。
 
 **按钮不依赖内存。** 每个按钮的 value 带着需要的全部信息：动作、会话 ID、审批或条目 ID。后端重启后旧卡片仍然能用。
 
 ```go
 button(label, kind, map[string]any{
 	"action": actionApprove, "thread": threadID,
-	"approval": it.Approval.ID, "decision": string(d),
+	"approval": it.Approval.Approval, "decision": string(d),
 })
 ```
 
@@ -160,7 +164,7 @@ button(label, kind, map[string]any{
 
 ## 与桌面端同步
 
-机器人和网关调用同一个引擎，都以 `repo.DefaultUser` 运行，所以桌面端和飞书操作的是同一批会话，不需要额外的同步。一边发的消息是另一边的一轮，引擎的事件同时到两边。
+机器人和网关调用同一个引擎，都以 `gateway.DefaultUser` 运行，所以桌面端和飞书操作的是同一批会话，不需要额外的同步。一边发的消息是另一边的一轮，引擎的事件同时到两边。
 
 **处理结果互通。** 审批或提问在任一端处理后，条目发生变化，`settle` 把飞书卡片改成结果：
 
@@ -171,9 +175,11 @@ button(label, kind, map[string]any{
 | 提问已回答 | `已回答` | 绿 |
 | 提问没回答就结束了 | `提问已取消` | 灰 |
 
-审批卡片用标签标出处理的地方：`在飞书` 或 `在桌面`。依据是 `DecidedBy`，飞书做的决定记成常量 `Decider`，值是 `feishu`。
+审批卡片用标签标出处理的地方：`在飞书` 或 `在桌面`。依据是桥里的一张内存表 `decided`：在飞书按下按钮时，`Decide` 提交前先给这个审批打标记，卡片结算时读它决定写哪个，读完删掉。桌面端的决定没有标记，所以写 `在桌面`。
 
-桌面端的审批卡片在 `item/completed` 时移除。
+桌面端的审批卡片在 `item/changed` 带来的条目不再等待审批时移除。
+
+引擎侧的中枢和待办不在这里特殊处理：飞书只转发轮次、审批和提问，见 [中枢](/zh/engine/hub) 与 [待办](/zh/integrate/protocol/todos)。
 
 **错误文案。** `errorText` 把常见错误译成中文：`ErrNoActiveTurn` 是 `现在没有在跑的一轮`，`ErrThreadArchived` 是 `会话已归档，先在桌面端恢复`。
 

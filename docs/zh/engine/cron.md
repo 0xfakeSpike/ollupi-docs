@@ -15,9 +15,9 @@
 代价：检查粒度是一分钟；会话拒收的那一次没有任何记录，只是次数不涨；大量任务同时到点时和用户消息在同一个队列里排队，[混合负载实验](/zh/benchmarks/#混合负载与子-agent)里 1000 个任务同时到期，峰值期间到达的用户轮次等第一次模型请求的 p50 是 49.3 s，峰值 56.9 s 排空（模拟模型，v0.18.0）。
 
 ::: info 演进
-- 早期定时任务是 agent 的一部分：事件循环里有一个定时分支，`settle` 还要负责发送到期的任务。`ee7776c` 把这些全部移出 agent，改成到点调用 `send`。
-- 日期在 11 个月之后的一次性任务被拒绝，来自 `8f1d5e2`。
-- 以前先发送、再在另一步记账，两步之间崩溃会重发一次；发送失败也计为一次运行。`35bab6a` 把两步放进一个事务，会话拒收的一次不再计数。
+- 早期定时任务是 agent 的一部分：事件循环里有一个定时分支，`settle` 还要负责发送到期的任务。`3c3cc23` 把这些全部移出 agent，改成到点调用 `send`。
+- 日期在 11 个月之后的一次性任务被拒绝，来自 `05a2099`。
+- 以前先发送、再在另一步记账，两步之间崩溃会重发一次；发送失败也计为一次运行。`ebff4fb` 把两步放进一个事务，会话拒收的一次不再计数。
 :::
 
 ## 数据模型
@@ -48,9 +48,11 @@
 | `threadArchived` | `threads.archived_at` | 会话归档时为 true |
 | `lastTurnId`、`lastRunAt` | 这个任务发出的最后一个轮次 | 按 `turns.cron_job` 找，`lastRunAt` 是那个轮次的排队时间；没发过时为空 |
 
-只有顶层会话能有任务：协议的 `cron/*` 用 `topThread` 取会话，子 agent 会话报 `ErrSubagentThread`；模型的工具只有主 agent 有，子 agent 的角色没有 `cron` 提供者。
-
 `cron.Create` 在事务里查这个会话已有的任务：已满 64 个（`MaxJobs`）或重名都报 `invalid scheduled job`，和其他校验错误一样。
+
+### 谁能建任务
+
+协议的 `cron/*` 只按归属查会话（`app.inThread` → `thread`），顶层会话和子 agent 会话一样能建。挡住子 agent 的是模型侧：`agent/agent.go` 的 `roles` 里，三个主 agent 角色（`full-main-agent`、`compact-main-agent`、`hub-main-agent`）带 `cron` 提供方；八个子 agent 角色都不带，`general-sub-agent` 显式 `Without` 它，其余七个的 `Providers` 白名单里没有它。
 
 ## 调度表达式
 
@@ -106,7 +108,7 @@
 | 有可用的模型：沿用会话上一轮的连接，没有就用第一个模型 | 连接不可用时拒收 |
 | 消息放得进模型的输入 | 拒收 |
 
-通过后追加两条日志条目：`TurnQueued`（带模型、按输入大小选的主 agent 角色、`CronJob` 任务 ID）和这条 `UserMessage`。会话空闲时它就是当前轮次；会话正忙时它排在后面，每条消息各自一个轮次，正在跑的那一轮不会被打断。轮次的 `CronJob` 也写进 `turns.cron_job`，界面据此标出消息来源、视图据此算 `lastRunAt`。
+通过后追加两条日志条目：`TurnQueued`（带模型、角色和 `CronJob` 任务 ID；角色按输入大小在 `full-main-agent` 和 `compact-main-agent` 之间选，hub 工作区的会话固定是 `hub-main-agent`）和这条 `UserMessage`。会话空闲时它就是当前轮次；会话正忙时它排在后面，每条消息各自一个轮次，正在跑的那一轮不会被打断。轮次的 `CronJob` 也写进 `turns.cron_job`，界面据此标出消息来源、视图据此算 `lastRunAt`。
 
 之后它和用户的轮次没有区别：调度器按会话变成可运行的先后（`runnable_since`）分配槽位，顶层会话排在子 agent 会话前面，不看轮次是谁发的。见[执行模型](/zh/engine/execution)。
 
@@ -139,7 +141,7 @@
 
 | 方法 | 走哪 |
 |---|---|
-| `cron/list` | `App.CronJobs`：用户的全部任务，按 `created_at, id` 排序；给了 `threadId` 时只列这个会话的，会话要属于调用者且是顶层会话 |
+| `cron/list` | `App.CronJobs`：用户的全部任务，按 `created_at, id` 排序；给了 `threadId` 时只列这个会话的，会话要属于调用者 |
 | `cron/create` | `App.CreateCronJob` → `cron.Create`，参数打包成 `cron.Draft`（`Name`、`Spec`、`Prompt`、`Times`） |
 | `cron/pause` | `App.PauseCronJob` → `cron.Pause`，`paused` 必填 |
 | `cron/delete` | `App.DeleteCronJob` → `cron.Delete` |
@@ -175,7 +177,7 @@
 | `cron/calendar.go` | `Calendar`、`Draft`、`NewJob`、`Pause`、`Advance`、`Next`、`lastRun`、各项校验和 `ErrInvalidJob` |
 | `cron/jobs.go` | `Create`、`Pause`、`Delete`：在事务里查数量和重名、写行 |
 | `cron/cron.go` | `Run`、`sendDue`、`send`：每分钟检查，发送和记账在一个事务里 |
-| `app/cronjobs.go` | `CronJobs`、`CreateCronJob`、`PauseCronJob`、`DeleteCronJob`：只接受调用者的顶层会话 |
+| `app/cronjobs.go` | `CronJobs`、`CreateCronJob`、`PauseCronJob`、`DeleteCronJob`：只查会话归属 |
 | `app/turns.go` | `Scheduled` 和 `queue`：定时任务的消息和用户消息同一条排队路径 |
 | `tool/builtin/cronjobs/cronjobs.go` | `create_scheduled_job` 等四个工具 |
 | `account/account.go` | `CronJob` |

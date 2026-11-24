@@ -2,7 +2,7 @@
 
 用户级的设置：发给模型之前要不要脱敏，记忆开不开，要不要从新的轮次里学新记忆，以及用户自己的一层权限。客户端用 `settings/read` 读、`settings/update` 改三个开关、`settings/updatePermissions` 改权限，用 `settings/changed` 跟上。脱敏识别什么、怎样替换和还原，见[脱敏](/zh/engine/redaction)；记忆怎样提炼和载入，见[记忆](/zh/integrate/protocol/memory)。
 
-本页按引擎 v0.17.2 写，示例来自对 v0.17.1 网关的脚本试验。
+示例来自对本机网关的脚本试验。
 
 ## 概念与状态
 
@@ -21,7 +21,7 @@
 - **权限是四层中的一层。** `permissions` 夹在部署默认和工作区之间，怎样叠加、怎样校验见[权限](/zh/integrate/protocol/permissions)。
 
 ::: info 演进
-v0.12.1 只有 `redaction` 一项，记忆的开关和权限都是宿主的配置。`1ae27b2` 把记忆开关和用户的一层权限存进每个用户的设置，加了 `settings/updatePermissions`。`1681a3d` 把"学新记忆"从记忆开关里拆出来，成了 `learn`，migration 0003 给每个用户补上 `learn = 1`。
+v0.12.1 只有 `redaction` 一项，记忆的开关和权限都是宿主的配置。`3580e6f` 把记忆开关和用户的一层权限存进每个用户的设置，加了 `settings/updatePermissions`。`e451d91` 把"学新记忆"从记忆开关里拆出来，成了 `learn`，migration 0003 给每个用户补上 `learn = 1`。
 :::
 
 ## 典型流程

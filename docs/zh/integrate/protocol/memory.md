@@ -2,7 +2,7 @@
 
 长期记忆是引擎从已经结束的轮次里提炼出来的笔记，会话运行时载入其中放得下的部分。客户端用 `memory/*` 查看记忆和提炼的状态，替用户改正、搬动或遗忘某一条，用 `memory/changed` 跟上变化；会话里的 `memoryContext` 条目告诉客户端这一轮带上了哪些记忆。提炼怎样取证据、怎样合并、怎样重试，见[记忆的实现](/zh/engine/memory)；开关在[设置](/zh/integrate/protocol/settings)里。
 
-本页按引擎 v0.17.2 写，示例来自对 v0.17.1 网关的脚本试验（假模型、单用户，两条记忆是直接写进库里的）。
+示例来自对本机网关的脚本试验（假模型、单用户，两条记忆是直接写进库里的）。
 
 ## 概念与状态
 
@@ -33,7 +33,7 @@
 **变更有通知。** 每次一条记忆被写入，不管是客户端改的还是后台提炼写的，网关都发 `memory/changed`，载荷是写之后的整条记忆。提炼的进度（`memory/status`）变化时没有通知。
 
 ::: info 演进
-v0.12.1 的记忆没有任何通知，两个开关 `generationEnabled`、`useEnabled` 是宿主的配置，没配记忆时所有 `memory/*` 都返回 `-32000`。`1ae27b2` 把记忆开关存进每个用户的设置；`9b5b50b` 加了 `memory/changed`，`memory/status` 改成 `enabled`、`unread`、`active`；`1681a3d` 拆出 `learn` 开关。
+v0.12.1 的记忆没有任何通知，两个开关 `generationEnabled`、`useEnabled` 是宿主的配置，没配记忆时所有 `memory/*` 都返回 `-32000`。`3580e6f` 把记忆开关存进每个用户的设置；`499f96f` 加了 `memory/changed`，`memory/status` 改成 `enabled`、`unread`、`active`；`e451d91` 拆出 `learn` 开关。
 :::
 
 ## 一轮里的记忆：memoryContext 条目
@@ -50,7 +50,7 @@ v0.12.1 的记忆没有任何通知，两个开关 `generationEnabled`、`useEna
 `ItemRow` 的其余字段见[一轮与条目](/zh/integrate/protocol/turns)。快照放多少条、怎样排序，见[快照](/zh/engine/memory#快照)。模型在一轮里还可以调 `memory_search` 工具搜更多记忆，它是普通的工具调用，界面按通用调用显示。
 
 ::: info 演进
-v0.12.1 在会话第一次运行时总会生成 `memoryContext` 条目，没有记忆可载入时条目照样有，只是两个字段都不出现。`cf4141e` 把一轮改成从日志一步步运行，没有可载入的记忆就不写这条条目。
+v0.12.1 在会话第一次运行时总会生成 `memoryContext` 条目，没有记忆可载入时条目照样有，只是两个字段都不出现。`b7b6bdf` 把一轮改成从日志一步步运行，没有可载入的记忆就不写这条条目。
 :::
 
 ## 典型流程
@@ -240,7 +240,7 @@ v0.12.1 在会话第一次运行时总会生成 `memoryContext` 条目，没有�
 `MemoryListParams`、`MemoryUpdateParams`、`MemoryMoveParams`、`MemoryForgetParams` 的字段就是上面各方法的参数表；`MemoryListResult` 包了一层 `data`，`MemoryResult` 包了一层 `memory`。
 
 ::: info 演进
-v0.12.1 的 `MemorySource` 是 `{table, id, occurredAt}`，`MemoryStatus` 有 `generationEnabled`、`useEnabled`、`pending` 和上次提炼的用量 `lastReport`，`MemorySkip` 还有 `entries`。`a1fcbb9` 改成按轮次提炼，证据记成会话和条目；`9b5b50b` 换成现在的 `MemoryStatus`。
+v0.12.1 的 `MemorySource` 是 `{table, id, occurredAt}`，`MemoryStatus` 有 `generationEnabled`、`useEnabled`、`pending` 和上次提炼的用量 `lastReport`，`MemorySkip` 还有 `entries`。`50c35eb` 改成按轮次提炼，证据记成会话和条目；`499f96f` 换成现在的 `MemoryStatus`。
 :::
 
 ## 错误与边界

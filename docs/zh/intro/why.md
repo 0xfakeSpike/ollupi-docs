@@ -102,7 +102,7 @@ Ollupi 把会话放在一个进程、一个数据库中，优势在单机效率�
 | 多用户之间的公平性 | 待补 |
 | 增加分片能否线性扩容 | 待补 |
 
-已有数据来自[性能基准](/zh/benchmarks/)和[与其他 harness 对照](/zh/benchmarks/#与其他-harness-对照)：模拟的模型和工具，一台 8 GB 内存的 Apple M1；Ollupi 测于 v0.8.3 至 v0.8.5，早于多用户、分片、日志重建和工具池。[第二轮基准](/zh/benchmarks/plan)将用当前版本重测，并补齐空白。
+已有数据来自[性能基准](/zh/benchmarks/)和[与其他 harness 对照](/zh/benchmarks/#对比)：模拟的模型和工具，一台 8 GB 内存的 Apple M1；Ollupi 测于 v0.8.3 至 v0.8.5，早于多用户、分片、日志重建和工具池。[第二轮基准](/zh/benchmarks/plan)将用当前版本重测，并补齐空白。
 
 ## 两个项目
 

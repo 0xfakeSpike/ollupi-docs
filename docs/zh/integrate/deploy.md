@@ -207,7 +207,7 @@ D=/srv/ollupi
 示例省掉的东西：命令和文件工具、`ClientFor`、云沙箱这些每用户资源（见[扩展点](/zh/integrate/extend)），`Member.Load`（不填时报 0，新用户只按用户数在两个候选里选），以及记忆模型。
 
 ::: info 演进
-v0.12.1 时，租约是 `agent.Config.Lease`，存在分片自己的库里（`shard_lease`），拿到租约的进程再调 `Catalog.Publish` 发布地址，分片网关用 `gateway.OnShard` 核对用户，错分片回 401。`6282176`（v0.13.0）把路由移进 `router` 包、按负载放置新用户，错分片改成 503；`48c8454`（v0.16.0）把租约移进目录库、和地址放在同一行，加上 epoch 围栏，`Publish` 随之消失，引擎不再知道分片，分片进程由 `shard.Member` 运行；`de6eb86` 把目录库换成 `catalog.Catalog` 接口，租约只按目录库的时钟判断。
+v0.12.1 时，租约是 `agent.Config.Lease`，存在分片自己的库里（`shard_lease`），拿到租约的进程再调 `Catalog.Publish` 发布地址，分片网关用 `gateway.OnShard` 核对用户，错分片回 401。`93bec1a`（v0.13.0）把路由移进 `router` 包、按负载放置新用户，错分片改成 503；`68a4035`（v0.16.0）把租约移进目录库、和地址放在同一行，加上 epoch 围栏，`Publish` 随之消失，引擎不再知道分片，分片进程由 `shard.Member` 运行；`8874aa2` 把目录库换成 `catalog.Catalog` 接口，租约只按目录库的时钟判断。
 :::
 
 ## 目录库
@@ -228,7 +228,7 @@ v0.12.1 时，租约是 `agent.Config.Lease`，存在分片自己的库里（`sh
 让一个分片不再接新用户：把它的 `Member.Accepting` 设成 false，重启持有者，`Acquire` 会写下新值；已经放在上面的用户照常服务。引擎不搬迁用户，也不会把用户从满了的分片移走。分片容量见[容量规划与限流](/zh/integrate/capacity)。
 
 ::: info 演进
-v0.12.1 时几个进程同时第一次打开同一个新目录库，有的会失败（``table `shards` already exists`` 或 `database is locked`），所以要先单独起一个进程把库建好。`0cfd5ca`（v0.14.0）让几个进程可以同时打开、同时写同一个目录库。
+v0.12.1 时几个进程同时第一次打开同一个新目录库，有的会失败（``table `shards` already exists`` 或 `database is locked`），所以要先单独起一个进程把库建好。`a443460`（v0.14.0）让几个进程可以同时打开、同时写同一个目录库。
 :::
 
 ## 租约时长

@@ -88,7 +88,7 @@ cfg := host.Config{
 所有用户的名额之和不受分片限制，分片能同时跑多少轮只由 `Slots` 决定，见[容量规划与限流](/zh/integrate/capacity)。重试和名额的机制见[模型接入](/zh/engine/models)。
 
 ::: info 演进
-v0.16.0 之前记忆提炼的客户端另由 `memory.Options.ClientFor` 给，不填时所有用户共用一个。`18d6757` 起记忆提炼和对话走同一个 `ClientFor`。
+v0.16.0 之前记忆提炼的客户端另由 `memory.Options.ClientFor` 给，不填时所有用户共用一个。`9fa9186` 起记忆提炼和对话走同一个 `ClientFor`。
 :::
 
 ## 自己实现模型客户端
@@ -240,7 +240,7 @@ func (t *Tickets) Invoke(ctx context.Context, c tool.Call) (kit.Result, error) {
 - **需要审批前冻结执行内容的工具实现 `Prepare`。** 只有执行内容可能在审批期间变化的工具才需要，比如命令和文件修改：`Prepare` 返回的 `tool.Plan.Data` 记在调用里，审批的就是它，执行时从 `tool.Call.Prepared` 读回。见[工具](/zh/engine/tools)。
 
 ::: info 演进
-v0.16.0 之前工具实现的是 `tools.Provider`（`Name`、`ToolList`、`Invoke`），每个用户额外的工具由 `Config.ToolsFor` 返回一个 `tools.Set`，宿主还要自己维护 `Set.Unavailable`。`cef6026`（v0.16.0）把工具层收进 `tool` 和 `tool/kit`：provider 的方法变成 `Tools` 和 `Invoke(ctx, tool.Call)`，`PermissionContent` 改名 `Content`，用户自己的工具只来自库里的 MCP 服务器，连不上的服务器由 `tool/mcp` 自己记成不可用。
+v0.16.0 之前工具实现的是 `tools.Provider`（`Name`、`ToolList`、`Invoke`），每个用户额外的工具由 `Config.ToolsFor` 返回一个 `tools.Set`，宿主还要自己维护 `Set.Unavailable`。`65e57cb`（v0.16.0）把工具层收进 `tool` 和 `tool/kit`：provider 的方法变成 `Tools` 和 `Invoke(ctx, tool.Call)`，`PermissionContent` 改名 `Content`，用户自己的工具只来自库里的 MCP 服务器，连不上的服务器由 `tool/mcp` 自己记成不可用。
 :::
 
 ## 云沙箱
@@ -295,7 +295,7 @@ BoxIn: func(c tool.Caller) (sandbox.Box, error) {
 工作区工具要在 `host.New` 之前建好放进 `Tools`，而 `BoxIn` 要读 `h.Store`：闭包在调用时才读 `h`，先声明变量、建完宿主再赋值即可。`machines` 和下面的 `boxes` 一样要缓存、要在退出时关。环境只是库里的一行名字和种类（`local` 或 `machine`），引擎不知道它对应哪台机器，这个对应关系由宿主保存。配了 `BoxIn` 时，`run_command` 的描述会多一句：会话在它开始时选的环境里运行，那里的文件夹不一定是这台机器的。
 
 ::: info 演进
-v0.12.0 之前没有执行环境，每个用户只有一个 Box。`5f64857`（v0.12.0）加入执行环境和 `BoxIn`。没有配 `BoxIn` 的宿主，工具调用照旧走 `BoxFor`。
+v0.12.0 之前没有执行环境，每个用户只有一个 Box。`b1baf49`（v0.12.0）加入执行环境和 `BoxIn`。没有配 `BoxIn` 的宿主，工具调用照旧走 `BoxFor`。
 :::
 
 按用户缓存 Box，并管理它的生命周期：
@@ -556,7 +556,7 @@ var _ sandbox.Machine = container{}
 
 **引擎保证：**
 
-- `Remote` 包出来的 Box 里，命令不能提权（`FullAccess` 的命令直接报错 `sandbox: this sandbox cannot give a command full access`）；写文件只要求在根目录内；HTTP 请求（比如 HTTP MCP 服务器）从引擎进程发出，只连公网地址。
+- `Remote` 包出来的 Box 里，命令不能以全权运行（`FullAccess` 的命令直接报错 `sandbox: this sandbox cannot give a command full access`）；写文件只要求在根目录内；HTTP 请求（比如 HTTP MCP 服务器）从引擎进程发出，只连公网地址。
 - 机器慢或卡住时，只卡住用到它的那一次调用；附件在写进日志之前、在调度之外读完。
 - 工具调用里 `BoxFor` 返回错误时，这次调用失败，错误以 `workspace: the sandbox of the user:` 开头，交给模型；`Boxes` 返回错误时，`workspace/add` 和带附件的消息返回错误，这个用户的 MCP 服务器连不上（`mcp: the sandbox of the user: ...`）。
 
@@ -715,7 +715,7 @@ func sessions(db *sql.DB) auth.Authenticate {
 - **令牌作废要自己处理。** 令牌作废后，已经建立的连接不会断开，直到它到了寿命（15 到 20 小时）或因别的原因断开。
 
 ::: info 演进
-v0.14.0 之前 `Authenticate` 是 `func(token string) (user string, ok bool)`，没有 ctx，也分不出"查不了"。`988bb0f` 改成现在的签名，令牌的读法和 `ErrUnknownToken` 在 v0.17.0 移进 `auth` 包。
+v0.14.0 之前 `Authenticate` 是 `func(token string) (user string, ok bool)`，没有 ctx，也分不出"查不了"。`e36b07e` 改成现在的签名，令牌的读法和 `ErrUnknownToken` 在 v0.17.0 移进 `auth` 包。
 :::
 
 ## 代码位置
