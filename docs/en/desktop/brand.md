@@ -1,6 +1,6 @@
 # Brand
 
-Ollupi's name, mark, icon and wordmark, and where they appear. The interface's visual language is on [Design language](/desktop/design).
+Ollupi's name, mark, icon and wordmark, and the rules for where they appear in the product. The interface's own visual language is on [Design language](/desktop/design). The full guidelines are in ollupi-desktop's `apps/desktop/PRODUCT.md` (the name and the definition) and section 0 of `packages/ui/DESIGN.md` (the mark and its use).
 
 ::: info Full page in Chinese
 This page is being translated. The complete version is [in Chinese](/zh/desktop/brand).

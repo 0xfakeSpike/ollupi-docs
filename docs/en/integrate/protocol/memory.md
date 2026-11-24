@@ -1,6 +1,6 @@
 # Memory
 
-Long-term memories are notes the engine learns from ended turns. A client lists them by scope, edits, moves and forgets them with `memory/*`, follows every write, the background extraction's included, with `memory/changed`, and reads extraction's progress with `memory/status`. The switches that turn memory and learning on and off are in the user's settings.
+Long-term memories are notes the engine distills from turns that have ended; a running session loads the part of them that fits. A client uses `memory/*` to see the memories and the state of extraction, and to correct, move or forget one on the user's behalf, and follows changes with `memory/changed`; the `memoryContext` item in a session tells the client which memories a turn carried. How extraction gathers evidence, merges and retries is on [memory](/engine/memory) in the engine section; the switches are in [settings](/integrate/protocol/settings).
 
 ::: info Full page in Chinese
 This page is being translated. The complete version, with every method, notification, type and real message, is [in Chinese](/zh/integrate/protocol/memory).
@@ -8,11 +8,11 @@ This page is being translated. The complete version, with every method, notifica
 
 The full page covers:
 
-- Concepts and state: scopes, statuses, the host's extraction model and the user's `memory` and `learn` switches
+- Concepts and state: scopes, statuses, user edits, and what decides extraction and loading
 - Memory in a turn: the `memoryContext` item
 - Typical flows
 - Methods: `memory/list`, `memory/status`, `memory/update`, `memory/move`, `memory/forget`
 - Notification: `memory/changed`
-- Types: `MemoryRow`, `MemorySource`, `MemoryReference`, `MemoryStatus`
+- Types: `MemoryRow`, `MemorySource`, `MemoryReference`, `MemoryStatus`, parameter types
 - Errors and limits
 - Code locations

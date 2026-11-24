@@ -1,6 +1,6 @@
 # Skills and MCP
 
-Skills and MCP both bring outside content to the model: a skill is a set of instructions written for the model, installed per role in the skills directory; an MCP server is a tool server someone else has built, which each user registers in their own settings. Both join that user's tool set as tool providers (`kit.Provider`). This page covers their formats, how they are assembled, and their limits.
+Skills and MCP are both ways to bring content from outside the engine to the model: a skill is a set of instructions written for the model, installed per role in the skills directory; an MCP (Model Context Protocol) server is a tool service someone else has built, which each user registers in their own settings. Both join that user's tool set as tool providers (`kit.Provider`). For the tool set, the life of one call and deferred loading, see [Tools](/engine/tools); this page covers each one's format, how it is assembled, and its limits.
 
 ::: info Full page in Chinese
 This page is being translated. The complete version, with every detail and code reference, is [in Chinese](/zh/engine/skills-mcp).
@@ -8,6 +8,7 @@ This page is being translated. The complete version, with every detail and code 
 
 The full page covers:
 
+- Why it is designed this way
 - What a skill is
 - Discovery and loading
 - How a skill enters the context
@@ -15,4 +16,5 @@ The full page covers:
 - The MCP client
 - Failure, status and cleanup
 - Permissions and the sandbox
+- The workspace layer
 - Limits and known issues

@@ -1,4 +1,4 @@
-# Articles
+# All articles
 
 The manual says what Ollupi does. The articles say why: the problems behind the design, how it compares with other ways of running agents, and what the measurements showed, including where they went wrong.
 

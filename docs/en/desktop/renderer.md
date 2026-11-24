@@ -15,5 +15,6 @@ The full page covers:
 - Scrolling
 - Markdown
 - Search
-- Languages
-- Local storage
+- The Capabilities page
+- The Settings page
+- Languages and local storage

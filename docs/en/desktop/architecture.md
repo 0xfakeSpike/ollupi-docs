@@ -12,5 +12,7 @@ The full page covers:
 - Four channels
 - Four packages
 - From engine events to the screen
+- The hub (Super Agent)
+- Todos
 - Which layer owns what
 - Single user

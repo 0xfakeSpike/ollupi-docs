@@ -1,6 +1,6 @@
 # History
 
-This page tells what happened to Ollupi in order: where it started, the turns in direction, and how the two repositories moved, from the first commit to engine v0.17.1. The reasons for each choice are in the design decisions.
+This page tells what happened to Ollupi in order: which commit it started from, the times it changed direction, and how each of the two repositories moved. The reasons for each choice are in the [design decisions](/reference/decisions); this page covers only the order.
 
 ::: info Full page in Chinese
 This page is being translated. The complete version, with every detail and code reference, is [in Chinese](/zh/reference/history).
@@ -19,4 +19,4 @@ The full page covers:
 - Rebuilt around the conversation log (Nov 16–17)
 - Filling the gaps and putting the code in order (Nov 18)
 - Turning points
-- The two repositories now
+- The pace of the two repositories and where they stand: how the desktop app follows the engine, the current state, how the figures were taken

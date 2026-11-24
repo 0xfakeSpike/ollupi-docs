@@ -10,9 +10,9 @@ The full page covers:
 
 - Why it is designed this way
 - Three paths
-- Sessions, messages, tasks and memory: search
+- Sessions, messages, tasks and memory: `search`
 - Indexing and consistency
-- File search: grep and glob
+- File search: `grep` and `glob`
 - Two ways into memory search
 - The desktop app
 - Known limits

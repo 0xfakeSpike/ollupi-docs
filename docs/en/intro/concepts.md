@@ -18,6 +18,8 @@ flowchart LR
 
 A project folder in the user's sandbox: a local folder on the desktop app, a path on the user's own sandbox machine in the cloud. Tools read and write files and run commands here, and permission rules can be set per workspace. A session may belong to a workspace or to none (general). A workspace can be archived but not deleted; once archived, no new session starts in it and its sessions take no new messages.
 
+There are two kinds of workspace: project workspaces, and one kind called the hub, which brings together all of the user's projects; see [hub](#hub) below. A workspace can also carry instructions of its own (the project's rules, what to avoid) and a set of switches; the instructions go to the model along with each session's instructions.
+
 ## Environment
 
 Where a session's commands and file tools run. Every user has this machine as one environment, and can add cloud sandboxes of their own. A session chooses its environment when it starts and keeps it, and its subagents follow it; a session that chooses none runs on this machine. Which machine an environment stands for is the host's to decide. See the [gateway protocol](/zh/integrate/protocol/workspaces#执行环境的方法) (in Chinese).
@@ -25,6 +27,8 @@ Where a session's commands and file tools run. Every user has this machine as on
 ## Session (thread)
 
 One continuous conversation. Subagents and scheduled tasks use ordinary sessions too; the engine has no special way of running them.
+
+A session's status:
 
 | State | Meaning |
 |---|---|
@@ -81,7 +85,7 @@ Items have their own states: pending, in progress, completed, failed, declined. 
 
 ## Slot
 
-The unit of concurrency in the execution pool. To run its current turn, a session first takes a slot; there are 32 in all by default, and the host can cap how many one user holds at once. Waiting turns give up their slots, so the slot count limits turns running at once, not the number of sessions. When slots run short, users' own sessions go before subagents, and sessions of the same kind go in the order they became able to run.
+The unit of concurrency in the session pool. To run its current turn, a session first takes a slot; there are 32 in all by default, and the host can cap how many one user holds at once. Waiting turns give up their slots, so the slot count limits turns running at once, not the number of sessions. When slots run short, users' own sessions go before subagents, and sessions of the same kind go in the order they became able to run.
 
 Model calls have a second limit, per model connection: 4 per connection by default. Tool execution does not count against it.
 
@@ -95,9 +99,19 @@ A tool call may need the user's approval, and the agent can ask the user structu
 
 ## Subagents
 
-A subtask launched by a tool call in the parent session, of one of two kinds: general or browser. A subagent is an ordinary session whose turns queue with all the others, at a lower priority than users' own sessions; it takes no messages from the user directly and cannot launch subagents of its own.
+A subtask launched by a tool call in the parent session. A subagent is an ordinary session whose turns queue with all the others, at a lower priority than users' own sessions; the user can also send it messages directly, and it cannot launch subagents of its own.
+
+The engine gives each kind of task a role: the main agent has two, full and compact; the hub has one; subagents have eight: general, browser, design, codebase, frontend, backend, writing and research. A role decides which tools the session gets, which rules it follows and how many calls it may make: codebase, backend and research are allowed 400 model calls and 1200 tool calls, the others 200 and 400; any role ends after 10 failures in a row. A role changes only the rules and the tools; every role runs the same way.
 
 The launch returns at once and the subagent runs beside its parent. When it ends, its report is written as an item into the turn that launched it; once the parent turn has answered, it waits for every subagent it launched to report before answering again. While it waits it holds no slot; if the user steers meanwhile, it replies first and then goes back to waiting.
+
+## Todos
+
+The user's own list. It belongs to no session and stays when sessions close. A todo has a title, notes, a status and a one-line result; the status is open, handed to a session, done or dropped. A title holds at most 200 characters, notes 2000 and a result 500. A todo can be linked to a session, and once linked its status becomes handed to a session. Todos are kept by the hub's agent; see [hub](#hub) and [todos](/integrate/protocol/todos).
+
+## Hub
+
+A kind of workspace for planning the work on all projects in one place. The deployment turns the hub on; a user has at most one hub workspace, and to make a different one the hub, the current one must first be changed back to a project workspace. Sessions in the hub workspace are answered by the hub main agent: it does no work for any one project, and its tools include no subagents and no browser. Instead it has five more: list workspaces, start a new session in a project workspace, send a message to an existing session, list the status of sessions, and read a session's last few turns; three others keep the user's todos. It hands a piece of work to a project on the user's behalf, then reads those sessions to judge how far they have got. See [hub](/engine/hub).
 
 ## Memory and skills
 

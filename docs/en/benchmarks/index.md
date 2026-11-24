@@ -106,7 +106,7 @@ An earlier run of the same experiment (`shards-previous.txt`, without the CPU to
 
 ## Commands in a sandbox
 
-1024 sessions whose tool calls each run `sleep 1` through `run_command`, up to 1024 processes at a time on 8 cores. Without a sandbox (full access), turn p50 is 34.1 s; in the macOS sandbox (workspace write), 104.1 s, with 563 ms of CPU per turn spent starting sandboxed processes. The fake tool takes 18.4 s.
+1024 sessions whose tool calls each run `sleep 1` through `run_command`, up to 1024 processes at a time on 8 cores. With full access (no sandbox), turn p50 is 34.1 s; in the macOS sandbox (workspace write), 104.1 s, with 563 ms of CPU per turn spent starting sandboxed processes. The fake tool takes 18.4 s.
 
 ## Mixed load and subagents
 

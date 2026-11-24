@@ -1,6 +1,6 @@
 # Memory
 
-Memory lets the agent remember a user's preferences, a project's decisions and verified facts across sessions. The `extract` package distils notes in the background from turns as they end, a session loads a snapshot before its first model call, and the model searches the rest on demand with `memory_search`. Each user has two switches: memory decides whether memories are used and learned, learning only whether they are learned.
+Memory lets the agent remember a user's preferences, a project's decisions and verified facts across sessions. The `extract` package distils notes in the background from turns that have just ended, a session loads a snapshot before its first model call, and the model looks up the rest on demand with `memory_search`. Each user has two switches: memory (`memory`) decides whether memories are used and learned, and learning (`learn`) decides only whether they are learned.
 
 ::: info Full page in Chinese
 This page is being translated. The complete version, with every detail and code reference, is [in Chinese](/zh/engine/memory).
@@ -8,6 +8,7 @@ This page is being translated. The complete version, with every detail and code 
 
 The full page covers:
 
+- Why it is designed this way
 - The two switches
 - Types and scopes
 - Tables
@@ -15,5 +16,5 @@ The full page covers:
 - Protecting user edits
 - Snapshots
 - Search
-- Retries and skips
+- Retrying and skipping failures
 - Limits and known issues
