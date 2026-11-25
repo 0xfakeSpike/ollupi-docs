@@ -93,17 +93,17 @@ flowchart TD
 
 sidecar 把这台机器登记成唯一的沙箱提供者：`thisMachine` 返回一个 `sandbox.Local`，提供者 ID 是 `local`（`LocalSandbox`），名字是引擎的 `This computer`，界面上按语言写成"这台电脑"。每个身份的第一个环境就是它的沙箱；`--import-config` 不起引擎、直接在 store 里建身份时，用 `FirstEnvironment` 给出同样的第一个环境。
 
-- 每个环境是 `<home>/users/<身份>/<环境 ID>` 这个文件夹，不属于工作区的会话的命令在这里运行。删除环境时文件夹留着。
+- 每个环境是一个文件夹，不属于工作区的会话的命令在这里运行：默认身份（`FirstProfile`）的第一个环境是 `<home>/scratch`，和它的 Super Agent 的 `<home>/super-agent` 并列；其余身份、其余环境的是 `<home>/users/<身份>/<环境 ID>`，两个环境不会写同一批文件。`thisMachine` 用 `sandbox.Local` 的 `Folder` 给出前一种，查 store 判断哪个是身份的第一个环境。删除环境时文件夹留着。
 - 命令按引擎 `sandbox.Config` 的默认值在 Seatbelt 里跑：工作区可写、不联网。桌面端只加三项：`DenyRead` 是 `<home>/data`（`Options.DataHome` 和 `Home` 不同时两个 `data` 都在里面），命令读不到模型的 API 密钥和每个身份的 MCP 服务器配置；`EnvMarker` 是 `OLLUPI_SANDBOX`；`HideEnv` 是 `OLLUPI_`，有完全访问的命令和 MCP 服务器拿到后端的环境变量，但没有 `OLLUPI_` 开头的那些，也就拿不到两个密钥。
 - 后端只提供这一种沙箱，环境对话框里不出现提供者的选择，新开的环境都是这台机器上的另一个文件夹。
 
 ::: info 演进
-以前 sidecar 自己用 `workspace.New` 装命令和文件工具：不属于工作区的命令都在共用的 `<home>/scratch` 里跑，每个身份另有一个 `full-access` 的 Box（根目录 `<home>/users/<id>`，`newUserBoxes`）给 MCP 服务器、附件和工作区校验用；在云端沙箱里开的会话，命令被工作区工具拒绝（"start the conversation in …"）。跟进引擎的沙箱提供者之后，这台机器成了提供者，环境的沙箱由引擎打开，`scratch` 不再使用。
+以前 sidecar 自己用 `workspace.New` 装命令和文件工具：不属于工作区的命令都在共用的 `<home>/scratch` 里跑，每个身份另有一个 `full-access` 的 Box（根目录 `<home>/users/<id>`，`newUserBoxes`）给 MCP 服务器、附件和工作区校验用；在云端沙箱里开的会话，命令被工作区工具拒绝（"start the conversation in …"）。跟进引擎的沙箱提供者之后，这台机器成了提供者，环境的沙箱由引擎打开。0.8.17-beta.13 让每个环境都在 `users/<身份>/<环境 ID>`，`scratch` 没人用了；下一版把默认身份的第一个环境放回 `scratch`。
 :::
 
 ### MCP 服务器
 
-MCP 服务器由用户在界面里添加，存在引擎的 store 里，每个身份自己的。它们的进程跑在这个身份的第一个环境里：工作目录是那个环境的文件夹 `<home>/users/<身份>/<环境 ID>`，以完全访问运行，不受 Seatbelt 限制，能拿到后端的环境变量，只去掉 `OLLUPI_` 开头的变量（尤其是两个密钥）。
+MCP 服务器由用户在界面里添加，存在引擎的 store 里，每个身份自己的。它们的进程跑在这个身份的第一个环境里：工作目录是那个环境的文件夹（默认身份是 `<home>/scratch`），以完全访问运行，不受 Seatbelt 限制，能拿到后端的环境变量，只去掉 `OLLUPI_` 开头的变量（尤其是两个密钥）。
 
 连接发生在 `Serve` 开头：对 store 里的每个身份各起一个 `h.ollupi.Users.Tools(ctx, user)`，不在握手的 30 秒时限内。连不上的服务器跳过，原因由 `mcpServer/list` 报告，界面上能看到。
 

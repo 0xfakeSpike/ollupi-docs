@@ -33,7 +33,7 @@
 
 `sandbox.Env` 是提供者看到的一个环境：`User`、`ID`；`Config`，`Check` 认可过的设置；`State`，提供者上次留下的状态，比如云沙箱的 ID，沙箱还没建过时为 nil；`Keep`，在交出 Box 之前把新状态记下来，进程重启后 `Open` 凭它找回同一个沙箱。
 
-**本机是一个提供者。** `sandbox.Local{Dir, Config}` 的每个环境是本机的一个文件夹 `Dir/<用户>/<环境 ID>`：`Open` 建好这个文件夹，把它作为唯一的命令目录交给 `sandbox.New(Config)`，命令按 `Config` 的限制运行（三种模式见下）。它的名字是 `sandbox.LocalName`（`This computer`）；不收设置，非空的设置被 `Check` 拒绝（`sandbox: this machine takes no settings`）；不留状态；`Remove` 不删文件夹，里面的东西归用户。用户 ID 或环境 ID 不能当文件夹名（空、`.`、`..`、带路径分隔符）时 `Open` 报错。
+**本机是一个提供者。** `sandbox.Local{Dir, Folder, Config}` 的每个环境是本机的一个文件夹，默认是 `Dir/<用户>/<环境 ID>`；部署设了 `Folder` 时由它给出（返回空串仍用默认）：`Open` 建好这个文件夹，把它作为唯一的命令目录交给 `sandbox.New(Config)`，命令按 `Config` 的限制运行（三种模式见下）。它的名字是 `sandbox.LocalName`（`This computer`）；不收设置，非空的设置被 `Check` 拒绝（`sandbox: this machine takes no settings`）；不留状态；`Remove` 不删文件夹，里面的东西归用户。用户 ID 或环境 ID 不能当文件夹名（空、`.`、`..`、带路径分隔符）时 `Open` 报错。
 
 **环境由 `environment.Boxes` 打开。** 宿主把提供者按 ID 放进 `host.Config.Sandboxes`，用 `host.Config.Sandbox` 指定每个用户的第一个环境是哪个提供者的沙箱；一个提供者都没有，或 `Sandbox` 不在其中时，`host.New` 失败。
 

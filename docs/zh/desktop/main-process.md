@@ -129,7 +129,7 @@ frame-src blob:; connect-src ws://127.0.0.1:*
 | 远程 | `remote.read`、`save` | 连另一台机器上的后端时的地址和 token；开关远程或换主机时重启后端、重载窗口 |
 | 身份 | `profile.select`、`delete` | 选这台 Mac 用的身份（写 `profile.json`）；删除一个不在用的身份：`ollupid --delete-profile` 加删它的附件和 `<home>/users/<id>`。身份列表、新建和改名走网关，见 [配置的实现](/zh/desktop/config#运营者和身份) |
 | 技能 | `skills.import` | 让用户选一个技能文件夹，用 `ollupid --read-skill` 读成字段；技能本身经网关读写，见 [配置](/zh/desktop/config#技能) |
-| 中枢 | `superAgentFolder` | 建 `<home>/users/<id>/super-agent` 并给出路径，这个身份的 hub 工作区加在这里 |
+| 中枢 | `superAgentFolder` | 建这个身份的 Super Agent 文件夹并给出路径，hub 工作区加在这里：默认身份是 `<home>/super-agent`，别的身份是 `<home>/users/<id>/super-agent` |
 | 附件 | `attachments.pathOf`、`writeTemp`、`removeTemp` | 没有路径的文件先写成临时文件 |
 | 文件 | `files.list`、`read`、`kind` | 只读工作区文件，见 [侧边面板](/zh/desktop/side-panels) |
 | 改动 | `changes.list`、`diff`、`stage`、`unstage`、`discard`、`commit` | 工作区的 git 操作 |

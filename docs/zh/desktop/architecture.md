@@ -100,7 +100,7 @@ sequenceDiagram
 
 桌面端的内置宿主把中枢写死开启。`sidecar/internal/host/host.go` 构造引擎时传 `Hub: true`，注释写明应用的 Super Agent 就是引擎的 hub：用户的 hub 工作区把活交给项目工作区。开关的含义、hub 工作区与 hub 主 agent 的设计见 [中枢](/zh/engine/hub)，这里只讲它在桌面端怎么出现。
 
-- 界面上第一次开始 Super Agent 时，渲染进程的 `startSuperAgent` 调 `desktop.superAgentFolder()` 拿到当前身份的 `<home>/users/<id>/super-agent`，用 `workspace/add` 把它加成工作区，再用 `workspace/setKind` 把 `kind` 设成 `hub`，最后在其中开一个草稿会话。每个身份一个文件夹，两个中枢不会写同一批文件；中枢不拿它装项目文件。默认身份早先建的中枢工作区可能还在 `<home>/super-agent`，界面以引擎记的工作区路径为准。
+- 界面上第一次开始 Super Agent 时，渲染进程的 `startSuperAgent` 调 `desktop.superAgentFolder()` 拿到当前身份的 Super Agent 文件夹（默认身份是 `<home>/super-agent`，别的身份是 `<home>/users/<id>/super-agent`），用 `workspace/add` 把它加成工作区，再用 `workspace/setKind` 把 `kind` 设成 `hub`，最后在其中开一个草稿会话。每个身份一个文件夹，两个中枢不会写同一批文件；中枢不拿它装项目文件。界面以引擎记的工作区路径为准。
 - 工作区的种类只有 `project` 和 `hub`，新建的都是 `project`；一个用户最多一个 hub 工作区，再改第二个会被引擎拒绝。
 - 这个工作区里的会话由 `agent.HubMain`（`hub-main-agent`）回答。它把工作交给项目会话，自己不跑项目的命令、不碰项目的文件。它也是技能的一个归属：给了 `hub-main-agent` 的技能它才看得到。
 - 桌面端不为中枢传别的配置，界面语言里的 Super Agent 与文档里的中枢是同一件东西。中枢的待办面板见 [面板](/zh/app/panels)。

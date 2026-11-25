@@ -101,7 +101,7 @@ hub 里的会话以 `hub-main-agent` 运行：`app.queue`（`app/turns.go`）在
 工具的描述对所有会话是同一份：`run_command` 说它在会话的环境里运行，`work_dir` 默认是项目根目录、不在项目里时是环境文件夹，具体是哪个环境、什么限制、能否申请全权，让模型看系统提示词的 `# ENVIRONMENT`（`workspace.Describe`）。
 
 ::: info 演进
-以前这个提供者由宿主用 `workspace.New` 建好放进 `Tools`，配置里还有 `workspace_dirs`（不在工作区的命令目录，默认 `<home>/scratch`）和沙箱的各项（`sandbox_mode`、`network`、`allowed_domains`、`deny_read`、`max_output_bytes` 等），命令目录和沙箱规则直接写进 `run_command` 的描述。环境变成提供者的沙箱之后，这些都归了提供者，`scratch` 也不再用：不在工作区的命令在各自环境的文件夹里跑。
+以前这个提供者由宿主用 `workspace.New` 建好放进 `Tools`，配置里还有 `workspace_dirs`（不在工作区的命令目录，默认 `<home>/scratch`）和沙箱的各项（`sandbox_mode`、`network`、`allowed_domains`、`deny_read`、`max_output_bytes` 等），命令目录和沙箱规则直接写进 `run_command` 的描述。环境变成提供者的沙箱之后，这些都归了提供者：不在工作区的命令在各自环境的文件夹里跑，文件夹在哪由提供者决定（桌面端把默认身份的第一个环境放在 `<home>/scratch`）。
 :::
 
 ### 命令
