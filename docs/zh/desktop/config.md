@@ -8,7 +8,7 @@
 | 引擎 store 里的模型目录（catalog） | 提供方、它们的模型和 API 密钥，所有身份共用 | 运营者经网关 `catalog/set` 整份替换，马上生效 |
 | 引擎 store 里每个用户的数据 | 新会话默认的模型、学记忆的模型、权限、MCP 服务器、技能、记忆开关 | 这个身份自己，经网关改，马上生效 |
 
-身份列表 `~/.ollupi/profiles.json` 不属于其中任何一处：本机部署里应用是身份提供方，列表是主进程的，后端不读。
+身份也在 store 里：`users` 表的每一行是一个身份，带名字（迁移 0022 的 `name`，空就是还没起名），没有颜色。运营者经网关 `user/list`、`user/create`、`user/update` 管理，普通连接只能 `user/read` 自己、给自己改名。主进程只记这台 Mac 选的是哪个（`userData/profile.json`）。
 
 ## 为什么这样设计
 
@@ -72,7 +72,7 @@ sidecar 启动时要两个密钥，`OLLUPI_GATEWAY_TOKEN` 和 `OLLUPI_OPERATOR_T
 | `<网关密钥>.<身份>` | 这个身份 |
 | `<运营者密钥>.<身份>` | 这个身份，同时是运营者 |
 
-`host.profileOf` 用常量时间比较认出是哪个密钥，返回 `auth.Identity{User, Operator}`；store 里还没有这个用户时当场建出来，给它自带的技能。
+`host.profileOf` 用常量时间比较认出是哪个密钥，返回 `auth.Identity{User, Operator}`；token 里的身份必须是 store 里已有的用户，不认识的一样回 `ErrUnknownToken`，不会当场建。store 里一个用户都没有时，sidecar 启动时建第一个（`default`）；之后的用户由运营者 `user/create` 建，`gateway.Options.Welcome` 给它自带的技能。握手的 `ready` 行带上 store 里所有身份的 id，这台 Mac 选的身份不在里面时，supervisor 退回第一个并记下。
 
 本机的后端由 supervisor 启动：每次启动生成两个随机密钥，交给渲染进程的是 `<运营者密钥>.<身份>`，所以本机的应用就是运营者；网关密钥不交给任何人。连另一台机器上的后端时，设置 → 连接里填什么 token，就是什么身份：填运营者 token 能改模型目录，填普通 token 只能在目录里选。远端怎么配这两个密钥，见 ollupi-desktop 仓库的 `docs/remote-mac-mini.md`。
 
@@ -85,16 +85,17 @@ sidecar 启动时要两个密钥，`OLLUPI_GATEWAY_TOKEN` 和 `OLLUPI_OPERATOR_T
 
 ## 旧文件的导入
 
-应用每次启动时，在选身份之前运行一次 `ollupid --import-config`（`BackendConfig.importOlder`，同一次启动里只跑一次）。每一步都能重复运行，导入中途断了，下次启动接着做完。四步依次是：
+应用每次启动时，在启动后端之前运行一次 `ollupid --import-config`（`BackendConfig.importOlder`，同一次启动里只跑一次）。每一步都能重复运行，导入中途断了，下次启动接着做完。五步依次是：
 
 | 步骤 | 处理什么 | 做法 |
 |---|---|---|
 | `dropWorkspace` | `workspace` 块 | 从文件里去掉，不保留任何值 |
-| `runImport` | 按身份写模型的旧键（`config.Legacy`） | 所有身份用过的模型合并成一份目录，直接写进 store；每个身份变成 store 里的用户，`settings` 里记下原来的模型和学习模型；身份写进 `profiles.json`，名字和颜色取自文件或 `--names` 给的应用旧 `profiles.json`；原文件存为 `config.yaml.pre-import` |
+| `runImport` | 按身份写模型的旧键（`config.Legacy`） | 所有身份用过的模型合并成一份目录，直接写进 store；每个身份变成 store 里的用户，`settings` 里记下原来的模型和学习模型，名字写进 `users.name`（取自文件，或 `--names` 给的应用旧 `profiles.json`）；原文件存为 `config.yaml.pre-import` |
 | `importProviders` | `providers`（`config.Providers`） | 按 `CheckCatalog` 检查后用 `SetCatalog` 整份写进 store，再从文件里去掉 |
+| `importProfiles` | `~/.ollupi/profiles.json` | 里面每个身份 `EnsureUser`，名字合规则的写进 `users.name`，颜色丢掉，再删掉这个文件 |
 | `importSkills` | `skills_dir` | 读文件夹里各角色的技能，同名的合成一个、给所有有它的角色，内容不同时以主 agent 那份为准，写给 store 里的每个用户；去掉这一行，文件夹留着 |
 
-输出是一行 JSON，比如 `{"ok":true,"workspace":true,"providers":["openai"]}`，没做的步骤不出现。
+输出是一行 JSON，比如 `{"ok":true,"workspace":true,"providers":["openai"],"profiles":["default","work"]}`，没做的步骤不出现。
 
 去掉一个键用的是 `config/older.go` 的 `takeKey`：在 `yaml.Node` 树上删掉这个键和它的值，其余节点和注释原样写回。`yaml.v3` 把一个键上方的所有注释段落都算作这个键的 `HeadComment`，段落之间隔着空行，所以只有最后一段是在说这个键的。`takeKey` 删键时只带走最后一段，前面的段落挪到下一个键上方，没有下一个键时挪到文件末尾。比如 `providers` 前面那段说明会跟着它走，而它下面 `# slots: 32` 那段注释留在原处。
 
@@ -139,13 +140,14 @@ sidecar 启动时要两个密钥，`OLLUPI_GATEWAY_TOKEN` 和 `OLLUPI_OPERATOR_T
 | ollupi-desktop | `sidecar/internal/config/legacy.go` | 按身份写模型的旧文件（`Legacy`） |
 | ollupi-desktop | `sidecar/internal/config/older.go` | `Providers`、`SkillsDir`、`Workspace` 和它们共用的 `takeKey` |
 | ollupi-desktop | `sidecar/cmd/ollupid/main.go` | 两个密钥、各种模式的入口 |
-| ollupi-desktop | `sidecar/cmd/ollupid/import.go` | `--import-config`：`dropWorkspace`、`runImport`、`importProviders`、写 `profiles.json` |
+| ollupi-desktop | `sidecar/cmd/ollupid/import.go` | `--import-config`：`dropWorkspace`、`runImport`、`importProviders`、`importProfiles` |
 | ollupi-desktop | `sidecar/cmd/ollupid/skills.go` | `importSkills`，`--read-skill`、`--skill-schema` 的输出类型 |
 | ollupi-desktop | `sidecar/internal/host/host.go` | `New` 里的装配和工作区沙箱，`profileOf` |
 | ollupi-desktop | `apps/desktop/src/main/backend/config.ts` | `BackendConfig`：`importOlder`、`deleteProfile` |
 | ollupi-desktop | `apps/desktop/src/main/backend/supervisor.ts` | 生成两个密钥，给渲染进程运营者 token |
 | ollupi-desktop | `apps/desktop/src/main/backend/skills.ts` | 导入时用 `--read-skill` 读一个技能文件夹 |
-| ollupi-desktop | `apps/desktop/src/main/profile.ts` | `profiles.json` 和这台 Mac 的选择 |
+| ollupi-desktop | `apps/desktop/src/main/profile.ts` | 这台 Mac 选的身份 |
+| ollupi-desktop | `apps/desktop/src/renderer/src/domains/profile.ts` | 身份列表跟着 `user/changed`；运营者 `user/list`，否则 `user/read` |
 | ollupi-desktop | `apps/desktop/scripts/generate-config.mjs` | 类型生成 |
 | ollupi-desktop | `apps/desktop/src/renderer/src/domains/catalog.ts` | `catalog/read`、`catalog/changed`、`saveCatalog` |
 | ollupi-desktop | `apps/desktop/src/renderer/src/domains/providers.ts` | 目录改动的规则 |

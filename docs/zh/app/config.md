@@ -9,8 +9,7 @@ Ollupi 的配置和数据都在本机的 `~/.ollupi`。大多数设置在应用�
 | 位置 | 内容 |
 |---|---|
 | `~/.ollupi/config.yaml` | 后端的名字、提示词、工具白名单和同时运行的会话数。所有身份共用这一份 |
-| `~/.ollupi/profiles.json` | 有哪些身份，每个身份的名字和颜色 |
-| `~/.ollupi/data` | 数据库：模型服务和它们的 API 密钥，以及所有身份的会话、记忆、待办、技能和设置 |
+| `~/.ollupi/data` | 数据库：模型服务和它们的 API 密钥，有哪些身份和它们的名字，以及每个身份的会话、记忆、待办、技能和设置 |
 | `~/.ollupi/attachments` | 随消息发送的文件的副本 |
 | `~/Library/Logs/Ollupi/backend.log` | 后端日志 |
 
@@ -23,7 +22,6 @@ Ollupi 的配置和数据都在本机的 `~/.ollupi`。大多数设置在应用�
 ```
 ~/.ollupi/
 ├── config.yaml          后端的配置，权限 0600
-├── profiles.json        身份列表：名字和颜色
 ├── data/
 │   └── store.sqlite     数据库，旁边有 -shm 和 -wal
 ├── attachments/         随消息发送的图片和文件的副本
@@ -119,17 +117,18 @@ prompt: ""
 | MCP 服务器 | **能力 → MCP**，见[技能、MCP 与工具](/zh/app/capabilities#mcp) |
 | 技能和给哪些 agent | **能力 → 技能**，见[技能、MCP 与工具](/zh/app/capabilities#技能) |
 
-身份本身在 **设置 → 身份** 里新建、改名、换颜色和删除，列表写在 `~/.ollupi/profiles.json`。这台 Mac 当前用哪个身份，记在应用自己的 `profile.json` 里。
+身份本身在 **设置 → 身份** 里新建、改名和删除，身份和名字存在后端的数据库里。全新的数据目录第一次启动时，后端自己建第一个身份，没有名字的身份显示成"我"。这台 Mac 当前用哪个身份，记在应用自己的 `profile.json` 里；那个身份被删了，就退回第一个。连另一台机器上的后端时，填运营者 token 才能新建、删除和切换身份；填普通 token 只看得到自己，可以给自己改名。
 
 ## 升级时自动处理的
 
-应用每次启动时，先检查 `config.yaml` 里有没有旧版本留下的写法，有就改成现在的样子，其余内容和注释原样保留：
+应用每次启动时，先检查 `config.yaml`（和旧版的 `profiles.json`）里有没有旧版本留下的写法，有就改成现在的样子，`config.yaml` 的其余内容和注释原样保留：
 
 | 旧文件里有 | 启动时怎么处理 |
 |---|---|
 | `workspace` | 去掉这一块。命令和文件工具总是打开，见[字段](#字段)下的说明 |
-| 按身份写的模型：`models` 和 `memory.model`，或各带模型的 `profiles`，或 `credentials` | 所有身份用过的模型合并进数据库里的模型列表；每个身份原来的模型和学习模型变成它自己的选择，名字和颜色写进 `profiles.json`；原文件留一份 `config.yaml.pre-import` |
+| 按身份写的模型：`models` 和 `memory.model`，或各带模型的 `profiles`，或 `credentials` | 所有身份用过的模型合并进数据库里的模型列表；每个身份原来的模型和学习模型变成它自己的选择，名字写进数据库；原文件留一份 `config.yaml.pre-import` |
 | `providers` | 整个搬进数据库，换掉数据库里原有的模型列表，再从文件里去掉。密钥从此不在文件里 |
+| `~/.ollupi/profiles.json`（不在 `config.yaml` 里，旧版的身份列表） | 里面的身份和名字搬进数据库，颜色不要了，再删掉这个文件 |
 | `skills_dir` | 文件夹里的技能给每个已有身份，同名的合成一个、给原来有它的所有 agent（内容不同时以主 agent 那份为准），再去掉这一行；文件夹原样留在磁盘上，可以自己删 |
 
 `permissions`、`mcp`、`memory.use` 和 `memory.generate` 不在自动处理之列。文件里还有它们时，后端会报字段不认识：删掉它们，再到应用里重新设置。
