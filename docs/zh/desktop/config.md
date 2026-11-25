@@ -82,16 +82,18 @@ store 里一个用户都没有时，sidecar 启动时建第一个（`host.FirstP
 
 ## 部署参数和沙箱
 
-`host.New` 装配引擎时只给 `ollupi.Config` 名字、工具、`Boxes`、`Hub` 和网关选项：
+`host.New` 装配引擎时只给 `ollupi.Config` 名字、工具、沙箱提供者、`Hub` 和网关选项：
 
 | 参数 | 值 | 来自 |
 |---|---|---|
 | 名字 | `ollupi`，引擎用它在 MCP 握手和日志里标识自己 | `host.Name` |
 | 系统提示 | 引擎默认 | `Prompt` 留空 |
-| 工具 | 全部，没有白名单；桌面端再加工作区工具和内置浏览器 | `Tools` 只追加，不限制 |
+| 工具 | 全部，没有白名单；桌面端再加内置浏览器 | `Tools` 只追加，不限制 |
+| 沙箱 | 只有这台机器，ID `local`，每个身份的第一个环境是它 | `Sandboxes`、`Sandbox` |
+| 命令 | 引擎默认：30 秒超时，单次最多 600 秒，没有黑名单 | `Commands` 留空 |
 | 槽位 | 32 | `Slots` 留空，取引擎默认 |
 
-命令和文件工具（`run_command`、`edit_file`、`write_file`）总是打开，沙箱用引擎 `workspace.Config` 的默认值：工作区可写、不联网、命令默认 30 秒超时（单次最多 600 秒），不属于工作区的命令在 `<home>/scratch` 里执行。桌面端在此之外只加一条：`<home>/data` 禁止读，命令读不到 API 密钥和数据库；环境变量标记是 `OLLUPI_SANDBOX`。引擎自己再让 `AGENTS.md`、`CLAUDE.md`、`.mcp.json` 这类文件名受保护。每个身份的 MCP 服务器在 `<home>/users/<id>` 里运行。
+命令和文件工具（`run_command`、`edit_file`、`write_file`）由引擎装，总是打开。命令在这台机器的沙箱里跑，用引擎 `sandbox.Config` 的默认值：工作区可写、不联网；不属于工作区的命令在所在环境的文件夹 `<home>/users/<id>/<环境 ID>` 里执行。桌面端在此之外只加三项：`<home>/data` 禁止读，命令读不到 API 密钥和数据库；环境变量标记是 `OLLUPI_SANDBOX`；有完全访问的命令和 MCP 服务器拿不到 `OLLUPI_` 开头的变量。引擎自己让 `AGENTS.md`、`CLAUDE.md`、`.mcp.json` 这类文件名受保护。每个身份的 MCP 服务器在它第一个环境的文件夹里运行。见 [sidecar](/zh/desktop/sidecar#这台机器)。
 
 ## 旧文件的导入
 

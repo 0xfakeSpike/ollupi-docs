@@ -6,7 +6,7 @@ Ollupi 桌面端把 ollupi 引擎包成一个 macOS 应用。引擎是 Go 库，
 
 | 进程 | 代码 | 做什么 | 生命周期 |
 |---|---|---|---|
-| Go sidecar（`ollupid`） | `sidecar/` | 嵌入引擎，装配工具、每个身份的运行环境、中枢，在回环端口上提供网关；模型目录和身份在引擎的 store 里 | 主进程启动它；SIGTERM 或 stdin 关闭时退出 |
+| Go sidecar（`ollupid`） | `sidecar/` | 嵌入引擎，把这台机器登记成唯一的沙箱提供者，装配浏览器工具、中枢，在回环端口上提供网关；模型目录和身份在引擎的 store 里 | 主进程启动它；SIGTERM 或 stdin 关闭时退出 |
 | Electron 主进程 | `apps/desktop/src/main` | 托管 sidecar，记这台 Mac 选的身份，启动前导入旧数据目录；拥有窗口、内置浏览器、终端、git 操作、更新、通知 | 应用的生命周期，窗口关闭后仍在 |
 | 渲染进程 | `apps/desktop/src/renderer` | 界面。沙箱内运行，只能通过 `window.desktop` 和网关 WebSocket 与外界说话 | 窗口的生命周期；隐藏窗口不销毁它 |
 

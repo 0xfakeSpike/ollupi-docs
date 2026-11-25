@@ -11,7 +11,7 @@
 | 1 | 取消 `h.Run` 和 `h.Gateway.Serve` 共用的 ctx | 网关关掉入口，以 1001 `server shutting down` 关掉现有连接，最多等 5 秒；调度器取消正在跑的轮次，等它们的 goroutine 退出；定时任务和记忆提炼停下 |
 | 2 | 等两者都返回 | 被取消的轮次原样留在库里，下次启动由调度器接着跑；在 ctx 结束后才停下的运行不会把轮次判成失败 |
 | 3 | `member.Run` 返回（分片部署时） | 它在返回前 `Release` 租约，备用进程最多等一次轮询（TTL/3）就能接管 |
-| 4 | `h.Close()` | 关掉每个用户的 MCP 服务器，最后关库。`Config.Tools` 里有资源的 provider（比如 `workspace.Provider`）和用户的 Box 由宿主自己关 |
+| 4 | `h.Close()` | 关掉每个用户的 MCP 服务器和所有打开的执行环境的 Box，最后关库。`Config.Tools` 里有资源的 provider 由宿主自己关 |
 
 顺序错了后果很具体：先关库，还在跑的运行写不进去，以错误结束；不等 `member.Run` 返回就退出进程，租约没放掉，备用要等它过期才接管。
 
@@ -178,7 +178,8 @@ SELECT shard_id, count(*) FROM placements GROUP BY shard_id;
 | 一轮失败：`run: model call: model request failed; check the selected connection and try again` | 请求没拿到 HTTP 状态码，比如网络不通 | 查到服务商的网络 |
 | 一轮失败：`run: model call: llm: the provider sent nothing for 3m0s` | 服务商 3 分钟没有发回任何字节 | 查服务商状态；这次尝试被放弃 |
 | 一轮失败：`run: the permission settings: ...` | 某一层权限规则提到了这个用户没有的工具 | 部署层的规则在 `Permissions` 里改；用户、工作区、会话层由客户端改 |
-| 一轮失败：`run: the tools of the user: ...` | 建这个用户的工具注册表失败：provider 或工具重名，或 `Boxes` 对他返回错误 | 见[扩展点](/zh/integrate/extend#命名) |
+| 一轮失败：`run: the tools of the user: ...` | 建这个用户的工具注册表失败：provider 或工具重名，或他的第一个执行环境打不开（`mcp: the first environment of the user: ...`） | 见[扩展点](/zh/integrate/extend#命名)和[云沙箱](/zh/integrate/extend#云沙箱) |
+| 一轮失败：`run: the environment of the conversation: ...` | 会话所在执行环境的沙箱打不开，提供者的 `Open` 返回了错误 | 查提供者；下次用到时会重新打开，见[云沙箱](/zh/integrate/extend#云沙箱) |
 | 重启后一些工具调用失败，提示 `the call was cut off when the run that made it stopped; ...` | 上个进程退出时它们正在执行，可能已生效，引擎不重跑 | 按设计如此，见[持久化](/zh/engine/persistence) |
 
 ## 代码位置

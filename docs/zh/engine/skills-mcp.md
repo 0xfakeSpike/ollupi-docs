@@ -9,7 +9,7 @@
 - **坏技能在启动时暴露。** 启动时把整个技能目录检查一遍，任何一个技能解析失败，`host.New` 就失败，不会悄悄少一个技能，见[设计决策 18](/zh/reference/decisions#_18-出错即暴露)。
 - **MCP 服务器是用户自己的设置，存在库里。** 每个用户通过协议增删自己的服务器，改动下一次用到时生效，不用重启，也不经过宿主（host）的配置。
 - **MCP 工具名带服务器前缀，连不上的服务器跳过并报告原因。** 工具一律注册成 `<server>__<tool>`，服务器以后新增的工具不会和别的工具撞名；连不上的服务器不让轮次失败，状态里写明原因，引用它的规则保留但暂时不匹配任何调用。
-- **每个用户的服务器在自己的沙箱里按需启动。** 用户第一次需要工具时，才在他的 `Box`（沙箱的运行环境）里启动他的服务器，各用户的进程和连接互不共享。
+- **每个用户的服务器在自己的沙箱里按需启动。** 用户第一次需要工具时，才在他第一个执行环境的 `Box` 里启动他的服务器，各用户的进程和连接互不共享。服务器属于用户、不属于某个会话，所以不跟着会话换环境。
 - **服务器自己声明的只读不算数。** MCP 工具一律当作会改东西、会访问外部世界，审批策略不因服务器的标注放行。
 
 代价：每个用户一组服务器进程；一台服务器掉线、或用户改了任一台的配置，这个用户的整组服务器都关掉重连；MCP 工具在 `on-request` 下每次都问，规则只能写到工具名；每次模型调用都要读一遍角色的技能目录。
@@ -133,13 +133,13 @@ MCP 服务器是用户的设置，按 `(user_id, name)` 一行存在 `mcp_server
 
 客户端身份是 `host.Config.Name` 和构建版本（读不到时是 `unknown`）。连接在 `Users.Tools(ctx, user)` 或 `Users.Statuses(user)` 第一次用到这个用户时做，按用户缓存，同一用户的并发请求共用一次连接：
 
-1. 从库里读这个用户的服务器，用 `host.Config.Boxes(user)` 取他的 `Box`。
+1. 从库里读这个用户的服务器，取他第一个执行环境的 `Box`（`environment.Boxes.In(ctx, user, "")`）；打不开时报 `mcp: the first environment of the user: ...`，这个用户的工具集建不起来。
 2. 每台服务器一个 goroutine，各自限时 30 秒（`connectTimeout`），覆盖启动、initialize 握手和 `tools/list`。
 3. 连上的服务器作为提供者，和内置提供者一起交给 `kit.New` 组成工具集；连不上的服务器名字记进工具集的 `Unavailable`。
 
 | 步骤 | 实现 |
 | --- | --- |
-| stdio | 工作目录是 `Box.Roots()[0]`；`box.Executable` 解析命令，`box.Start` 起进程，stdin/stdout 接 `mcp.IOTransport`，stderr 收进一个 2048 字节（`tailBytes`）的环形缓冲 |
+| stdio | 工作目录是 `Box.Roots()[0]`，即第一个环境的文件夹；`box.Executable` 解析命令，`box.Start` 起进程，Box 能给全权（`CanEscalate`）时以全权启动，stdin/stdout 接 `mcp.IOTransport`，stderr 收进一个 2048 字节（`tailBytes`）的环形缓冲 |
 | HTTP | `mcp.StreamableClientTransport`，底层是 `box.Transport()` 外面包一层：`Headers` 只加在主机名和 `URL` 相同的请求上，关会话的 `DELETE` 限时 5 秒（`closeTimeout`） |
 | 消息上限 | 一条消息最多 32 MiB（`maxMessageBytes`）：stdio 上每行必须是一条完整的 JSON 消息，HTTP 的 SSE 每个事件、其他响应体都不能超过；超过时会话以错误结束 |
 | 握手 | `client.Connect`；`InitializeResult().ServerInfo.Name` 记作服务器标题，写进提供者的描述 |
@@ -207,7 +207,7 @@ MCP 工具进工具集时字段是这样填的：
 
 规则只能写到工具名：`<server>__<tool>` 可以，带说明符的写法在保存时被拒（`takes no specifier`）。连不上的服务器的名字在工具集的 `Unavailable` 里：已有的规则保留、这次不匹配任何调用；新写一条引用它的规则会被拒，要等服务器连上再加。部署层的规则可以写到这个用户没有的 MCP 工具。完整规则和匹配算法见[审批与权限](/zh/engine/permissions)。
 
-沙箱边界分三处：stdio 服务器在 `host.Config.Boxes(user)` 给出的这个用户的 `Box` 里启动，按这个 `Box` 的规则运行（本机的 `Sandbox` 按它的沙箱配置起进程，远程 `Box` 交给它的 `Machine`）；HTTP 请求用 `box.Transport()`（本机的 `Sandbox` 返回带系统代理的 `http.Transport`，远程 `Box` 用自己的 transport，请求从分片进程发出，只能到公网地址）；宿主把技能目录作为 `workspace.AgentFiles.SkillsDir` 交给工作区工具时，它在沙箱里是只读路径，`run_command` 改不了技能文件，而技能自己的读取直接读目录，不经 `Box`。沙箱的两种形态见[沙箱](/zh/engine/sandbox)。
+沙箱边界分三处：stdio 服务器在用户第一个环境的 `Box` 里启动，它是用户自己的程序，Box 能给全权时以全权运行，和在 ollupi 之外运行一样（本机的 `Sandbox` 不加 Seatbelt，环境变量只去掉 `HideEnv` 的前缀；远程 `Box` 给不了全权，交给它的 `Machine` 照常运行）；HTTP 请求用 `box.Transport()`（本机的 `Sandbox` 返回带系统代理的 `http.Transport`，远程 `Box` 用自己的 transport，请求从分片进程发出，只能到公网地址）；`activate_skill` 把技能的文件写进会话所在环境的文件夹 `.ollupi/skills/<名字>`（同一版本只写一次），技能的命令在那里能用到它们。沙箱的两种形态见[沙箱](/zh/engine/sandbox)。
 
 ## 工作区层
 
@@ -227,7 +227,7 @@ MCP 工具进工具集时字段是这样填的：
 - **技能正文太大时激活失败。** 超过 20000 rune 或 artifact 预算时这次调用失败，模型拿不到正文；激活过的技能太多时，较早的那些在上下文里换成一行提示。
 - **起初连不上的服务器不会自动重试。** 只有已经连上的服务器掉线才触发整组重连（`gone()` 只看连上过的会话）；起初就失败的那台要等同一用户的另一台掉线、用户改一次配置，或进程重启。
 - **一台掉线，整组重连。** 这个用户的其他服务器进程也会被关掉重启，改任一台的配置也一样；按代码推断，正在跑的轮次手里还拿着关掉之前的工具集，这时调用那些服务器的工具会失败。
-- **stdio 服务器要一个有根目录的 `Box`。** 工作目录取 `Box.Roots()[0]`。`sandbox.New` 和 `sandbox.Here` 建的 Box 至少有一个根目录；`sandbox.Remote` 不检查传进来的 `roots`，给它空列表时 stdio 服务器会越界。
+- **stdio 服务器要一个有根目录的 `Box`。** 工作目录取 `Box.Roots()[0]`。`sandbox.New`、`sandbox.Here` 和 `sandbox.Local` 建的 Box 至少有一个根目录；`sandbox.Remote` 不检查传进来的 `roots`，提供者给它空列表时 stdio 服务器会越界。
 
 ## 代码位置
 

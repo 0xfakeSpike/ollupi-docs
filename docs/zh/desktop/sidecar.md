@@ -70,30 +70,40 @@ flowchart TD
 
 ## 装配引擎
 
-装配出来的组件大部分在引擎的 host 里。`ollupi.New` 一次建好 store、按模型目录建的模型客户端、附件、内置工具、调度器、记忆提炼和用量记录，桌面端只补上引擎不知道的几样：每个身份的运行环境、工作区工具、内置浏览器、网关的认证。`host.New` 只构建，不启动，任何一步失败都会把已打开的组件按相反顺序关掉。
+装配出来的组件大部分在引擎的 host 里。`ollupi.New` 一次建好 store、按模型目录建的模型客户端、附件、内置工具、调度器、记忆提炼和用量记录，桌面端只补上引擎不知道的几样：这台机器这个沙箱提供者、内置浏览器、网关的认证。命令和文件工具、网页工具都是引擎自己装的。`host.New` 只构建，不启动，任何一步失败都会把已打开的组件按相反顺序关掉。
 
 | 顺序 | 组件 | 说明 |
 |---|---|---|
-| 1 | 运行环境 | `newUserBoxes`：每个身份一个 `sandbox.New` 的 `full access` Box，根目录是 `<home>/users/<id>`，第一次用到时建 |
-| 2 | 工作区工具 | 总是有。`DenyRead` 是 `<home>/data`，命令读不到 API 密钥和数据库；`EnvMarker` 是 `OLLUPI_SANDBOX`；`BoxIn` 拒绝在别的机器上开的会话 |
-| 3 | 浏览器工具 | 只有 `OLLUPI_BROWSER_URL` 存在时注册 |
-| 4 | 引擎 | `ollupi.New`：名字 `host.Name`（`ollupi`），引擎默认的系统提示和槽位，全部工具，`Boxes`、`Hub: true`，网关的 `Authenticate`、`Welcome` 和允许的源 |
-| 5 | 第一个身份 | `firstProfile`：store 里一个用户都没有时建 `default`，给它随应用发布的技能 |
+| 1 | 浏览器工具 | 只有 `OLLUPI_BROWSER_URL` 存在时注册 |
+| 2 | 引擎 | `ollupi.New`：名字 `host.Name`（`ollupi`），引擎默认的系统提示和槽位，全部工具，`Sandboxes` 只有这台机器（`thisMachine`，ID `local`）、`Sandbox: "local"`，`Hub: true`，网关的 `Authenticate`、`Welcome` 和允许的源 |
+| 3 | 第一个身份 | `firstProfile`：store 里一个用户都没有时建 `default`，给它随应用发布的技能 |
 
 桌面端特有的几样：
 
 - `Authenticate` 是 `profileOf`：认出 token 用的是哪个密钥，token 里的身份必须是 store 里已有的用户，否则回 `ErrUnknownToken`，不会当场建。
 - `Welcome`：运营者用 `user/create` 建的身份，也拿到随应用发布的技能。
-- `Boxes` 给每个身份自己的 Box。命令只在这台机器上跑，所以引擎里指向别的机器的会话会被工作区工具拒绝，报"start the conversation in …"。
+- 这台机器是唯一的沙箱提供者，见下一节。
 - `Hub: true`。应用的 Super Agent 就是引擎的中枢，用户的唯一中枢工作区把活分给项目工作区。中枢本身见 [中枢](/zh/engine/hub)。
 
 ::: info 演进
 早期 store、定时任务、MCP 连接、记忆提炼和网关都由 `host.New` 自己逐个构造，事件还要靠 `agent.Config.OnEvent` 手动分发给网关和各个客户端。后来这些都成了引擎 host 的一部分，分发改走 store 的事件流。模型客户端原来由 sidecar 按 `config.yaml` 里的模型逐个建（`modelClients`），引擎 v0.32.0 把模型目录搬进 store 后由引擎自己建（`desktop@8033b6d`）；名字、提示、工具白名单和槽位原来读自 `config.yaml`，现在是常量（`desktop@780d8cc`）。
 :::
 
+### 这台机器
+
+sidecar 把这台机器登记成唯一的沙箱提供者：`thisMachine` 返回一个 `sandbox.Local`，提供者 ID 是 `local`（`LocalSandbox`），名字是引擎的 `This computer`，界面上按语言写成"这台电脑"。每个身份的第一个环境就是它的沙箱；`--import-config` 不起引擎、直接在 store 里建身份时，用 `FirstEnvironment` 给出同样的第一个环境。
+
+- 每个环境是 `<home>/users/<身份>/<环境 ID>` 这个文件夹，不属于工作区的会话的命令在这里运行。删除环境时文件夹留着。
+- 命令按引擎 `sandbox.Config` 的默认值在 Seatbelt 里跑：工作区可写、不联网。桌面端只加三项：`DenyRead` 是 `<home>/data`（`Options.DataHome` 和 `Home` 不同时两个 `data` 都在里面），命令读不到模型的 API 密钥和每个身份的 MCP 服务器配置；`EnvMarker` 是 `OLLUPI_SANDBOX`；`HideEnv` 是 `OLLUPI_`，有完全访问的命令和 MCP 服务器拿到后端的环境变量，但没有 `OLLUPI_` 开头的那些，也就拿不到两个密钥。
+- 后端只提供这一种沙箱，环境对话框里不出现提供者的选择，新开的环境都是这台机器上的另一个文件夹。
+
+::: info 演进
+以前 sidecar 自己用 `workspace.New` 装命令和文件工具：不属于工作区的命令都在共用的 `<home>/scratch` 里跑，每个身份另有一个 `full-access` 的 Box（根目录 `<home>/users/<id>`，`newUserBoxes`）给 MCP 服务器、附件和工作区校验用；在云端沙箱里开的会话，命令被工作区工具拒绝（"start the conversation in …"）。跟进引擎的沙箱提供者之后，这台机器成了提供者，环境的沙箱由引擎打开，`scratch` 不再使用。
+:::
+
 ### MCP 服务器
 
-MCP 服务器由用户在界面里添加，存在引擎的 store 里，每个身份自己的。它们的进程跑在这个身份的 Box 里：根目录是 `<home>/users/<id>`，能拿到后端的环境变量，但去掉两类：`OLLUPI_` 开头的变量（尤其是两个密钥），以及沙箱拒绝的名字，比如 shell 的 `BASH_FUNC_x%%`。
+MCP 服务器由用户在界面里添加，存在引擎的 store 里，每个身份自己的。它们的进程跑在这个身份的第一个环境里：工作目录是那个环境的文件夹 `<home>/users/<身份>/<环境 ID>`，以完全访问运行，不受 Seatbelt 限制，能拿到后端的环境变量，只去掉 `OLLUPI_` 开头的变量（尤其是两个密钥）。
 
 连接发生在 `Serve` 开头：对 store 里的每个身份各起一个 `h.ollupi.Users.Tools(ctx, user)`，不在握手的 30 秒时限内。连不上的服务器跳过，原因由 `mcpServer/list` 报告，界面上能看到。
 
@@ -154,7 +164,7 @@ type readResult struct {
 | ollupi-desktop | `sidecar/cmd/ollupid/main.go` | 命令行入口、两个密钥、一次性模式、启动顺序、`--delete-profile` |
 | ollupi-desktop | `sidecar/cmd/ollupid/import.go` | `--import-config` |
 | ollupi-desktop | `sidecar/cmd/ollupid/skills.go` | `--read-skill` 和它的 `readResult`，`importSkills` 搬旧的 `skills_dir` |
-| ollupi-desktop | `sidecar/internal/host/host.go` | 装配、`Serve`、每个身份的 Box、`profileOf`、`firstProfile`、`giveStarterSkills` |
+| ollupi-desktop | `sidecar/internal/host/host.go` | 装配、`Serve`、这台机器这个提供者（`thisMachine`、`LocalSandbox`、`FirstEnvironment`）、`profileOf`、`firstProfile`、`giveStarterSkills` |
 | ollupi-desktop | `sidecar/internal/handshake/handshake.go` | 握手行 |
 | ollupi-desktop | `sidecar/internal/config/` | 拆开旧配置，`ProfileID` |
 | ollupi-desktop | `sidecar/internal/skillmd/` | 把技能文件夹读成 `skill.Package` |

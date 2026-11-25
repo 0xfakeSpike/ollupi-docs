@@ -7,9 +7,10 @@
 | # | 功能 | 优先级 | ollupi | desktop |
 |---|---|---|---|---|
 | 1 | 编辑历史消息、分叉、回滚 | P1 | ✔ | ✔ |
-| 2 | Linux / Windows | P3 | ✔ | ✔ |
-| 3 | Apple 公证 | P3 | | ✔ |
-| 4 | 远程访问 | P3 | ✔ | ✔ |
+| 2 | 云沙箱提供者 | P2 | ✔ | ✔ |
+| 3 | Linux / Windows | P3 | ✔ | ✔ |
+| 4 | Apple 公证 | P3 | | ✔ |
+| 5 | 远程访问 | P3 | ✔ | ✔ |
 
 ## P1
 
@@ -25,9 +26,22 @@
   - 消息上的"编辑"、"从这里分叉"
   - 分叉出的会话标明来源
 
+## P2
+
+### 2. 云沙箱提供者
+
+执行环境、沙箱提供者的接口和桌面端的环境对话框都已经做了（见[功能清单](/zh/reference/features)），但还没有接入任何云沙箱（E2B、Daytona 等），后端只提供这台电脑。接一家就是写一个提供者，放进 `host.Config.Sandboxes`，见[云沙箱](/zh/integrate/extend#云沙箱)。
+
+- ollupi
+  - 实现一家的 `sandbox.Provider`：`Open` 建出或找回沙箱，用 `Keep` 记下沙箱的 ID；`Remove` 删掉它；机器实现 `sandbox.Machine`，用 `sandbox.Remote` 包成 Box
+  - 沙箱的网络规则、休眠和唤醒由提供者负责
+- desktop
+  - sidecar 在 `Sandboxes` 里加上这个提供者，和这台机器并列
+  - 环境对话框在后端提供不止一种沙箱时已经会出现选择；还要能填提供者的设置（`environment/add` 的 `config`，比如模板、地区）
+
 ## P3
 
-### 2. Linux / Windows
+### 3. Linux / Windows
 
 沙箱依赖 macOS Seatbelt。
 
@@ -38,12 +52,12 @@
   - electron-builder 增加 Linux / Windows 目标，sidecar 多平台构建
   - 自动更新支持对应安装包
 
-### 3. Apple 公证
+### 4. Apple 公证
 
 - desktop
   - 发布流程加签名和公证，用户首次打开不再被拦下
 
-### 4. 远程访问
+### 5. 远程访问
 
 网关已有令牌认证、允许的主机名，监听由宿主传入；每个用户最多四条连接，每条都收到全部事件。还缺：
 

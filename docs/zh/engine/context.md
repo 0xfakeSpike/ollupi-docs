@@ -100,9 +100,10 @@ r.NeedsCompaction = natural > r.Stats.CompactAtTokens &&
 | 3 | `# WORKSPACE INSTRUCTIONS` | 会话在工作区里且 `Instructions` 不为空。固定一句 `The user set these instructions for every conversation in this workspace. Follow them, within Safety.` 加原文；上限 20000 字符（`maxInstructionsRunes`），超限保存时就报错 |
 | 4 | `# AVAILABLE SKILLS` | 这个角色装了技能 |
 | 5 | `# DEFERRED TOOLS` | 有延迟加载的工具 |
-| 6 | `# PROJECT` | 会话属于工作区且这一轮能用工作区工具；写明项目路径 |
+| 6 | `# ENVIRONMENT` | 这一轮能用工作区工具；写明命令和文件改动在哪个执行环境里、不在项目里时 `work_dir` 是环境的哪个文件夹、沙箱的限制（`Box.Summary`），以及能不能、怎样用 `sandbox_permissions` 申请全权 |
+| 7 | `# PROJECT` | 会话属于工作区且这一轮能用工作区工具；写明项目路径 |
 
-第 3 段对所有角色都有，包括子 agent，所以工作区的约定对交给子 agent 的活也生效；它只是提示词，不参与权限判定，见[工作区](/zh/engine/workspace)。`# PROJECT` 还要求这一轮真有 `workspace` provider 的工具（`run.input` 在发出和延迟的工具里找），工作区工具被权限拿掉时没有这一节。
+第 3 段对所有角色都有，包括子 agent，所以工作区的约定对交给子 agent 的活也生效；它只是提示词，不参与权限判定，见[工作区](/zh/engine/workspace)。`# ENVIRONMENT` 和 `# PROJECT` 都要求这一轮真有 `workspace` provider 的工具（`run.input` 在发出和延迟的工具里找），工作区工具被权限拿掉时没有这两节。`# ENVIRONMENT` 的文字由 `host` 按会话的环境现写（`workspace.Describe`），要先打开那个环境的沙箱，所以环境的沙箱最晚在它的会话第一次带着工作区工具调模型之前建出来；打开失败时这一轮以 `run: the environment of the conversation: ...` 失败，见[提供者与执行环境](/zh/engine/sandbox#提供者与执行环境)。工具的描述对所有会话相同，随环境变化的说明只在这一节里。
 
 每个角色的规则都有 `Safety` 一节，安全规则不依赖 agent 提示词。主 agent 的规则以 `Final answer` 收尾，子 agent 的以 `Report` 收尾；子 agent 不带 agent 提示词，规则开头说明它是子 agent、回复是给启动它的 agent 的报告。技能按角色装在 `host.Config.SkillsDir` 下每个角色自己的子目录，目录超过输入预算的 4% 时从末尾删。系统提示词每次调用前重新写（`run.input`），每次都重读技能目录；输入不变时文字逐字节相同，缓存照常命中，运行中途出现或消失的工具、新装的技能从下一次请求起出现，代价是一次缓存失效。
 

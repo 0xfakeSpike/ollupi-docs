@@ -99,7 +99,7 @@
 [... characters 8000-52000 of this output omitted; call read_tool_output with output_id "<条目 ID>" and offset 8000 to read them ...]
 ```
 
-日志里的内容不变，同一个结果下次可以显示得更长；`read_tool_output` 按字符读完整结果，只接受当前会话的工具调用和子 agent 报告。切点怎么避开脱敏范围见[上下文管理](/zh/engine/context#工具输出裁剪)。工具层也截一次：命令的 stdout、stderr 各认 `max_output_bytes`（默认 1 MiB），保留头尾，中间换成 `[… N bytes omitted …]`。
+日志里的内容不变，同一个结果下次可以显示得更长；`read_tool_output` 按字符读完整结果，只接受当前会话的工具调用和子 agent 报告。切点怎么避开脱敏范围见[上下文管理](/zh/engine/context#工具输出裁剪)。工具层也截一次：命令的 stdout、stderr 各认 沙箱的 `MaxOutputBytes`（默认 1 MiB），保留头尾，中间换成 `[… N bytes omitted …]`。
 
 ## 延迟加载
 

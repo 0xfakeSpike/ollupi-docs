@@ -7,12 +7,12 @@
 | [每用户的模型客户端](#每用户的模型客户端) | `host.Config.ClientFor` | 所有用户共用 `Connections` 里的客户端和配额 |
 | [自己实现模型客户端](#自己实现模型客户端) | `llm.Client` 接口，放进 `Connections` 或由 `ClientFor` 返回 | 用内置的 OpenAI、Anthropic、Gemini 客户端 |
 | [自己的工具](#自己的工具) | `kit.Provider` 接口，放进 `host.Config.Tools` | 只有内置工具和用户自己的 MCP 服务器 |
-| [云沙箱](#云沙箱) | `host.Config.Boxes`，工作区工具的 `workspace.Options.BoxFor` 或 `BoxIn`；`sandbox.Machine` 接口 | `Boxes` 必填；用户可以完全使用这台机器时填 `sandbox.Here()` |
+| [云沙箱](#云沙箱) | `sandbox.Provider` 接口，放进 `host.Config.Sandboxes`；机器实现 `sandbox.Machine`，用 `sandbox.Remote` 包成 Box | `Sandboxes`、`Sandbox` 必填；只用本机时填 `sandbox.Local` |
 | [附件存储](#附件存储) | `app.Attachments` 接口 | `host.New` 固定用 `<Home>/attachments` 目录 |
 | [目录库](#目录库) | `catalog.Catalog` 接口，给 `shard.Member` 和 `router.NewLocator` | 用 `catalog.OpenSQL` 打开的 SQLite 文件 |
 | [认证](#认证) | `gateway.Options.Authenticate`，路由器的 `router.NewLocator` | 用 `Token`，只有 `default` 一个用户 |
 
-本页的代码都对着引擎 v0.17.1 编译并通过 `go vet`。云沙箱那段没有在真实容器里跑过；附件存储和目录库只给出接口的实现，没有接真实的服务。
+本页的代码都对着引擎 v0.17.1 编译并通过 `go vet`；云沙箱那段按 `sandbox.Provider` 写，对着引入它的引擎代码编译并通过 `go vet`，没有在真实容器里跑过；附件存储和目录库只给出接口的实现，没有接真实的服务。
 
 ## 每用户的模型客户端
 
@@ -195,7 +195,7 @@ func (t *Tickets) Invoke(ctx context.Context, c tool.Call) (kit.Result, error) {
 
 | 规则 | 不遵守时 |
 | --- | --- |
-| provider ID 非空，所有 provider 之间不重复，也不和内置的重复（`plan`、`user_input`、`deferred_tools`、`subagents`、`context`、`memory`、`cron`、`skills`、`tool_registry`，以及 `workspace`、`web` 如果你也放了它们） | 建这个用户的注册表时出错（`tool registry: provider "x" twice`），他的每一轮都失败 |
+| provider ID 非空，所有 provider 之间不重复，也不和内置的重复（`workspace`、`web`、`plan`、`user_input`、`deferred_tools`、`subagents`、`context`、`memory`、`cron`、`skills`、`tool_registry`） | 建这个用户的注册表时出错（`tool registry: provider "x" twice`），他的每一轮都失败 |
 | 工具名非空，在这个用户的整个注册表里不重复 | 同上（`tool registry: tool "x" twice`） |
 | 工具名写成 `<provider ID>__<工具>` | 见下面两条 |
 
@@ -236,7 +236,7 @@ func (t *Tickets) Invoke(ctx context.Context, c tool.Call) (kit.Result, error) {
 
 - **按用户隔离。** 引擎不知道你的工具碰的是谁的数据。`tool.Call` 里嵌着 `tool.Caller`，给出 `User`、`Thread`、`Workspace`、`Environment`、`Root`（工作区目录）、`Subagent` 等，工具自己只做这个用户的事。
 - **`Tools` 返回固定的列表。** 它的结果会被缓存，不要按时间或调用者变。
-- **自己关闭 provider。** `h.Close` 只关用户的 MCP 服务器和库，不调 `Config.Tools` 里任何 provider 的 `Close`；`workspace.Provider` 这类有资源的 provider 由宿主在退出时关。
+- **自己关闭 provider。** `h.Close` 只关用户的 MCP 服务器、执行环境的 Box 和库，不调 `Config.Tools` 里任何 provider 的 `Close`；有资源的 provider 由宿主在退出时关。
 - **需要审批前冻结执行内容的工具实现 `Prepare`。** 只有执行内容可能在审批期间变化的工具才需要，比如命令和文件修改：`Prepare` 返回的 `tool.Plan.Data` 记在调用里，审批的就是它，执行时从 `tool.Call.Prepared` 读回。见[工具](/zh/engine/tools)。
 
 ::: info 演进
@@ -245,121 +245,132 @@ v0.16.0 之前工具实现的是 `tools.Provider`（`Name`、`ToolList`、`Invok
 
 ## 云沙箱
 
-用户的命令、文件、附件来源和 stdio MCP 服务器都经 `sandbox.Box` 访问。接云沙箱只需要实现 `sandbox.Machine`，再用 `sandbox.Remote(machine, roots, summary)` 包成 `Box`。`Box` 的方法、`Remote` 和本机沙箱语义的区别见[沙箱](/zh/engine/sandbox)。
+用户的命令、文件、附件来源和 stdio MCP 服务器都经执行环境（environment）的 `sandbox.Box` 访问，每个执行环境是部署的某个沙箱提供者（`sandbox.Provider`）的一个沙箱。接一家云沙箱就是写一个提供者，放进 `host.Config.Sandboxes`：引擎在环境第一次用到时让它建沙箱，记下它交回的状态，之后凭状态找回同一个沙箱，环境删除时让它清掉。提供者、环境和 Box 的关系见[提供者与执行环境](/zh/engine/sandbox#提供者与执行环境)，`Remote` 和本机沙箱语义的区别见[沙箱](/zh/engine/sandbox)。
 
 ::: warning 还没有服务商实现
-引擎仓库里 `Machine` 的实现只在测试里，没有接入任何云沙箱服务商。下面的实现用 `docker exec` 访问每个用户一个容器，编译通过，没有在真实容器里跑过。
+引擎和桌面端都还没有接入任何云沙箱服务商（E2B、Daytona 等）；`Machine` 的实现只在测试里。下面的提供者用 `docker` 给每个环境一个容器，编译通过，没有在真实容器里跑过。
 :::
 
-同一个按用户取 Box 的函数要填在两个地方：
-
-| 位置 | 谁用它 | 不填时 |
+| 位置 | 填什么 | 不填时 |
 | --- | --- | --- |
-| `host.Config.Boxes` | 读附件的源文件、`workspace/add` 和 `workspace/move` 校验路径、启动这个用户的 stdio MCP 服务器 | 必填，`host.New` 失败 |
-| `workspace.Options.BoxFor` 或 `BoxIn` | 每一次 `run_command`、文件工具、读取工具 | 所有用户都用 `Options.Box` |
+| `host.Config.Sandboxes` | 提供者 ID 到实现。ID 就是客户端 `environment/add` 的 `provider`、`environment/list` 的 `providers[].id`。本机和云沙箱可以同时提供 | 必填，`host.New` 失败 |
+| `host.Config.Sandbox` | 每个用户的第一个环境是哪个提供者的沙箱。MCP 服务器、按路径发来的附件、没有指定环境的会话和工作区都用第一个环境 | 必填，不是 `Sandboxes` 的键时 `host.New` 失败 |
 
-只填了第一个时，工作区添加在用户的机器里，工具却在 `Options.Box` 里运行，两边对不上。
+引擎什么时候调提供者：
 
-### 按会话选择环境
+| 方法 | 什么时候 | 要做到 |
+| --- | --- | --- |
+| `Name()` | 建用户时给第一个环境起名；`environment/list` 列出可选的提供者 | 返回固定的名字 |
+| `Check(config)` | `environment/add` 时；`config` 是客户端给的 JSON 对象，没给时为空 | 不能用的设置返回错误，客户端收到 `-32602` `invalid environment: ...` |
+| `Open(ctx, env)` | 一个环境在这个进程里第一次被用到时：工具调用、带命令工具的一轮写系统提示词、`workspace/add`、启动 MCP 服务器、读附件 | `env.State` 为 nil 时建沙箱，交出 Box 之前用 `env.Keep` 记下怎样找回它；不为 nil 时找回并唤醒同一个沙箱 |
+| `Remove(ctx, env)` | `environment/delete` 删掉这一行之后 | 删掉沙箱，已经不在了返回 nil。返回错误时环境已经删了，客户端收到 `-32000`，沙箱可能还留着 |
 
-一个用户可以有几个执行环境，会话开始时选一个，之后不变，见[执行环境](/zh/integrate/protocol/workspaces)。`Boxes` 是用户在这台机器上的那个 Box，工作区校验和附件读取用它；配了 `workspace.Options.BoxIn` 时，每次工具调用在哪个 Box 里跑，由它按会话的环境决定。
+会话在哪个环境里运行由引擎定，宿主不用管：在工作区里的会话用工作区的环境，不在工作区的用开会话时选的，默认是用户的第一个，见[工作区与执行环境](/zh/integrate/protocol/workspaces#概念与状态)。
 
-| `BoxIn(caller)` 返回 | 这次调用 |
-| --- | --- |
-| `(box, nil)` | 在这个 Box 里运行 |
-| `(nil, nil)` | 在 `Options.Box` 里运行。注意不是 `BoxFor` 给的 Box |
-| `(nil, err)` | 失败，错误以 `workspace: the environment of the conversation:` 开头交给模型 |
-
-配了 `BoxIn` 时，`BoxFor` 不参与工具调用。`caller.Environment` 是会话的环境 ID，`caller.User` 是用户。按环境找机器（`h` 是 `host.New` 返回的宿主，`b` 是下面的 `boxes`，`machines` 是宿主自己按环境找到或唤醒云沙箱的代码）：
-
-```go
-BoxIn: func(c tool.Caller) (sandbox.Box, error) {
-	if c.Environment == "" {
-		return b.For(c.User)
-	}
-	var env account.Environment
-	err := h.Store.Read(context.Background(), func(r store.Reader) (err error) {
-		env, err = r.Environment(c.User, c.Environment)
-		return err
-	})
-	if err != nil {
-		return nil, err
-	}
-	if env.Kind == account.Local {
-		return b.For(c.User) // 和 Boxes 同一个
-	}
-	return machines.For(c.User, env.ID)
-},
-```
-
-工作区工具要在 `host.New` 之前建好放进 `Tools`，而 `BoxIn` 要读 `h.Store`：闭包在调用时才读 `h`，先声明变量、建完宿主再赋值即可。`machines` 和下面的 `boxes` 一样要缓存、要在退出时关。环境只是库里的一行名字和种类（`local` 或 `machine`），引擎不知道它对应哪台机器，这个对应关系由宿主保存。配了 `BoxIn` 时，`run_command` 的描述会多一句：会话在它开始时选的环境里运行，那里的文件夹不一定是这台机器的。
-
-::: info 演进
-v0.12.0 之前没有执行环境，每个用户只有一个 Box。`b1baf49`（v0.12.0）加入执行环境和 `BoxIn`。没有配 `BoxIn` 的宿主，工具调用照旧走 `BoxFor`。
-:::
-
-按用户缓存 Box，并管理它的生命周期：
+一个用 `docker` 的提供者，每个环境一个容器，容器 ID 记在环境的状态里（`container` 是下面的 `Machine` 实现）：
 
 ```go
-const summary = "A Linux container of your own; network rules are set on the container"
+const summary = "A Linux container of its own; network rules are set on the container"
 
 var roots = []string{"/work"}
 
-// boxes 给每个用户一个连好的 Box，并负责它的生命周期：workspace 包只关 Options.Box。
-type boxes struct {
-	containerOf func(user string) (string, error) // 找到或创建这个用户的容器
+// docker 是一种云沙箱：每个环境一个容器，容器 ID 记在环境的状态里。
+type docker struct{ image string }
 
-	mu     sync.Mutex
-	byUser map[string]sandbox.Box
+// settings 是用户新建环境时能选的；不给时用默认镜像。
+type settings struct {
+	Image string `json:"image"`
 }
 
-func (b *boxes) For(user string) (sandbox.Box, error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	if box, ok := b.byUser[user]; ok {
-		return box, nil
-	}
-	id, err := b.containerOf(user)
-	if err != nil {
-		return nil, err
-	}
-	box := sandbox.Remote(container{id: id}, roots, summary)
-	b.byUser[user] = box
-	return box, nil
+// state 是提供者留给下一次 Open 的：这个环境的容器。
+type state struct {
+	Container string `json:"container"`
 }
 
-func (b *boxes) Close() error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	var errs []error
-	for _, box := range b.byUser {
-		errs = append(errs, box.Close())
+func (docker) Name() string { return "Docker" }
+
+func (d docker) Check(config json.RawMessage) error {
+	_, err := d.settings(config)
+	return err
+}
+
+func (d docker) settings(config json.RawMessage) (settings, error) {
+	s := settings{Image: d.image}
+	if len(bytes.TrimSpace(config)) == 0 {
+		return s, nil
 	}
-	return errors.Join(errs...)
+	dec := json.NewDecoder(bytes.NewReader(config))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&s); err != nil {
+		return s, fmt.Errorf("docker: the settings: %w", err)
+	}
+	return s, nil
+}
+
+// Open 第一次建容器并记下它的 ID，之后把同一个容器启动起来。
+func (d docker) Open(ctx context.Context, env sandbox.Env) (sandbox.Box, error) {
+	var st state
+	if env.State != nil {
+		if err := json.Unmarshal(env.State, &st); err != nil {
+			return nil, err
+		}
+	}
+	if st.Container == "" {
+		s, err := d.settings(env.Config)
+		if err != nil {
+			return nil, err
+		}
+		out, err := exec.CommandContext(ctx, "docker", "run", "-d", "-w", roots[0],
+			"--label", "ollupi.user="+env.User, "--label", "ollupi.environment="+env.ID,
+			s.Image, "sleep", "infinity").Output()
+		if err != nil {
+			return nil, fmt.Errorf("docker run: %w", err)
+		}
+		st.Container = strings.TrimSpace(string(out))
+		kept, err := json.Marshal(st)
+		if err != nil {
+			return nil, err
+		}
+		// 先记下再交出 Box：进程这时退出，下次 Open 也找得回这个容器。
+		if err := env.Keep(kept); err != nil {
+			return nil, err
+		}
+	} else if out, err := exec.CommandContext(ctx, "docker", "start", st.Container).CombinedOutput(); err != nil {
+		return nil, fmt.Errorf("docker start: %w: %s", err, out)
+	}
+	return sandbox.Remote(container{id: st.Container}, roots, summary), nil
+}
+
+// Remove 在环境删除后删掉它的容器；容器已经不在了不算错。
+func (docker) Remove(ctx context.Context, env sandbox.Env) error {
+	var st state
+	if env.State != nil {
+		if err := json.Unmarshal(env.State, &st); err != nil {
+			return err
+		}
+	}
+	if st.Container == "" {
+		return nil
+	}
+	out, err := exec.CommandContext(ctx, "docker", "rm", "-f", st.Container).CombinedOutput()
+	if err != nil && !strings.Contains(string(out), "No such container") {
+		return fmt.Errorf("docker rm: %w: %s", err, out)
+	}
+	return nil
 }
 ```
 
 装配：
 
 ```go
-b := &boxes{containerOf: containerOf, byUser: map[string]sandbox.Box{}}
-defer b.Close()
-
-ws, err := workspace.New(workspace.Options{
-	Box:    sandbox.Remote(nil, roots, summary), // 只用来写工具描述
-	BoxFor: b.For,                               // 每次调用用这个用户自己的
-})
-if err != nil {
-	return err
-}
-defer ws.Close()
-
 h, err := host.New(ctx, host.Config{
-	Tools: []kit.Provider{ws},
-	Boxes: b.For,
+	Sandboxes: map[string]sandbox.Provider{"docker": docker{image: "ubuntu:24.04"}},
+	Sandbox:   "docker",
 	// ...
 })
 ```
+
+这样每个用户的第一个环境是一个容器，名字是 `Docker`。要让用户另开环境时选镜像，客户端在 `environment/add` 里带 `{"name": "GPU", "provider": "docker", "config": {"image": "..."}}`；这个配置只在建容器时读。
 
 `Machine` 的每个方法，引擎依赖的语义：
 
@@ -378,7 +389,7 @@ h, err := host.New(ctx, host.Config{
 ::: details 用 docker exec 实现的 Machine（完整代码）
 
 ```go
-// container 是一台用 docker exec 访问的机器：一个用户一个容器，容器就是隔离边界。
+// container 是一台用 docker exec 访问的机器：一个环境一个容器，容器就是隔离边界。
 type container struct{ id string }
 
 // docker 在容器里运行 argv；flags 放在容器 ID 前面（-w、-e）。退出码非 0 不算错误。
@@ -556,16 +567,25 @@ var _ sandbox.Machine = container{}
 
 **引擎保证：**
 
-- `Remote` 包出来的 Box 里，命令不能以全权运行（`FullAccess` 的命令直接报错 `sandbox: this sandbox cannot give a command full access`）；写文件只要求在根目录内；HTTP 请求（比如 HTTP MCP 服务器）从引擎进程发出，只连公网地址。
+- 一个环境在一个进程里只 `Open` 一次，这个环境里所有会话和工具共用它给的 Box；同时到来的打开等同一次。打开失败不缓存，下次用到时再调。
+- `Open` 在锁外调用，一个启动慢的沙箱只让用到它的调用等着，不挡别的环境。
+- `Keep` 把状态写进库（`environments.state`）之后才返回。状态不出现在协议里，客户端看不到。
+- 环境删除、宿主 `Close` 时，引擎关掉这个环境的 Box；删除时再调 `Remove`。
+- `Remote` 包出来的 Box 里，命令不能以全权运行（`FullAccess` 的命令直接报错 `sandbox: this sandbox cannot give a command full access`），系统提示词的 `# ENVIRONMENT` 也告诉模型不要申请；MCP 服务器在里面照常启动、不带全权。写文件只要求在根目录内；HTTP 请求（比如 HTTP MCP 服务器、`web_fetch`）从引擎进程发出，只连公网地址。
 - 机器慢或卡住时，只卡住用到它的那一次调用；附件在写进日志之前、在调度之外读完。
-- 工具调用里 `BoxFor` 返回错误时，这次调用失败，错误以 `workspace: the sandbox of the user:` 开头，交给模型；`Boxes` 返回错误时，`workspace/add` 和带附件的消息返回错误，这个用户的 MCP 服务器连不上（`mcp: the sandbox of the user: ...`）。
+- 打不开环境时：工具调用失败，错误以 `workspace: the environment of the conversation:` 开头交给模型；带命令工具的一轮在写系统提示词时失败（`run: the environment of the conversation: ...`）；第一个环境打不开时，这个用户的工具集建不起来（`mcp: the first environment of the user: ...`），他的每一轮都失败，`workspace/add` 和按路径带附件的消息也返回错误。
 
 **宿主要保证：**
 
-- **缓存每个用户的 Box。** 每一次工具调用都会调 `BoxFor`，不要每次都去创建或唤醒机器。机器的创建、找回、唤醒、休眠都在它背后由宿主做。
-- **关闭 Box。** `workspace` 包只关 `Options.Box`，用户的 Box 由宿主在退出时关。
+- **`Open` 要找得回。** 进程重启、分片换了持有者之后，同一个环境会再 `Open` 一次，要凭 `State` 找回同一台机器，不要每次新建；建好之后、交出 Box 之前就 `Keep`。
+- **一台机器只放一个环境的东西。** `Remote` 的 `Check`、`CheckRead` 总是通过，隔离靠机器本身。
 - **网络规则设在机器上。** 引擎不管云沙箱里命令的网络。
-- **所有用户用同样的 `roots` 和 `summary`。** 工具描述按 `Options.Box` 写，模型看到的目录和规则来自它；用户的 Box 和它不同时，描述和实际规则对不上。
+- **`roots` 的第一个是环境文件夹，不能为空。** 不在工作区的命令在那里运行，`activate_skill` 把技能的文件放在它下面的 `.ollupi/skills/<名字>`，stdio MCP 服务器的工作目录也是它。
+- **`summary` 写清这台机器的限制。** 它原样进系统提示词的 `# ENVIRONMENT`，模型据此判断命令能做什么。
+
+::: info 演进
+v0.12.0 之前没有执行环境，每个用户只有一个 Box；`b1baf49`（v0.12.0）加入执行环境和工作区工具的 `BoxIn`。那时同一个按用户取 Box 的函数要填两处，`host.Config.Boxes` 管附件、工作区校验和 MCP 服务器，工作区工具的 `BoxFor` 或 `BoxIn` 管每次工具调用，只填一处时两边对不上；环境在库里只是名字和种类（`local` 或 `machine`），宿主自己缓存和关闭 Box、自己记哪个环境对应哪台机器。现在宿主只写提供者，这些都由引擎做，命令和文件工具也由 `host.New` 自己装。
+:::
 
 ## 附件存储
 
@@ -635,7 +655,7 @@ var _ app.Attachments = objects{}
 | 存到一半失败 | `Delete`，已经存进去的那几个 | 同上 |
 | 删除会话 | `DeletePrefix("<会话 ID>/")`，带结尾的 `/` | 失败时会话已经删掉，返回 `the conversation is deleted, but not its attachments: ...` |
 
-- 附件的源文件从用户自己的 Box 里读（`Boxes`），不是从引擎所在的机器；路径必须是绝对路径。
+- 附件的源文件从用户第一个执行环境的 Box 里读，不是从引擎所在的机器；路径必须是绝对路径。
 - 一条消息最多 10 个附件；图片最大 20 MiB，文本文件最大 256 KiB。超出时消息被拒绝。类型按文件内容判断。
 - 发消息时的存储、客户端读附件、删除各有 1 分钟超时；模型调用时的读取跟着这一轮的 `ctx`。
 
@@ -728,9 +748,11 @@ v0.14.0 之前 `Authenticate` 是 `func(token string) (user string, ok bool)`，
 | `tool/tool.go` | `Caller`、`Call`、`Annotations`、`Plan` |
 | `tool/kit/kit.go`、`schema.go` | `Provider`、`Spec`、`Result`、注册表、`InputSchema`、`DecodeArguments`、输出截断 |
 | `policy/checker.go`、`rules.go`、`validate.go` | 标注怎样决定审批、`__` 的处理、规则匹配 |
-| `tool/builtin/workspace/tool.go`、`dirs.go` | `workspace.Options` 的 `Box`、`BoxFor`、`BoxIn` |
+| `pkg/sandbox/provider.go`、`environment/environment.go` | `Provider`、`Env`、`Local`；按执行环境打开、共用、关闭 Box，`Keep` 写库 |
+| `tool/builtin/workspace/tool.go`、`dirs.go` | 命令和文件工具按会话的环境取 Box |
 | `tool/mcp/servers.go` | 每个用户的注册表、MCP 工具名规则 |
 | `pkg/sandbox/box.go`、`remote.go` | `Box`、`Machine`、`Remote` |
+| `app/owned.go`、`gateway/owned.go` | `environment/add` 时调 `Check`，`environment/delete` 之后调 `Remove` |
 | `app/app.go`、`app/attachments.go`、`blob/blob.go` | `Attachments` 接口、附件的校验和存取、`blob.Dir` |
 | `catalog/catalog.go`、`catalog/sql.go` | `Catalog` 接口和 SQLite 实现 |
 | `auth/auth.go`、`gateway/auth.go`、`router/router.go` | `Authenticate`、令牌的读法、握手时的校验 |

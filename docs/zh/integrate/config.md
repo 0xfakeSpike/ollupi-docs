@@ -13,10 +13,12 @@
 | `Connections` | `map[string]llm.Client` | 必填 | 连接 ID 到客户端。上下文窗口、主 agent 的角色（输入预算不到 16,384 token 时用精简主 agent）都按这里的 `Limits` 算，配了 `ClientFor` 也一样 |
 | `ClientFor` | `func(user, connection string) (llm.Client, error)` | nil，所有用户共用 `Connections` | 每次模型请求（包括记忆提炼）都调一次，让这个用户用自己的密钥和配额。要每次返回同一个客户端，否则并发名额失效，见[扩展点](/zh/integrate/extend#每用户的模型客户端) |
 | `Memory` | `*llm.Model` | nil，不提炼记忆 | 记忆提炼用的模型，必须在 `Models` 的连接里，输入预算至少 8,192 token。nil 时不从对话里学新记忆，已有记忆的召回仍按每个用户的设置。见[记忆](/zh/engine/memory) |
-| `Tools` | `[]kit.Provider` | nil，只有内置工具 | 所有用户共有的工具 provider，接在内置工具前面，每个用户的注册表里还有他自己的 MCP 服务器。命令与文件、网页工具不是内置的，要放在这里。见[扩展点](/zh/integrate/extend#自己的工具) |
+| `Tools` | `[]kit.Provider` | nil，只有内置工具 | 所有用户共有的工具 provider，接在内置工具前面，每个用户的注册表里还有他自己的 MCP 服务器。命令与文件（`workspace`）、网页（`web`）工具是内置的，不要再放进来，否则每一轮都因 provider 重名失败。见[扩展点](/zh/integrate/extend#自己的工具) |
 | `Allowlist` | `[]string` | nil，全部可见 | 非 nil 时只有名单里的工具对模型可见，内置工具也要列上；空切片表示一个工具都没有。名单里不存在的名字被忽略 |
 | `Permissions` | `policy.Settings` | 审批策略 `on-request`，没有规则 | 权限分层里最底下的部署层，所有用户共用。启动时只查语法；规则提到不存在的工具要到运行时才报错，见[启动校验](/zh/integrate/embed#启动校验与常见错误)和[审批与权限](/zh/engine/permissions) |
-| `Boxes` | `func(user string) (sandbox.Box, error)` | 必填 | 用户在这台机器上的沙箱：工作区的添加与移动、附件的源文件、用户的 stdio MCP 服务器都经它。工作区工具要另外填同一个函数，见[扩展点](/zh/integrate/extend#云沙箱) |
+| `Sandboxes` | `map[string]sandbox.Provider` | 必填，至少一个 | 部署提供的沙箱，键是提供者 ID（客户端在 `environment/add` 里用它）。用户的每个执行环境是其中一个提供者的一个沙箱，命令、文件、工作区、附件来源、MCP 服务器都经环境的 Box。本机用 `sandbox.Local`，云沙箱自己实现，见[扩展点](/zh/integrate/extend#云沙箱)和[提供者与执行环境](/zh/engine/sandbox#提供者与执行环境)。为空时 `host.New` 失败 |
+| `Sandbox` | `string` | 必填 | 每个用户的第一个环境是哪个提供者的沙箱，必须是 `Sandboxes` 的一个键，否则 `host.New` 失败。用户建出来时就带这个环境，名字取提供者的 `Name()`，删不掉；没有指定环境的会话、工作区、MCP 服务器和附件都用它 |
+| `Commands` | `workspace.Config` | 零值，用下面的默认 | 所有环境共用的命令设置：`CommandTimeoutSec`（默认 30 秒）、`MaxCommandTimeoutSec`（默认 `max(600, CommandTimeoutSec)`，模型能要的最长超时）、`CommandBlacklist`（命中就拒绝）。超时调大，卡住的命令占着这一轮更久；调小，长的构建和测试被杀掉。命令的模式、网络、可写目录这些限制是提供者的配置，不在这里，见[沙箱](/zh/engine/sandbox#三种模式) |
 | `SkillsDir` | `string` | 空，不开技能 | 技能目录，下面按角色分子目录（`<SkillsDir>/<角色>/<技能>/SKILL.md`）。启动时检查，不合规时 `host.New` 失败 |
 | `Slots` | `int` | 32 | 这个进程同时运行的轮次数，见[容量规划](/zh/integrate/capacity) |
 | `UserSlots` | `int` | 等于 `Slots` | 一个用户最多占几个槽位 |
@@ -29,7 +31,7 @@
 各参数调大调小的后果集中在[容量规划与限流](/zh/integrate/capacity#调大调小的后果)。
 
 ::: info 演进
-v0.16.0 之前填的是 `agent.Config`（v0.14.0 到 v0.15.1 叫 `service.Config`），有 `DB`、`OnEvent`、`Lease`、`OnLeaseLost`、`Attachments`、`AttachmentsDir`、`ToolsFor`、`BoxFor` 等字段。`9fa9186` 用 `host.Config` 取代它，默认值不变（32 个槽位、全部可给一个用户、4 小时）：库和附件目录由 `Home` 决定，工具 provider 换成 `tool/kit` 的接口，用户自己的工具只来自他的 MCP 服务器，`BoxFor` 改名 `Boxes`。`3580e6f` 起每个用户的 MCP 服务器存进库里；租约移到 `shard.Member`（`68a4035`）。v0.16.1（`c6a54b2`）起审批策略不填时默认 `on-request`；更早的 `agent.Config` 不填会启动失败。
+v0.16.0 之前填的是 `agent.Config`（v0.14.0 到 v0.15.1 叫 `service.Config`），有 `DB`、`OnEvent`、`Lease`、`OnLeaseLost`、`Attachments`、`AttachmentsDir`、`ToolsFor`、`BoxFor` 等字段。`9fa9186` 用 `host.Config` 取代它，默认值不变（32 个槽位、全部可给一个用户、4 小时）：库和附件目录由 `Home` 决定，工具 provider 换成 `tool/kit` 的接口，用户自己的工具只来自他的 MCP 服务器，`BoxFor` 改名 `Boxes`。后来 `Boxes` 又换成 `Sandboxes` 和 `Sandbox`：宿主只给沙箱提供者，每个执行环境的 Box 由引擎向提供者要，命令和文件工具也由 `host.New` 自己装，宿主不再用 `workspace.New` 建好放进 `Tools`。`3580e6f` 起每个用户的 MCP 服务器存进库里；租约移到 `shard.Member`（`68a4035`）。v0.16.1（`c6a54b2`）起审批策略不填时默认 `on-request`；更早的 `agent.Config` 不填会启动失败。
 :::
 
 ## 模型连接
@@ -120,6 +122,8 @@ v0.16.0 之前填的是 `agent.Config`（v0.14.0 到 v0.15.1 叫 `service.Config
 | 路径 | 职责 |
 |---|---|
 | `host/host.go` | `Config`、默认值、`New` 里的校验 |
+| `environment/environment.go`、`pkg/sandbox/provider.go` | `Sandboxes` 与 `Sandbox` 的校验、执行环境的沙箱；`Provider`、`Local` |
+| `tool/builtin/workspace/config.go` | `Commands` 的字段和默认值 |
 | `host/models.go` | 模型和连接的校验，`ClientFor` |
 | `pkg/llm/chat.go`、`limits.go`、`connection.go` | `Model`、`Limits`、默认并发 4、重试 8 次 |
 | `gateway/serve.go` | `Options`、`DefaultConnections`、`NewServer` |

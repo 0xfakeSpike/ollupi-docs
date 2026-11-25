@@ -61,7 +61,7 @@ flowchart LR
 
 心跳每 `PingEvery`（默认 30 秒）发一次 `ws.Ping`，最多等 `PongWithin`（15 秒）。ping 失败不一定断开：只有 `jsonrpc.Conn.Silent(sent)` 为真时 `wshub` 才 `CloseNow()`，而 `Silent` 只在读协程从发 ping 之前起就停在 `ws.Read` 上时为真。读协程等 pace 令牌（`messagesPerSecond` 50、`messageBurst` 200）或在满 inbox（`maxInboxMessages` 64、`maxInboxBytes` 8 MiB）上阻塞时不算沉默——这是服务端放慢读取，不是对端消失，连接不会被心跳断掉。
 
-一个用户第一次连到这个进程时，网关先做分片这一侧的校验，再调用 `EnsureUser`，建 `users`、`settings` 和这台机器的执行环境；之后这个进程记住这个用户，重连不再写库。
+一个用户第一次连到这个进程时，网关先做分片这一侧的校验，再调用 `EnsureUser`，建 `users`、`settings` 和用户的第一个执行环境（`host.Config.Sandbox` 那个提供者的，沙箱等第一次用到时才建）；之后这个进程记住这个用户，重连不再写库。
 
 调度不区分用户：所有用户的可运行会话在同一个队列里，按相同顺序取，只受单用户槽位限额约束。
 
@@ -223,7 +223,7 @@ Ollupi 不做登录。登录在它之前完成，`auth.Authenticate(ctx, token)`
 
 ## 每用户资源
 
-`host.Config` 有两个按用户取资源的钩子：`ClientFor(user, connection)` 返回这个用户调用这条连接时用的模型客户端（记忆提取也用它），没配时共用 `Connections`；`Boxes(user)` 返回这个用户的沙箱（命令、文件和本地 MCP 服务器都经它访问），必填。模型并发名额在客户端内部，所以 `ClientFor` 应该每次返回同一个客户端，否则限制不生效；窗口预算和模型列表仍从共享的 `Connections` 里读，所以它始终要配（见[模型](/zh/engine/models)）。`ClientFor` 返回错误时只有这一轮失败。
+`host.Config` 有两个按用户取资源的钩子：`ClientFor(user, connection)` 返回这个用户调用这条连接时用的模型客户端（记忆提取也用它），没配时共用 `Connections`；沙箱不按用户给，而是按执行环境：宿主在 `Sandboxes` 里给出提供者，每个用户的每个环境是一个提供者的一个沙箱，命令、文件和本地 MCP 服务器都经环境的 Box 访问，见[提供者与执行环境](/zh/engine/sandbox#提供者与执行环境)。模型并发名额在客户端内部，所以 `ClientFor` 应该每次返回同一个客户端，否则限制不生效；窗口预算和模型列表仍从共享的 `Connections` 里读，所以它始终要配（见[模型](/zh/engine/models)）。`ClientFor` 返回错误时只有这一轮失败。
 
 每个用户的 MCP 服务器存在 `mcp_servers` 里，由 `mcp.Users` 按用户连接；用户改了服务器后，下次取工具时重新连接，见[技能与 MCP](/zh/engine/skills-mcp)。沙箱见[沙箱](/zh/engine/sandbox)。
 
@@ -255,6 +255,6 @@ Ollupi 不做登录。登录在它之前完成，`auth.Authenticate(ctx, token)`
 | ollupi | `pkg/wshub/wshub.go` | 每用户连接上限、`StatusReplaced`、`MaxAge`、心跳 |
 | ollupi | `pkg/jsonrpc/jsonrpc.go` | `Silent`、pace 与 inbox 上限 |
 | ollupi | `app/app.go` | 按用户读会话的 `thread` |
-| ollupi | `host/host.go`、`host/models.go` | `ClientFor`、`Boxes`、`UserSlots`、任务槽位的装配 |
+| ollupi | `host/host.go`、`host/models.go` | `ClientFor`、`Sandboxes`、`UserSlots`、任务槽位的装配 |
 | ollupi | `bench/shards.go` | 1、2、4 分片的测量 |
 | ollupi | `bench/crash.go` | 用 `shard.Member` 运行的崩溃和接管实验 |

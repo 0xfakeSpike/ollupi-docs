@@ -109,25 +109,25 @@ flowchart TD
 
 `host.New(ctx, cfg)` 按这个顺序装：
 
-1. 检查 `Name` 非空、`Boxes` 已给；审批策略没写时取 `on-request`，再检查部署的权限设置（`policy.Settings.Check`），读不懂就拒绝启动。
+1. 检查 `Name` 非空；审批策略没写时取 `on-request`，再检查部署的权限设置（`policy.Settings.Check`），读不懂就拒绝启动。
 2. `newModels`：至少一个模型；每个模型有连接和名字；一个连接只对应一个模型；每个连接都有客户端。
 3. 配了 `SkillsDir` 时，检查每个角色的技能目录（`skill.Check`）。
 4. `sqlite.Open(Home)`：打开 `Home/data/store.sqlite`，跑迁移。feed 随 store 一起建。
-5. 附件存储 `blob.Dir(Home/attachments)`；定时任务的日历，时区取 `Location`，默认本地。
-6. 工具：`Tools` 里宿主自己的 provider，加上内置的 `plan`、`ask`、`loader`、`subagent`、`outputs`、`memory`、`web`（`web.New(cfg.Boxes)`，按用户在各自的 Box 里发请求），配了技能目录时加 `skills`，配了 `Hub` 时加 `hub`，最后是 `cronjobs`。`mcp.NewUsers` 用它们和每个用户的 MCP 服务器，按用户给出工具集；hub provider 拿到的 `App` 在 `app.New` 之后才回填。
-7. `app.New`、`usage.New`、`run.New`，然后是两个 `schedule.New`：会话的用 `schedule.Threads(runner.Run)`，槽位 `Slots` 默认 32，`UserSlots` 默认等于 `Slots`，`RunLimit` 默认 4 小时；后台任务的用 `schedule.Tasks(runner.Task)`，`TaskSlots` 默认 32，`UserTaskSlots` 默认 4，`TaskLimit` 默认 1 小时。
-8. 配了 `Memory` 时建 `extract.Extractor`；配了 `Gateway` 时建 `gateway.Server`。
+5. `environment.New(store, Sandboxes, Sandbox)`：用户执行环境的沙箱，一个提供者都没有或 `Sandbox` 不在其中时失败，见[提供者与执行环境](/zh/engine/sandbox#提供者与执行环境)；再用 `workspace.New` 建命令和文件工具，超时和黑名单取 `Commands`，Box 按会话的环境取。
+6. 附件存储 `blob.Dir(Home/attachments)`；定时任务的日历，时区取 `Location`，默认本地。
+7. 工具：`Tools` 里宿主自己的 provider，加上内置的 `workspace`（上一步建的）、`plan`、`ask`、`loader`、`subagent`、`outputs`、`memory`、`web`（在会话所在环境的 Box 里发请求），配了技能目录时加 `skills`，配了 `Hub` 时加 `hub`，最后是 `cronjobs`。`mcp.NewUsers` 用它们和每个用户的 MCP 服务器（在用户的第一个环境里启动），按用户给出工具集；hub provider 拿到的 `App` 在 `app.New` 之后才回填。
+8. `app.New`、`usage.New`、`run.New`（系统提示词的 `# ENVIRONMENT` 由宿主按会话的环境现写），然后是两个 `schedule.New`：会话的用 `schedule.Threads(runner.Run)`，槽位 `Slots` 默认 32，`UserSlots` 默认等于 `Slots`，`RunLimit` 默认 4 小时；后台任务的用 `schedule.Tasks(runner.Task)`，`TaskSlots` 默认 32，`UserTaskSlots` 默认 4，`TaskLimit` 默认 1 小时。
+9. 配了 `Memory` 时建 `extract.Extractor`；配了 `Gateway` 时建 `gateway.Server`。
 
-`Host.Run(ctx)` 在一个 errgroup 里运行会话调度器、后台任务调度器、定时任务（每分钟查一次到点的任务）、用量记录器，配了记忆时再加记忆提取，任何一个返回错误，其余跟着停；`ctx` 被取消时返回 `nil`。网关不在 `Run` 里，宿主另外调用 `Gateway.Serve(ctx, ln)`，`ctx` 结束后 HTTP 关停最多等 5 秒。`Host.Close` 关掉每个用户的 MCP 会话和 store。
+`Host.Run(ctx)` 在一个 errgroup 里运行会话调度器、后台任务调度器、定时任务（每分钟查一次到点的任务）、用量记录器，配了记忆时再加记忆提取，任何一个返回错误，其余跟着停；`ctx` 被取消时返回 `nil`。网关不在 `Run` 里，宿主另外调用 `Gateway.Serve(ctx, ln)`，`ctx` 结束后 HTTP 关停最多等 5 秒。`Host.Close` 关掉每个用户的 MCP 会话、所有打开的执行环境的 Box 和 store。
 
 ```go
 h, err := host.New(ctx, host.Config{
 	Home: home, Name: "ollupi",
-	Models:      []llm.Model{{Name: model, Connection: "model"}},
-	Connections: map[string]llm.Client{"model": client},
-	Tools:       []kit.Provider{files},
 	Permissions: policy.Settings{ApprovalPolicy: string(policy.Never)},
-	Boxes:       func(string) (sandbox.Box, error) { return sandbox.Here() },
+	Sandboxes: map[string]sandbox.Provider{"local": sandbox.Local{
+		Dir: filepath.Join(home, "users"), Config: sandbox.Config{Mode: string(sandbox.ModeFullAccess)}}},
+	Sandbox: "local",
 })
 if err != nil {
 	log.Fatalf("eval: %v", err)
@@ -186,7 +186,7 @@ flowchart TD
 
 `Send` 分两段：
 
-1. 在事务之外执行 `attach`：把附件从用户的沙箱复制进附件存储，最多 10 个，总共最多等 1 分钟。慢的沙箱或对象存储不该占着数据库唯一的连接。
+1. 在事务之外执行 `attach`：把附件从用户第一个执行环境的沙箱复制进附件存储，最多 10 个，总共最多等 1 分钟。慢的沙箱或对象存储不该占着数据库唯一的连接。
 2. 在 `store.Update` 里执行 `queue`：`thread` 确认会话属于这个用户；消息非空；会话没有归档，工作区可用；排在后面的轮次不到 20 个；确定模型（请求里指定的连接，否则沿用上一轮，否则第一个模型）；定这一轮的角色（会话自带 `role` 时用它，中枢工作区用 `hub-main-agent`，否则按模型输入预算选主 agent）；检查消息长度和图片（`fits`）；然后追加两条记录：`TurnQueued`（模型与角色）和 `UserMessage`。
 
 返回的轮次如果就是会话的当前轮次，`turn/start` 结果里的状态是 `inProgress`，否则是 `queued`。

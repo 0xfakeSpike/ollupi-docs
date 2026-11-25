@@ -24,12 +24,12 @@ agent 代替用户读写文件、运行命令、访问网络，它犯的错和�
 | 对象 | 信任程度 | 怎么处理 |
 |---|---|---|
 | 用户本人 | 可信 | 规则和审批决定代表用户，规则在每一档都先判定 |
-| 宿主（host，嵌入引擎的程序） | 可信 | 认证（`Authenticate`）、每用户的 `Box`（`host.Config.Boxes`，工作区工具的 `BoxFor`、`BoxIn`）、每用户的模型客户端（`ClientFor`）、部署层权限，都由宿主提供 |
+| 宿主（host，嵌入引擎的程序） | 可信 | 认证（`Authenticate`）、沙箱提供者（`host.Config.Sandboxes`，每个执行环境一个沙箱）、每用户的模型客户端（`ClientFor`）、部署层权限，都由宿主提供 |
 | 模型的输出 | 不可信 | 每个工具调用都过权限判定，命令和文件操作经沙箱 |
 | 工具结果、网页、仓库里的文件 | 不可信，是提示注入的来源 | 引擎不识别注入，靠权限和沙箱限制后果 |
 | MCP 服务器、技能 | 由用户自己安装，按用户自己的程序对待 | 服务器自报的只读标注不被采信，MCP 工具一律按会改东西的工具审批 |
 | 模型服务商 | 会看到请求内容 | 脱敏 |
-| 同一分片上的其他用户 | 不可信 | 入口检查、按用户投递事件、每用户的 `Box` |
+| 同一分片上的其他用户 | 不可信 | 入口检查、按用户投递事件、每个执行环境自己的 `Box` |
 
 ## 三道防线
 
@@ -78,26 +78,26 @@ v0.12.1 时批准之后、执行之前还会重新计算调用的内容，变了
 |---|---|---|
 | 数据 | 每张表经 `user_id` 归属用户，`app` 的每个操作按调用方查（`thread`、`view`），别人的东西一律当作不存在 | [多用户隔离](/zh/engine/sharding#多用户隔离) |
 | 连接和事件 | 令牌经 `Authenticate` 换成用户，连接只订阅自己用户的事件（`Feed.Subscribe`） | [令牌认证](/zh/engine/sharding#令牌认证) |
-| 执行环境 | `host.Config.Boxes(user)` 给每个用户自己的 Box，MCP 服务器在里面启动；工作区工具的 `BoxFor`、`BoxIn` 按用户或会话的执行环境给 Box；`ClientFor` 给每个用户自己的模型客户端 | [每用户资源](/zh/engine/sharding#每用户资源) |
+| 执行环境 | 每个执行环境是提供者的一个沙箱，属于一个用户；命令和文件工具用会话所在环境的 Box，MCP 服务器在用户的第一个环境里启动；`ClientFor` 给每个用户自己的模型客户端 | [提供者与执行环境](/zh/engine/sandbox#提供者与执行环境)、[每用户资源](/zh/engine/sharding#每用户资源) |
 | 故障 | 工具 panic 只让这次调用失败（`tool/kit`）；MCP 调用有超时；一轮最多占槽位 `RunLimit`（默认 4 小时）；`UserSlots` 限制一个用户的槽位数 | [单用户槽位限额](/zh/engine/sharding#单用户槽位限额) |
 
 脱敏密钥也是每用户一个，同一个值在不同用户下得到不同的占位符。
 
 ::: info 演进
-v0.12.1 时宿主不配 `BoxFor` 就让所有用户共用 `sandbox.Here()`；v0.16.0 起 `host.Config.Boxes` 必填，MCP 服务器和附件都经它取得用户自己的 Box。
+v0.12.1 时宿主不配 `BoxFor` 就让所有用户共用 `sandbox.Here()`；v0.16.0 起 `host.Config.Boxes` 必填，MCP 服务器和附件都经它取得用户自己的 Box。现在宿主只给沙箱提供者（`host.Config.Sandboxes`），每个执行环境的 Box 由引擎向提供者要。
 :::
 
 ## 已知的口子
 
-- **MCP 服务器不在工作区沙箱里。** stdio 服务器经 `host.Config.Boxes(user)` 给的 `Box` 启动，能做什么由那个 Box 决定；宿主给的是不受限的本机环境时，服务器进程能做用户能做的一切。调用本身也不受沙箱限制。MCP 工具没有内容，规则只能写到工具名。见[权限与沙箱](/zh/engine/skills-mcp#权限与沙箱)。
+- **MCP 服务器不在工作区沙箱里。** stdio 服务器在用户第一个环境的 `Box` 里启动，那个 Box 能给全权时就以全权运行：本机上服务器进程能做用户能做的一切，环境变量只少了 `HideEnv` 去掉的那些。调用本身也不受沙箱限制。MCP 工具没有内容，规则只能写到工具名。见[权限与沙箱](/zh/engine/skills-mcp#权限与沙箱)。
 - **`.git/hooks` 可写。** 仓库的 `.git` 和普通目录一样可写，包括 `.git/config` 和 `.git/hooks`。agent 写进去的钩子会在用户之后自己运行 git 时执行，不受沙箱限制。这是有意的取舍，换来 `git init`、`git clone` 不用每次申请全权，见[保护名](/zh/engine/sandbox#保护名)。
 - **`never` 档下全权不问。** 规则没有给出结论的调用一律运行，申请全权的命令也包括在内，只有 deny 规则拦得住；规则读不懂的命令遇到可能命中的 deny 规则会被拒绝。
 - **批准之后改的规则管不到已批准的调用。** 判定只在调用写下时做一次，等审批期间加的 deny 规则拦不住随后批准的调用。
 - **读几乎不设限。** Seatbelt 规则是 `(allow file-read*)` 加禁读路径，读取工具只查禁读路径（`CheckRead`），三档下都不问用户。禁读名单之外的文件，比如用户的文档目录，命令和读取工具都能读到。数据能不能出去取决于网络，见下条。
-- **`web_fetch` 不受沙箱的域名名单约束。** 请求经用户的 Box 发出（`Box.Transport()`）：本机是跟随系统代理的 `machineTransport`，云沙箱是 `PublicTransport`；它只用 `CheckPublic` 拦回环和私有地址，不看 `allowed_domains`（`tool/builtin/web/web.go`）。请求从哪里出去、能不能到内网，由用户机器的网络决定。见[本机请求走系统代理](/zh/engine/sandbox#本机请求走系统代理)。
-- **本机沙箱只有 macOS 实现。** 本机沙箱是 Seatbelt，非 macOS 上 `read-only` 和 `workspace-write` 直接报错，只能用 `full-access`。云沙箱只有 `Machine` 接口，仓库里的实现只在测试里。见[设计决策 20](/zh/reference/decisions#_20-seatbelt-沙箱)和[云沙箱接入点](/zh/engine/sandbox#云沙箱接入点)。
-- **网络过滤靠本地代理，管不到不走代理的程序。** Seatbelt 不能按域名过滤，所以配了 `allowed_domains` 时内核只放行到本地代理端口，代理按域名放行。不读代理环境变量的程序连不上网，而不是绕过去；只开网络、不配 `allowed_domains` 时外网全开。见[网络](/zh/engine/sandbox#网络)。
-- **工作区工具的本机沙箱可能不区分用户。** 工作区工具不配 `BoxFor`、`BoxIn` 时所有用户共用一个本机沙箱，读写规则对所有用户相同。多用户部署要给每个用户一台自己的机器。
+- **`web_fetch` 不受沙箱的域名名单约束。** 请求经会话所在环境的 Box 发出（`Box.Transport()`）：本机是跟随系统代理的 `machineTransport`，云沙箱是 `PublicTransport`；它只用 `CheckPublic` 拦回环和私有地址，不看 `Domains`（`tool/builtin/web/web.go`）。请求从哪里出去、能不能到内网，由用户机器的网络决定。见[本机请求走系统代理](/zh/engine/sandbox#本机请求走系统代理)。
+- **本机沙箱只有 macOS 实现。** 本机沙箱是 Seatbelt，非 macOS 上 `read-only` 和 `workspace-write` 直接报错，只能用 `full-access`。云沙箱提供者还没有：`Machine` 的实现只在测试里。见[设计决策 20](/zh/reference/decisions#_20-seatbelt-沙箱)和[云沙箱接入点](/zh/engine/sandbox#云沙箱接入点)。
+- **网络过滤靠本地代理，管不到不走代理的程序。** Seatbelt 不能按域名过滤，所以配了 `Domains.Allowed` 时内核只放行到本地代理端口，代理按域名放行。不读代理环境变量的程序连不上网，而不是绕过去；只开网络、不配 `Domains.Allowed` 时外网全开。见[网络](/zh/engine/sandbox#网络)。
+- **本机提供者的环境不隔开读。** `sandbox.Local` 的每个环境只是本机的一个文件夹，命令只能写自己的环境文件夹和工作区，但读规则对所有用户相同，禁读名单之外的别人的环境文件夹也读得到；全权的命令更不受限。多用户部署要用每个环境一台机器的云沙箱提供者。
 - **脱敏只认得出写好的模式。** `pkg/redact` 识别私钥、AWS 访问密钥、GitHub 令牌、`sk-` 开头的密钥、Google API 密钥、Slack 令牌、Bearer 令牌、JWT、身份证号、银行卡号、手机号、邮箱、IPv4 和 MAC 地址。其他形式的敏感值原样发给模型，比如姓名、地址、密码。图片不处理。见[识别类型](/zh/engine/redaction#识别类型)。
 - **同分片用户的隔离靠代码。** 没有进程或库的边界，漏掉一处入口检查就能读到别人的数据。现有的保证来自入口检查和功能测试，比如 `store/sqlite/owned_test.go` 的 `TestWhatAUserOwnsIsTheirsAlone`、`tool/mcp/users_test.go` 的 `TestEachUsersServersRunInTheirMachine`；多用户下的调度隔离靠 `UserSlots` 和每用户的模型密钥，测量见[多用户](/zh/benchmarks/#多用户)。
 - **提示注入没有专门的识别。** 工具结果、网页内容原样进入上下文（经脱敏），引擎不区分"数据"和"指令"，后果由权限和沙箱限制。
@@ -117,9 +117,10 @@ v0.12.1 时宿主不配 `BoxFor` 就让所有用户共用 `sandbox.Here()`；v0.
 | ollupi | `account/account.go` | 权限分层：部署、用户、工作区、会话 |
 | ollupi | `run/tools.go` | 每个调用的判定 |
 | ollupi | `tool/builtin/workspace/execution.go`、`files.go`、`prepared.go` | 冻结命令和文件修改、执行前核对 |
-| ollupi | `pkg/sandbox` | `Box`、Seatbelt、网络代理、`Machine`、`Remote` |
+| ollupi | `pkg/sandbox` | `Box`、`Provider`、`Local`、Seatbelt、网络代理、`Machine`、`Remote` |
+| ollupi | `environment` | 按执行环境打开和共用 Box |
 | ollupi | `pkg/redact` | 识别、占位符、还原 |
 | ollupi | `run/model.go` | 模型请求的脱敏和还原 |
 | ollupi | `app/app.go`、`store/feed.go`、`gateway/serve.go` | 按用户读写和入口检查、按用户投递事件、认证 |
 | ollupi | `tool/builtin/web/web.go` | `web_fetch` 的出站限制 |
-| ollupi | `tool/mcp` | 每个用户的 MCP 服务器，在用户的 Box 里启动 |
+| ollupi | `tool/mcp` | 每个用户的 MCP 服务器，在用户的第一个环境里启动 |

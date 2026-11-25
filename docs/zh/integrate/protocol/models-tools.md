@@ -8,9 +8,9 @@
 
 **模型**由宿主（host）在 `host.Config.Models` 里配好，所有用户看到同一份列表。每个模型绑一条连接（connection），一条连接只给一个模型用（`host.New` 启动时检查，重复时报 `connection "…" is listed twice`），所以客户端用 `connection` 指代模型。列表的第一个是默认模型。一轮（turn）排队时选定模型并记进 `TurnRow.model`，这一轮之后不再改变，见[一轮与条目](/zh/integrate/protocol/turns)。
 
-**工具**按用户分：引擎内置的提供方、宿主在 `host.Config.Tools` 里加的提供方（比如工作区工具），加上这个用户自己的 MCP 服务器，合成一张注册表。每个工具属于一个提供方（provider），条目和工具列表里都带着它的 id。注册表要求提供方 id 和工具名都唯一，重复时这个用户的注册表建不出来。
+**工具**按用户分：引擎内置的提供方、宿主在 `host.Config.Tools` 里加的提供方（比如桌面端的浏览器工具），加上这个用户自己的 MCP 服务器，合成一张注册表。每个工具属于一个提供方（provider），条目和工具列表里都带着它的 id。注册表要求提供方 id 和工具名都唯一，重复时这个用户的注册表建不出来。
 
-**MCP 服务器**按用户存在库里，每行是一份 `MCPServerConfig`：名字，加一个 stdio 命令或一个 HTTP 地址。服务器名就是它的提供方 id，它的工具名形如 `<服务器名>__<工具名>`。服务器在这个用户第一次需要工具时启动，stdio 服务器在用户自己的沙箱（`Box`）里运行，HTTP 服务器经这个 Box 的网络出去；连不上的服务器只是被跳过，它的工具不出现，状态里记下原因。增删改任何一个服务器后，这个用户的服务器全部关掉，下次需要时重新连。
+**MCP 服务器**按用户存在库里，每行是一份 `MCPServerConfig`：名字，加一个 stdio 命令或一个 HTTP 地址。服务器名就是它的提供方 id，它的工具名形如 `<服务器名>__<工具名>`。服务器在这个用户第一次需要工具时启动，stdio 服务器在用户第一个执行环境的沙箱（`Box`）里运行，那个沙箱能给全权时以全权运行，HTTP 服务器经这个 Box 的网络出去；连不上的服务器只是被跳过，它的工具不出现，状态里记下原因。增删改任何一个服务器后，这个用户的服务器全部关掉，下次需要时重新连。
 
 | 名字 | 规则 | 不满足时 |
 |---|---|---|
@@ -133,14 +133,14 @@ invalid message: connection "nope" is unavailable; restore it in Settings or sel
 |---|---|---|
 | `data` | [`MCPServer[]`](#mcpserver) | 这个用户的 MCP 服务器，按名字排序，每个带配置和状态 |
 
-和 `tool/list` 一样，第一次调用会先连这个用户的全部服务器，可能要等。结果里有 `env` 和 `headers` 的原值，令牌之类的秘密也在里面，客户端显示时要自己遮住。读库或取用户沙箱失败时返回 `-32000`。
+和 `tool/list` 一样，第一次调用会先连这个用户的全部服务器，可能要等。结果里有 `env` 和 `headers` 的原值，令牌之类的秘密也在里面，客户端显示时要自己遮住。读库或打开用户第一个环境的沙箱失败时返回 `-32000`。
 
 ### mcpServer/set
 
 | 参数 | 类型 | 说明 |
 |---|---|---|
 | `name` | string | 服务器名，见[概念与状态](#概念与状态)的规则；已有同名的就整份替换 |
-| `command?` | string | stdio 服务器的程序，在用户沙箱里按 `PATH` 找 |
+| `command?` | string | stdio 服务器的程序，在用户第一个环境的沙箱里按 `PATH` 找 |
 | `args?` | string[] | 只能和 `command` 一起给 |
 | `env?` | object | 程序的环境变量，只能和 `command` 一起给，值按原样传 |
 | `url?` | string | HTTP 服务器的地址（Streamable HTTP） |
@@ -239,7 +239,7 @@ v0.12.1 只有一个子 agent 工具 `Agent`，输出不进契约。`8c1414f` �
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `stdout`、`stderr` | string | 各自最多 `max_output_bytes`（默认 1 MiB），超出时保留头尾，中间换成省略提示 |
+| `stdout`、`stderr` | string | 各自最多 沙箱的 `MaxOutputBytes`（默认 1 MiB），超出时保留头尾，中间换成省略提示 |
 | `exit_code` | integer | 退出码 |
 | `work_dir` | string | 实际的工作目录 |
 | `signal?` | string | 被信号终止时的信号名 |
@@ -392,8 +392,8 @@ MCP 工具只带服务器给的 `title`、`destructiveHint`、`idempotentHint`�
 | `cron` | `create_scheduled_job`、`pause_scheduled_job`、`delete_scheduled_job`、`list_scheduled_jobs` | 引擎总装 |
 | `tool_registry` | `list_tool_providers`、`list_tools_for_provider` | 引擎总装 |
 | `skills` | `list_skills`、`activate_skill`、`read_skill_resource`、`get_skills_root_dir` | 宿主配了 `SkillsDir` 时 |
-| `workspace` | `run_command`、`claude`、`read_file`、`glob`、`grep`、`edit_file`、`write_file` | 宿主在 `host.Config.Tools` 里加 |
-| `web` | `web_fetch`，经用户的 Box 出网 | 引擎总装 |
+| `workspace` | `run_command`、`claude`、`read_file`、`glob`、`grep`、`edit_file`、`write_file`，在会话的执行环境里运行 | 引擎总装 |
+| `web` | `web_fetch`，经会话所在环境的 Box 出网 | 引擎总装 |
 | `hub` | `list_workspaces`、`start_conversation`、`send_message`、`list_conversations`、`read_conversation`、`add_todo`、`update_todo`、`list_todos` | 宿主开了 `host.Config.Hub` 时 |
 | 宿主自己的 id | 宿主加的提供方，比如桌面端的 `browser` | 宿主 |
 | MCP 服务器名 | 这个服务器的工具 | 用户 |

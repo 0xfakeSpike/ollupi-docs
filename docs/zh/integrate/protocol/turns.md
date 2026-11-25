@@ -208,9 +208,9 @@ v0.12.1 的插话代替回答时，等着的调用以 `declined` 结束，`error
 | `type` | 字段 | 行为 |
 |---|---|---|
 | `text` | `text` | 多段文本用换行连接，去掉首尾空白。估算的 token 数不能超过这个模型输入上限的 25%（至少 256）；长文本应作为文件附件发 |
-| `file` | `path`、`name?`、`mimeType?` | `path` 必须是用户沙箱里的绝对路径。引擎从沙箱读这个文件，复制一份进附件存储；`name` 默认取文件名 |
+| `file` | `path`、`name?`、`mimeType?` | `path` 必须是用户第一个执行环境里的绝对路径。引擎从那个环境的沙箱读这个文件，复制一份进附件存储；`name` 默认取文件名 |
 
-附件最多 10 个；图片（PNG、JPEG、GIF、WebP，按内容判断）最大 20 MiB，UTF-8 文本文件最大 256 KiB，其他文件不收。文本和附件不能都为空。协议里没有上传文件内容的方法，客户端和用户的沙箱不在一台机器上时，文件要先用别的途径放进沙箱。附件存储接口见[扩展点](/zh/integrate/extend#附件存储)。
+附件最多 10 个；图片（PNG、JPEG、GIF、WebP，按内容判断）最大 20 MiB，UTF-8 文本文件最大 256 KiB，其他文件不收。文本和附件不能都为空。协议里没有上传文件内容的方法，客户端和用户的第一个环境不在一台机器上时，文件要先用别的途径放进那里。附件存储接口见[扩展点](/zh/integrate/extend#附件存储)。
 
 结果：`{turn: TurnRow}`，`status` 是 `inProgress`（成为当前一轮）或 `queued`（排在后面）。回复之前已经发出这一轮的 `turn/changed`、这条消息的 `item/changed` 和会话的 `thread/changed`。
 
@@ -496,7 +496,7 @@ stateDiagram-v2
 |---|---|---|
 | `type` | string | `text` 或 `file` |
 | `text?` | string | `text` 时的文本 |
-| `path?` | string | `file` 时用户沙箱里的绝对路径 |
+| `path?` | string | `file` 时用户第一个执行环境里的绝对路径 |
 | `name?` | string | `file` 时的文件名，默认取路径里的名字 |
 | `mimeType?` | string | `file` 时文本文件的类型；不给或不是 `text/*`、`application/json` 时记为 `text/plain`。图片的类型按内容判断 |
 

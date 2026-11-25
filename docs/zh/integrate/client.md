@@ -344,9 +344,9 @@ v0.12.1 的网关在 `thread/read`、`thread/resume`、`cron/list` 读库到回�
 
 `expectedTurnId` 和 `turnId` 取本地状态里"当前进行中的那一轮"：状态是 `inProgress` 的那一轮，一个会话最多一个。
 
-附件用 `{type: "file", path}`：`path` 是用户沙箱里的绝对路径，引擎从那里读文件并复制一份。协议里没有上传文件内容的方法，所以客户端和用户的沙箱不在同一台机器时，文件要先用别的途径放进沙箱。附件的数量和大小上限见[一轮与条目](/zh/integrate/protocol/turns#turn-start)，读回用 `attachment/read`。
+附件用 `{type: "file", path}`：`path` 是用户第一个执行环境里的绝对路径，引擎从那里读文件并复制一份。协议里没有上传文件内容的方法，所以客户端和用户的第一个环境不在同一台机器时，文件要先用别的途径放进那里。附件的数量和大小上限见[一轮与条目](/zh/integrate/protocol/turns#turn-start)，读回用 `attachment/read`。
 
-新建会话时 `environmentId` 选在哪个执行环境里运行，省略时是用户的本机环境，之后不能改；子 agent 会话跟随父会话。可选的环境用 `environment/list` 列出。
+新建会话时 `environmentId` 选在哪个执行环境里运行，之后不能改；子 agent 会话跟随父会话。在工作区里的会话总在工作区的环境里，`environmentId` 省略即可，给了别的会被拒绝；不在工作区时省略是用户的第一个环境。可选的环境和部署提供的沙箱用 `environment/list` 列出，添加工作区时用 `environmentId` 指定文件夹在哪个环境里。
 
 ## 版本兼容
 

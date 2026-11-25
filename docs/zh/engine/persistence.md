@@ -96,7 +96,7 @@
 
 ## 表和关系
 
-`entries` 是日志，`turns`、`items`、`responses` 和 `threads` 的状态列是它的物化。外键：`threads.user_id`、`tasks.user_id` 是 `RESTRICT`（引擎没有删除用户的操作）；`threads.workspace_id`、`threads.environment_id` 也是 `RESTRICT`（工作区只归档，执行环境无人使用才能删，预先由 `EnvironmentInUse` 报错）；`entries`、`turns`、`items`、`responses`、`cron_jobs`、`tasks`、`todos` 和 `threads.parent_id` 是 `CASCADE`，删会话会带走日志、物化行、定时任务、任务行和子会话；其余指向 `users` 的表也是 `CASCADE`；`usage` 没有外键。
+`entries` 是日志，`turns`、`items`、`responses` 和 `threads` 的状态列是它的物化。外键：`threads.user_id`、`tasks.user_id` 是 `RESTRICT`（引擎没有删除用户的操作）；`threads.workspace_id`、`threads.environment_id`、`workspaces.environment_id` 也是 `RESTRICT`（工作区只归档，执行环境里没有会话和工作区才能删，预先由 `EnvironmentInUse` 报错）；`entries`、`turns`、`items`、`responses`、`cron_jobs`、`tasks`、`todos` 和 `threads.parent_id` 是 `CASCADE`，删会话会带走日志、物化行、定时任务、任务行和子会话；其余指向 `users` 的表也是 `CASCADE`；`usage` 没有外键。
 
 | 表 | 主键与列 |
 |---|---|
@@ -110,7 +110,7 @@
 | `todos` | `(user_id, id)`：`title`、`workspace_id`、`thread_id`、`status`、`notes`、`result`、`created_at`、`updated_at`、`ended_at` |
 | `items_search` | 虚拟表：FTS5 外部内容表，`trigram` 分词，内容来自 `items.text`，两个触发器维护；`items` 重建或 `VACUUM` 后 rowid 错位，必须重建，见[搜索](/zh/engine/search) |
 
-单用户网关的 `users` 是 `default`，`Tx.EnsureUser` 不存在时一起建 `settings`（脱敏开、随机密钥、记忆开）和本机执行环境（`local`、`This computer`）。`settings` 有 `redaction`、`redaction_key`、`memory`、`learn`、`permissions`；`workspaces` 的 `(user_id, root)` 唯一，有 `settings`、`instructions`、`providers`、`kind`、`archived_at`（见[工作区](/zh/engine/workspace)）；`cron_jobs`、`memories`、`memory_state`、`environments`、`mcp_servers` 见[定时任务](/zh/engine/cron)、[记忆](/zh/engine/memory)。`feed`、`shard_epoch` 各一行。
+单用户网关的 `users` 是 `default`，`Tx.EnsureUser` 不存在时一起建 `settings`（脱敏开、随机密钥、记忆开）和第一个执行环境（宿主 `host.Config.Sandbox` 那个提供者的，名字取提供者的 `Name()`）。`settings` 有 `redaction`、`redaction_key`、`memory`、`learn`、`permissions`；`environments` 有 `provider`、`config`、`state`（提供者留下的状态，客户端看不到）；`workspaces` 有 `environment_id`，`(user_id, environment_id, root)` 唯一，有 `settings`、`instructions`、`providers`、`kind`、`archived_at`（见[工作区](/zh/engine/workspace)）；`cron_jobs`、`memories`、`memory_state`、`mcp_servers` 见[定时任务](/zh/engine/cron)、[记忆](/zh/engine/memory)。`feed`、`shard_epoch` 各一行。
 
 索引：`threads_user_list`（`user_id, updated_at DESC, created_at DESC, id DESC`，只收顶层会话）、`threads_workspace`、`threads_environment`、`threads_parent`、`threads_runnable`、`turns_open`、`turns_ended`、`turns_cron_job`、`items_thread_seq`、`items_calls`（按 `json_extract(body, '$.Call.Tool')` 和 `thread_id`，只收 `toolCall`）、`responses_thread_seq`、`cron_jobs_due`、`memories_topic`、`tasks_queue`、`tasks_thread`、`usage_at`、`usage_user_at`、`entries_model_responded`（只收 `modelResponded`）、`todos_status`、`todos_thread`。
 

@@ -41,14 +41,14 @@
 | 参数 | 类型 | 说明 |
 |---|---|---|
 | `workspaceId?` | string | 所属工作区。省略时不属于任何工作区 |
-| `environmentId?` | string | 执行环境，必须是这个用户的。省略时取他的本机环境（`local` 类型的那个） |
+| `environmentId?` | string | 执行环境，必须是这个用户的。省略时：在工作区里取工作区的环境，不在工作区取他的第一个环境。和 `workspaceId` 一起给时必须是工作区的环境 |
 | `title?` | string | 去掉首尾空白后最多 120 字符（`account.maxNameRunes`），可以为空 |
 
 新会话这一层的权限设置是空的，按部署、用户、工作区三层运行，之后用 `thread/updatePermissions` 改，见[权限](/zh/integrate/protocol/permissions)。结果 `{thread: ThreadRow}`，回复之前已发出 `thread/changed`。
 
 | 错误 | 什么时候 |
 |---|---|
-| `-32602` | 标题超过 120 字符；参数里有多余字段 |
+| `-32602` | 标题超过 120 字符；参数里有多余字段；`environmentId` 不是工作区的环境（`invalid environment: workspace <名称> is a folder of another environment`） |
 | `-32004` | 工作区或执行环境不存在，或属于别的用户 |
 | `-32014` | 工作区已归档 |
 

@@ -4,7 +4,7 @@ React 19 写的界面，运行在沙箱里。它把引擎的状态镜像到本�
 
 ## 屏幕和路由
 
-没有 URL 路由。当前屏幕是 `navigation` 里的 `Screen`（`draft`、`thread`、`search`、`memory`、`cron`、`capabilities`、`settings`），`App.tsx` 用 `switch` 选组件：`draft`（`DraftScreen`）是还没创建的会话，选工作区和模型，发第一条消息才创建；`thread`（`ConversationScreen`）是标题栏、时间线、输入框和侧边面板；`search` 是全局搜索，`memory`、`cron` 是记忆与定时任务，`capabilities` 是技能、MCP、内置工具，`settings` 是所有设置一页。`found` 是搜索带来的定位目标，列表就绪后滚到那一条并闪一下（`.found` 动画）。
+没有 URL 路由。当前屏幕是 `navigation` 里的 `Screen`（`draft`、`thread`、`search`、`memory`、`cron`、`capabilities`、`settings`），`App.tsx` 用 `switch` 选组件：`draft`（`DraftScreen`）是还没创建的会话，选环境、工作区和模型，发第一条消息才创建：在工作区里时环境就是工作区的（`useDraftEnvironment`），在环境选择里换成别的环境会离开工作区，回到不属于工作区的草稿；`thread`（`ConversationScreen`）是标题栏、时间线、输入框和侧边面板；`search` 是全局搜索，`memory`、`cron` 是记忆与定时任务，`capabilities` 是技能、MCP、内置工具，`settings` 是所有设置一页。`found` 是搜索带来的定位目标，列表就绪后滚到那一条并闪一下（`.found` 动画）。
 
 - 第一次同步完成前，或后端 `failed` 时，显示 `BackendScreen`；同步过一次之后，重连和重启期间界面保持原样，连接状态只在侧边栏底部。
 - 协议版本不一致时，窗口顶部加一条横幅。
@@ -19,7 +19,7 @@ React 19 写的界面，运行在沙箱里。它把引擎的状态镜像到本�
 
 | 域 | 镜像什么 | 同步方式 |
 |---|---|---|
-| `environments` | 环境列表 | `environment/list`，之后 `environment/changed` |
+| `environments` | 环境列表和后端提供的沙箱提供者 | `environment/list`（`data` 和 `providers`），之后 `environment/changed`；提供者连接期间不变 |
 | `workspaces` | 工作区列表 | `workspace/list`，之后 `workspace/changed` |
 | `threads` | 侧边栏会话 | 每个工作区一次 `thread/list`，每页 50 |
 | `conversation` | 打开过的会话的时间线 | 重读当前会话，丢弃其他 |

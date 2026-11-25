@@ -83,7 +83,7 @@
 | `WorkspaceProvidersParams`、`WorkspaceProviders` | [workspace/updateProviders](/zh/integrate/protocol/workspaces#workspace-updateproviders)；`WorkspaceProviders` 是 `{enabled?, disabled?}` |
 | `EnvironmentAddParams`、`EnvironmentRenameParams`、`EnvironmentDeleteParams`、`EnvironmentResult`、`EnvironmentListResult`、`EnvironmentChangedNotification` | [执行环境的方法](/zh/integrate/protocol/workspaces#执行环境的方法) |
 | `EnvironmentRow` | [EnvironmentRow](/zh/integrate/protocol/workspaces#environmentrow) |
-| `EnvironmentKind` | [EnvironmentKind](/zh/integrate/protocol/workspaces#environmentkind) |
+| `SandboxProviderRow` | [SandboxProviderRow](/zh/integrate/protocol/workspaces#sandboxproviderrow) |
 
 ## 模型、工具与 MCP
 

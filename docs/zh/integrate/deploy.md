@@ -22,7 +22,7 @@
 
 ## 最小的多进程部署
 
-下面是一个二进制、三种角色：`-role router` 起路由器，`-role callout` 起负载均衡器的 callout，`-role shard` 起分片进程。同一个分片起两次就是一主一备。这段代码对着引擎 v0.17.2 编译并通过 `go vet`；v0.17.1 时在一台机器上按下面的命令跑过：路由、放置、错分片拒绝、`kill -9` 后接管、正常退出后交接都和本页描述一致（callout 只编译过，没有接负载均衡器跑）。模型名和 limits 与[最小宿主](/zh/integrate/embed#最小宿主程序)相同。
+下面是一个二进制、三种角色：`-role router` 起路由器，`-role callout` 起负载均衡器的 callout，`-role shard` 起分片进程。同一个分片起两次就是一主一备。这段代码对着引擎 v0.17.2 编译并通过 `go vet`（沙箱一项之后改成了 `Sandboxes`、`Sandbox`，这一处没有重新编译）；v0.17.1 时在一台机器上按下面的命令跑过：路由、放置、错分片拒绝、`kill -9` 后接管、正常退出后交接都和本页描述一致（callout 只编译过，没有接负载均衡器跑）。模型名和 limits 与[最小宿主](/zh/integrate/embed#最小宿主程序)相同。
 
 ```go
 package main
@@ -37,6 +37,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -153,7 +154,11 @@ func runShard(ctx context.Context, id, home, listen, advertise string, cat catal
 			}),
 		},
 		Permissions: policy.Settings{ApprovalPolicy: string(policy.OnRequest)},
-		Boxes:       func(string) (sandbox.Box, error) { return sandbox.Here() },
+		Sandboxes: map[string]sandbox.Provider{"local": sandbox.Local{
+			Dir:    filepath.Join(home, "users"),
+			Config: sandbox.Config{Mode: string(sandbox.ModeFullAccess)},
+		}},
+		Sandbox: "local",
 		Gateway: &gateway.Options{
 			Authenticate: authenticate,
 			Admit:        member.Admit,
@@ -204,7 +209,7 @@ D=/srv/ollupi
 | 绝对路径 | `Home` 和目录库路径都拼成 SQLite 的 `file:` URI，相对路径会失败：`storage: open run/catalog.sqlite: invalid uri authority: run` |
 | 进程守护 | 失去租约时 `member.Run` 取消 `serve` 的 ctx，等它返回，然后返回 `shard s1: store: a later holder of the shard writes to it now`，进程以错误退出。要靠 systemd 之类的守护把它重新拉起来，它重启后就成了新的备用 |
 
-示例省掉的东西：命令和文件工具、`ClientFor`、云沙箱这些每用户资源（见[扩展点](/zh/integrate/extend)），`Member.Load`（不填时报 0，新用户只按用户数在两个候选里选），以及记忆模型。
+示例里命令在分片自己的机器上不受限地跑（`full-access` 的 `sandbox.Local`，每个环境是 `<home>/users/<用户>/<环境 ID>`），只适合可以完全使用这台机器的用户；多用户部署要换成每个环境一台机器的云沙箱提供者，而且环境文件夹在分片的 `home` 下，备用进程接手后要看得到同样的文件，见[云沙箱](/zh/integrate/extend#云沙箱)。示例省掉的东西：`ClientFor` 这样的每用户资源（见[扩展点](/zh/integrate/extend)），`Member.Load`（不填时报 0，新用户只按用户数在两个候选里选），以及记忆模型。
 
 ::: info 演进
 v0.12.1 时，租约是 `agent.Config.Lease`，存在分片自己的库里（`shard_lease`），拿到租约的进程再调 `Catalog.Publish` 发布地址，分片网关用 `gateway.OnShard` 核对用户，错分片回 401。`93bec1a`（v0.13.0）把路由移进 `router` 包、按负载放置新用户，错分片改成 503；`68a4035`（v0.16.0）把租约移进目录库、和地址放在同一行，加上 epoch 围栏，`Publish` 随之消失，引擎不再知道分片，分片进程由 `shard.Member` 运行；`8874aa2` 把目录库换成 `catalog.Catalog` 接口，租约只按目录库的时钟判断。

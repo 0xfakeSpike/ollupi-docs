@@ -66,16 +66,17 @@
 - **规则**（rule）—— 按工具名和调用内容匹配的 allow、ask、deny 条目。代码：`policy.Rules`。见 [审批与权限](/zh/engine/permissions)
 - **权限层**（layer）—— 一份可叠加的权限设置：部署、用户、工作区、会话各一层，角色还可以带自己的一层。代码：`policy.Layer`、`policy.Settings`、`account.Layers`。见 [审批与权限](/zh/engine/permissions)
 - **沙箱**（sandbox）—— 限制模型的命令和文件操作能碰到什么的机制。代码：`sandbox.New`、`sandbox.Box`。见 [沙箱](/zh/engine/sandbox)
-- **Box** —— 一个用户的命令运行与文件所在的地方，工具只经它访问系统。代码：`sandbox.Box`、`sandbox.Here`、`host.Config.Boxes`。见 [沙箱](/zh/engine/sandbox)
-- **Machine** —— 云沙箱的最小接口：跑一条命令，按路径读写。代码：`sandbox.Machine`、`sandbox.Remote`。见 [沙箱](/zh/engine/sandbox)
+- **Box** —— 一个执行环境的命令运行与文件所在的地方，工具只经它访问系统。代码：`sandbox.Box`、`sandbox.Boxes`、`environment.Boxes`。见 [沙箱](/zh/engine/sandbox)
+- **沙箱提供者**（provider）—— 部署提供的一种沙箱，负责建出、找回和删除执行环境的沙箱；本机是其中一个。代码：`sandbox.Provider`、`sandbox.Local`、`host.Config.Sandboxes`。见 [提供者与执行环境](/zh/engine/sandbox#提供者与执行环境)
+- **Machine** —— 云沙箱的最小接口：跑一条命令，按路径读写；提供者用 `sandbox.Remote` 把它包成 Box。代码：`sandbox.Machine`、`sandbox.Remote`。见 [沙箱](/zh/engine/sandbox)
 - **全权**（full access）—— 让一条命令不受沙箱限制地运行：本机沙箱下由用户自己的账号直接执行，不由 Seatbelt 约束；接的远程沙箱不能给全权。`untrusted` 和 `on-request` 下必须单独批准，`never` 下直接运行，只有 deny 规则能拦住它。代码：`workspace.Prepared.Escalated`、`sandbox.Command.FullAccess`。见 [沙箱](/zh/engine/sandbox)、[审批与权限](/zh/engine/permissions)
 - **脱敏**（redaction）—— 发给模型前把敏感值换成占位符，回答回来再换回。代码：`redact.Redactor`（`pkg/redact`）。见 [脱敏](/zh/engine/redaction)
 - **占位符**（placeholder）—— 敏感值的替身，形如 `<PHONE:a1b2c3d4>`。代码：`Redactor.placeholder`（未导出）、`settings.redaction_key`。见 [脱敏](/zh/engine/redaction)
 
 ## 存储与部署
 
-- **执行环境**（environment）—— 会话运行命令和文件工具的地方：这台机器（`local`），或宿主接入的云沙箱（`machine`）。会话开始时选定，之后不变。代码：`environments` 表、`account.Environment`、`workspace.Options.BoxIn`。见 [网关协议](/zh/integrate/protocol/workspaces#执行环境的方法)
-- **工作区**（workspace）—— agent 工作的一个目录，权限规则可以按它设置。代码：`workspaces` 表、`account.Workspace`。见 [核心概念](/zh/intro/concepts)
+- **执行环境**（environment）—— 会话运行命令和文件工具的地方：某个沙箱提供者的一个沙箱，第一次用到时才建。每个用户有一个删不掉的第一个环境；工作区属于一个环境；会话开始时定下，之后不变。代码：`environments` 表、`account.Environment`、`environment.Boxes`。见 [网关协议](/zh/integrate/protocol/workspaces#执行环境的方法)
+- **工作区**（workspace）—— agent 工作的一个目录，在某个执行环境里，权限规则可以按它设置。代码：`workspaces` 表、`account.Workspace`。见 [核心概念](/zh/intro/concepts)
 - **记忆**（memory）—— 后台从已结束轮次提炼、跨会话使用的笔记。代码：`memories` 表、`memory.Memory`、`extract.Extractor`。见 [记忆](/zh/engine/memory)
 - **记忆范围**（scope）—— 一条记忆对哪些会话可见：`global`、`general`、`workspace`。代码：`memory.Scope`。见 [记忆](/zh/engine/memory)
 - **记忆状态**（memory status）—— 一条记忆现在是否在用：`active`、`retired`、`forgotten`。代码：`memory.Status`。见 [记忆](/zh/engine/memory)

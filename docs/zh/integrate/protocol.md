@@ -27,7 +27,7 @@
 | 令牌 | `Options.Authenticate`（最多等 10 秒）；单用户时比 `Options.Token` | 401 `invalid or missing gateway token`，暂时查不了 503 |
 | 接纳速率 | `Options.Connections` 的 `Rate`、`Burst`，默认每秒 200、突发 400 | 503 `too many connections are starting; try again` |
 
-之后 `app.EnsureUser` 建好用户行、设置和本机执行环境（失败回 500），再校验 Origin；分片部署时 `Options.Admit` 只放行分到本分片的用户，否则 503 `this user is not served here now; try again`。`/healthz` 直接回 200；503 都带 `Retry-After`，取值是 1 到 `RetryWithin` 秒之间的随机整数，默认上限 5 秒。
+之后 `app.EnsureUser` 建好用户行、设置和用户的第一个执行环境（失败回 500），再校验 Origin；分片部署时 `Options.Admit` 只放行分到本分片的用户，否则 503 `this user is not served here now; try again`。`/healthz` 直接回 200；503 都带 `Retry-After`，取值是 1 到 `RetryWithin` 秒之间的随机整数，默认上限 5 秒。
 
 令牌不进 URL（访问日志会保留 URL），有两种传法：`Authorization: Bearer <token>`；浏览器改用子协议 `new WebSocket(url, ["ollupi.token", token])`，网关读 `ollupi.token` 后面紧跟的那一项。`NewServer` 要求 `Token` 或 `Authenticate` 二选一，否则启动失败；令牌的签发不归引擎管，见[认证](/zh/integrate/extend#认证)。
 
@@ -99,7 +99,7 @@
 | `-32700` | `parseError` | 消息不是合法 JSON |
 | `-32600` | `invalidRequest` | 非文本帧、版本不对、不是请求也不是响应、重复初始化 |
 | `-32601` | `methodNotFound` | 方法不存在 |
-| `-32602` | `invalidParams` | 参数解码失败；`limit`、`beforeSeq`、`archived`、`expectedTurnId`、`turnId`、`paused` 等显式检查；`app.ErrInvalid*`（消息、回答、决定、路径、查询、待办）、`ErrEnvironmentInUse`、`account.ErrInvalidName`、`ErrInvalidMCPServer`、`policy.ErrInvalidSettings`、`memory.ErrInvalidChange`、`kit.ErrUnknownTool`、`kit.ErrInvalidArguments`、`cron.ErrInvalidJob` |
+| `-32602` | `invalidParams` | 参数解码失败；`limit`、`beforeSeq`、`archived`、`expectedTurnId`、`turnId`、`paused` 等显式检查；`app.ErrInvalid*`（消息、回答、决定、路径、环境、查询、待办）、`ErrEnvironmentInUse`、`ErrFirstEnvironment`、`account.ErrInvalidName`、`ErrInvalidMCPServer`、`policy.ErrInvalidSettings`、`memory.ErrInvalidChange`、`kit.ErrUnknownTool`、`kit.ErrInvalidArguments`、`cron.ErrInvalidJob` |
 | `-32603` | `internalError` | 结果无法编码 |
 | `-32000` | `serverError` | 其余所有错误 |
 | `-32002` | `notInitialized` | 未初始化 |
