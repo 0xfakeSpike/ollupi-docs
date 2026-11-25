@@ -1,6 +1,6 @@
 # 配置的实现
 
-桌面端的配置文件是 `~/.ollupi/config.yaml`，字段说明见[配置与数据](/zh/app/config)。这个文件只放"启动时取一次"的部署参数：模型和提供它们的 API、工作区工具、记忆用什么模型学、槽位。用户运行中会改的东西——权限、MCP 服务器、记忆开不开——存在引擎的 store 里，通过网关改，不经过这个文件。
+桌面端的配置文件是 `~/.ollupi/config.yaml`，字段说明见[配置与数据](/zh/app/config)。这个文件只放"启动时取一次"的部署参数：模型和提供它们的 API、记忆用什么模型学、槽位。用户运行中会改的东西——权限、MCP 服务器、记忆开不开——存在引擎的 store 里，通过网关改，不经过这个文件。
 
 引擎只在启动时读配置，所以文件的改动都要重启后端才生效。界面改配置时走一个固定流程：先让后端自己校验，通过后才写入并重启，这样后端不接受的改动到不了文件。
 
@@ -28,26 +28,14 @@
 | `models[].names[].limits` | `context` 上下文窗口、`output` 一次回答最多占多少、`input` 可选的输入上限 | 必填，不能是零值；`context`、`output` 必须为正 |
 | `tools` | 工具白名单 | 省略即全部放开 |
 | `slots` | 同时跑多少轮 | 省略用引擎默认的 32 |
-| `workspace.enabled` | 打开 `run_command`、`edit_file`、`write_file` | 省略为假 |
-| `workspace.sandbox_mode` | `read-only`、`workspace-write`、`full-access` | 省略为 `workspace-write` |
-| `workspace.command_timeout_sec` | 单条命令的默认超时（秒） | 省略或不为正时用 30 |
-| `workspace.max_command_timeout_sec` | 工具调用能给命令指定的最大超时 | 省略时用 `max(600, command_timeout_sec)`；不能小于 `command_timeout_sec` |
-| `workspace.network` | 沙箱里是否允许联网 | 省略为假 |
-| `workspace.workspace_dirs` | 命令的工作目录 | 省略时用 `<home>/scratch`，引擎自己创建 |
-| `workspace.allowed_domains` / `denied_domains` | 联网时的域名规则 | |
-| `workspace.deny_read` / `read_only` | 禁止读、只读的路径 | |
-| `workspace.extra_writable` | 工作目录之外额外可写的路径 | |
-| `workspace.unix_sockets` / `env_passthrough` | 允许访问的 unix socket、透传的环境变量 | |
-| `workspace.max_output_bytes` | 单次命令输出的上限 | 省略用 1 MiB |
-| `workspace.command_blacklist` | 禁止执行的命令名 | |
 | `memory.model` | 从结束的轮次里学记忆的模型，写 `provider/name`。和那个模型共用客户端与 `calls` | 省略则不学 |
 
 `config.yaml` 里没有 MCP 字段、技能，也没有记忆的开关：MCP 服务器和技能在引擎的 store 里（`mcpServer/list`、`skill/list`），记忆的 `use`、`generate` 在设置里（`settings/read`）。
 
-桌面端还会在引擎之外往工作区沙箱上加两条：`deny_read` 里有 `config.yaml`，命令读不到里面的 API 密钥；环境变量标记是 `OLLUPI_SANDBOX`。引擎自己再补两条：`<home>/data` 禁止读，`AGENTS.md`、`CLAUDE.md`、`.mcp.json` 这类文件名受保护。
+命令和文件工具（`run_command`、`edit_file`、`write_file`）总是打开，沙箱用引擎 `workspace.Config` 的默认值：工作区可写、不联网、命令默认 30 秒超时（单次最多 600 秒），工作目录是 `<home>/scratch`。桌面端在此之外加两条：`deny_read` 里有 `config.yaml`，命令读不到里面的 API 密钥；环境变量标记是 `OLLUPI_SANDBOX`。引擎自己再补两条：`<home>/data` 禁止读，`AGENTS.md`、`CLAUDE.md`、`.mcp.json` 这类文件名受保护。
 
 ::: info 演进
-0.7.53 之前，默认权限、MCP 服务器和记忆的两个开关都写在 `config.yaml` 里，改它们也要重启后端。0.7.53 跟进引擎 v0.17.1，引擎按用户把它们存进 store，桌面端改在应用里设置，第一次启动时把文件里的旧键搬进引擎（`desktop@795ac1d`）。
+0.7.53 之前，默认权限、MCP 服务器和记忆的两个开关都写在 `config.yaml` 里，改它们也要重启后端。0.7.53 跟进引擎 v0.17.1，引擎按用户把它们存进 store，桌面端改在应用里设置，第一次启动时把文件里的旧键搬进引擎（`desktop@795ac1d`）。后来 `workspace` 块也去掉了：桌面端总是打开命令和文件工具、用引擎默认的沙箱，旧文件里的这一块由 `--import-config` 在启动时去掉。
 :::
 
 ## 校验分三层

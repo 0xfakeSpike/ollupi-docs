@@ -63,12 +63,6 @@ models:
         images: true
         limits: { context: 400000, output: 128000 }
 
-workspace:
-  enabled: true
-  sandbox_mode: workspace-write # read-only | workspace-write | full-access
-  command_timeout_sec: 60
-  network: false
-
 # memory:
 #   model: openai/gpt-5.2
 ```
@@ -101,10 +95,11 @@ workspace:
 | `models` | list | 必填，至少一个模型 | 见下 | 提供方和模型 |
 | `tools` | string list | 不写时不限制 | 不写 | 引擎的工具白名单 |
 | `slots` | int | `0`，取引擎默认的 32 | 注释掉 | 同时运行的轮次数，不能为负 |
-| `workspace` | object | `enabled` 为假 | 见下 | 命令和文件工具 |
 | `memory` | object | 不学习新记忆 | 注释掉 | 学习记忆用的模型 |
 
 未知字段一律报错，比如写错的键，或旧版本的 `settings`。
+
+命令和文件工具不在这个文件里配置：它们总是打开，命令只能写工作区、不能联网，默认 30 秒超时，见[沙箱](/zh/engine/sandbox)。
 
 ### models
 
@@ -131,28 +126,6 @@ workspace:
 | `limits.input` | int | 不写时按窗口算 | 模型的输入比窗口剩余的小时填写 |
 
 模型以 `provider/name` 选择，这也是引擎的连接 ID。两个提供方可以有同名模型。顺序有意义：第一个提供方的第一个模型是默认模型。
-
-### workspace
-
-`enabled` 打开 `run_command`、`edit_file`、`write_file`，其余字段是引擎 `workspace.Config` 的 json 标签，直接平铺在这一层。沙箱行为见 [沙箱](/zh/engine/sandbox)。
-
-| 字段 | 类型 | 默认值 | 模板 | 含义 |
-|---|---|---|---|---|
-| `enabled` | bool | `false` | `true` | 开关 |
-| `workspace_dirs` | string list | 空，用 `<home>/scratch` | 不写 | 命令目录，相对路径基于 home |
-| `command_timeout_sec` | int | 30 | 60 | 命令默认超时，秒 |
-| `max_command_timeout_sec` | int | `max(600, command_timeout_sec)` | 不写 | 单次命令超时上限，不能小于默认超时 |
-| `command_blacklist` | string list | 空 | 不写 | 匹配到时拒绝执行 |
-| `sandbox_mode` | string | `workspace-write` | `workspace-write` | `read-only`、`workspace-write`、`full-access` |
-| `network` | bool | `false` | `false` | 沙箱内是否可联网 |
-| `allowed_domains` | string list | 空 | 不写 | 网络走代理，只放行这些域名 |
-| `denied_domains` | string list | 空 | 不写 | 必须和 `allowed_domains` 一起用 |
-| `deny_read` | string list | 空 | 不写 | 额外的不可读路径 |
-| `read_only` | string list | 空 | 不写 | 额外的只读路径 |
-| `extra_writable` | string list | 空 | 不写 | 额外的可写路径 |
-| `unix_sockets` | string list | 空 | 不写 | 允许访问的 Unix 套接字 |
-| `env_passthrough` | string list | 空 | 不写 | 透传给命令的环境变量名 |
-| `max_output_bytes` | int | 1 MiB | 不写 | 命令输出上限，不能为负 |
 
 ### memory
 
