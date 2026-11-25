@@ -6,8 +6,8 @@ Ollupi 桌面端把 ollupi 引擎包成一个 macOS 应用。引擎是 Go 库，
 
 | 进程 | 代码 | 做什么 | 生命周期 |
 |---|---|---|---|
-| Go sidecar（`ollupid`） | `sidecar/` | 嵌入引擎，装配模型、工具、记忆、定时任务、中枢，在回环端口上提供网关 | 主进程启动它；SIGTERM 或 stdin 关闭时退出 |
-| Electron 主进程 | `apps/desktop/src/main` | 托管 sidecar，拥有 `config.yaml` 的写入、窗口、内置浏览器、终端、git 操作、更新、通知 | 应用的生命周期，窗口关闭后仍在 |
+| Go sidecar（`ollupid`） | `sidecar/` | 嵌入引擎，装配工具、每个身份的运行环境、中枢，在回环端口上提供网关；模型目录和身份在引擎的 store 里 | 主进程启动它；SIGTERM 或 stdin 关闭时退出 |
+| Electron 主进程 | `apps/desktop/src/main` | 托管 sidecar，记这台 Mac 选的身份，启动前导入旧数据目录；拥有窗口、内置浏览器、终端、git 操作、更新、通知 | 应用的生命周期，窗口关闭后仍在 |
 | 渲染进程 | `apps/desktop/src/renderer` | 界面。沙箱内运行，只能通过 `window.desktop` 和网关 WebSocket 与外界说话 | 窗口的生命周期；隐藏窗口不销毁它 |
 
 ```mermaid
@@ -18,15 +18,15 @@ flowchart LR
   G -->|"HTTP 回环 /describe /call"| M
 ```
 
-主进程不转发网关流量。sidecar 就绪后，主进程把地址和令牌放进 `BackendState` 交给渲染进程，渲染进程自己连。所以一条消息从引擎到界面不经过主进程。
+主进程不转发网关流量。sidecar 就绪后，主进程把地址和 token 放进 `BackendState` 交给渲染进程，渲染进程自己连。所以一条消息从引擎到界面不经过主进程。
 
 ## 四条通道
 
 | 通道 | 两端 | 传输 | 认证 | 传什么 |
 |---|---|---|---|---|
-| 网关 | 渲染进程和 sidecar | `ws://127.0.0.1:<随机端口>/`，JSON-RPC 2.0 | 每次启动新生成的 32 字节令牌，随 `ollupi.token` 子协议发送 | 会话、一轮、条目、审批、设置、待办，全部引擎数据 |
-| IPC | 渲染进程和主进程 | `ipcRenderer.invoke` 和 `webContents.send` | 只暴露 `DesktopApi` 列出的方法 | 文件、git、终端、浏览器标签、配置、更新 |
-| 握手 | sidecar 和主进程 | stdout 一行 JSON，stderr 进日志 | 令牌走环境变量 `OLLUPI_GATEWAY_TOKEN` | `ready` 或 `fatal`，见 [sidecar](/zh/desktop/sidecar) |
+| 网关 | 渲染进程和 sidecar | `ws://127.0.0.1:<随机端口>/`，JSON-RPC 2.0 | token 是 `<密钥>.<身份>`，随 `ollupi.token` 子协议发送；本机的应用拿每次启动新生成的运营者密钥 | 会话、一轮、条目、审批、设置、待办、模型目录、身份，全部引擎数据 |
+| IPC | 渲染进程和主进程 | `ipcRenderer.invoke` 和 `webContents.send` | 只暴露 `DesktopApi` 列出的方法 | 文件、git、终端、浏览器标签、选哪个身份、远程连接、更新 |
+| 握手 | sidecar 和主进程 | stdout 一行 JSON，stderr 进日志 | 两个密钥走环境变量 `OLLUPI_GATEWAY_TOKEN`、`OLLUPI_OPERATOR_TOKEN` | `ready`（带身份列表）或 `fatal`，见 [sidecar](/zh/desktop/sidecar) |
 | 浏览器端点 | sidecar 和主进程 | `http://127.0.0.1:<随机端口>`，POST JSON | 令牌走环境变量 `OLLUPI_BROWSER_TOKEN`，请求带 `Authorization: Bearer` | agent 对标签页的操作，见 [内置浏览器](/zh/desktop/browser) |
 
 令牌放环境变量而不放参数，原因写在 `supervisor.ts`：argv 其他用户能读到。
@@ -56,7 +56,7 @@ flowchart TD
 
 主进程和渲染进程之间的契约是 `apps/desktop/src/shared/ipc.ts`：通道名和 `DesktopApi` 接口，两边都 import，改动在两端都过类型检查。
 
-`src/shared/generated/` 里的 `ConfigCheck` 和 `SkillsCheck` 是另一份生成的类型，来源是 sidecar 打印的 JSON Schema，见 [配置的实现](/zh/desktop/config#config-generate)。
+`src/shared/generated/backend-skills.ts` 里的 `SkillFolder` 是另一份生成的类型，描述 `ollupid --read-skill` 的输出，来源是 sidecar 打印的 JSON Schema，见 [配置的实现](/zh/desktop/config#config-generate)。
 
 ## 数据从引擎事件到界面
 
@@ -100,7 +100,7 @@ sequenceDiagram
 
 桌面端的内置宿主把中枢写死开启。`sidecar/internal/host/host.go` 构造引擎时传 `Hub: true`，注释写明应用的 Super Agent 就是引擎的 hub：用户的 hub 工作区把活交给项目工作区。开关的含义、hub 工作区与 hub 主 agent 的设计见 [中枢](/zh/engine/hub)，这里只讲它在桌面端怎么出现。
 
-- 界面上第一次开始 Super Agent 时，渲染进程的 `startSuperAgent` 调 `desktop.superAgentFolder()` 拿到 `<home>/super-agent`，用 `workspace/add` 把它加成工作区，再用 `workspace/setKind` 把 `kind` 设成 `hub`，最后在其中开一个草稿会话。这个文件夹在主进程这边与 `config.yaml` 同级，中枢不拿它装项目文件。
+- 界面上第一次开始 Super Agent 时，渲染进程的 `startSuperAgent` 调 `desktop.superAgentFolder()` 拿到当前身份的 `<home>/users/<id>/super-agent`，用 `workspace/add` 把它加成工作区，再用 `workspace/setKind` 把 `kind` 设成 `hub`，最后在其中开一个草稿会话。每个身份一个文件夹，两个中枢不会写同一批文件；中枢不拿它装项目文件。默认身份早先建的中枢工作区可能还在 `<home>/super-agent`，界面以引擎记的工作区路径为准。
 - 工作区的种类只有 `project` 和 `hub`，新建的都是 `project`；一个用户最多一个 hub 工作区，再改第二个会被引擎拒绝。
 - 这个工作区里的会话由 `agent.HubMain`（`hub-main-agent`）回答。它把工作交给项目会话，自己不跑项目的命令、不碰项目的文件。它也是技能的一个归属：给了 `hub-main-agent` 的技能它才看得到。
 - 桌面端不为中枢传别的配置，界面语言里的 Super Agent 与文档里的中枢是同一件东西。中枢的待办面板见 [面板](/zh/app/panels)。
@@ -121,7 +121,8 @@ sequenceDiagram
 
 | 问题 | 放在哪 | 为什么 |
 |---|---|---|
-| 这份 `config.yaml` 能不能启动 | sidecar 的 `--check-config`，它用临时目录完整装配一遍引擎 | 引擎才知道模型、工作区沙箱和记忆模型是否合法，桌面端不重写校验 |
+| 模型目录合不合规 | 引擎在 `catalog/set` 时用 `account.CheckCatalog` 检查，不通过回 `invalidParams`，目录不变 | 引擎才知道提供方和模型怎样算合法，桌面端不重写校验；`domains/providers.ts` 只照着引擎的规则提前挡住删最后一个模型 |
+| 谁能改模型目录、管理身份 | 引擎网关按连接是不是运营者判定，sidecar 的 `profileOf` 认出 token 用的密钥 | 本机和远程部署是同一套权限，界面只看 `forbidden` 决定显示什么 |
 | 一个技能合不合规 | 引擎在 `skill/set` 时检查，不通过回 `invalidParams` | 同上；界面只把原因显示出来 |
 | 一个技能文件夹怎么读 | sidecar 的 `--read-skill`，和随应用发布的技能同一个读法 | `SKILL.md` 只有一处解析 |
 | 一个工具调用现在在等什么 | 引擎网关的 `ItemRow`（`gateway/wire.go`），`@ollupi/core` 的 `waitsForApproval` 照抄它的判定 | 界面只读状态，判定跟着协议里那个类型走 |
@@ -134,9 +135,11 @@ sequenceDiagram
 
 桌面端自己定义的只有引擎没有的东西：窗口、面板宽度、配色、通知开关、内置浏览器的标签页和历史。这些存在渲染进程的 `localStorage` 或主进程的数据文件夹里，不进引擎的库。
 
-## 单用户
+## 身份
 
-引擎是多用户的，桌面端只有一个用户 `gateway.DefaultUser`，值是 `default`。网关的令牌就是这个用户，中枢也以它的身份调用引擎，所以中枢和桌面看到的是同一批会话和同一份待办。网关给每个用户保留一条连接，新连接会顶掉旧的，这也是渲染进程在同步完成之前不开第二条重连循环的原因。引擎的多用户和分片见 [分片](/zh/engine/sharding)。
+引擎是多用户的，桌面端的身份就是引擎 store 里的用户：每个身份有自己的会话、记忆、待办、技能、设置和中枢，模型目录所有身份共用。连接的 token 是 `<密钥>.<身份>`，所以一条连接永远是某一个身份，没有匿名连接；token 里的身份必须是 store 里已有的用户。新的数据目录启动时 sidecar 建第一个身份 `default`，之后的由运营者经网关 `user/create` 建。
+
+一个窗口一次用一个身份，这台 Mac 选的是哪个记在主进程的 `profile.json`；切换身份时渲染进程用新 token 重连，后端不重启。中枢以同一个身份调用引擎，所以中枢和桌面看到的是这个身份的同一批会话和同一份待办。网关按用户留连接，每个用户最多 4 条（`gateway.DefaultConnections` 的 `PerKey`），再多会顶掉最早的一条。身份怎样认、谁能管理，见[配置的实现](/zh/desktop/config#运营者和身份)；引擎的多用户和分片见 [分片](/zh/engine/sharding)。
 
 ## 代码位置
 
@@ -153,7 +156,8 @@ sequenceDiagram
 | ollupi-desktop | `packages/client/` | JSON-RPC 客户端 |
 | ollupi-desktop | `packages/core/` | 客户端纯函数 |
 | ollupi-desktop | `packages/ui/` | 组件和设计 token |
-| ollupi-desktop | `sidecar/internal/host/host.go` | 装配引擎（`Hub: true`）、服务、`Check` |
+| ollupi-desktop | `sidecar/internal/host/host.go` | 装配引擎（`Hub: true`）、服务、`profileOf` |
+| ollupi-desktop | `apps/desktop/src/main/profile.ts` | 这台 Mac 选的身份 |
 | ollupi | `store/feed.go` | 事件的订阅与分发 |
 | ollupi | `gateway/server.go` | 网关连接和按用户订阅 |
 | ollupi | `agent/agent.go` | 角色清单，含 `HubMain` |

@@ -1,20 +1,20 @@
 # Sidecar
 
-`ollupid` 是桌面端的后端。它是一个 Go 可执行文件，把 ollupi 引擎装配起来，在回环端口上提供网关。引擎是库，没有入口，也不读配置文件，这些由 sidecar 负责。Electron 主进程启动它，读一行握手，然后把地址交给界面。sidecar 的 `go.mod` 钉住引擎版本，当前是 `v0.31.0`。
+`ollupid` 是桌面端的后端。它是一个 Go 可执行文件，把 ollupi 引擎装配起来，在回环端口上提供网关。引擎是库，没有入口；sidecar 也不读配置文件，模型目录、身份和每个身份的设置都在引擎的 store 里，经网关读写。Electron 主进程启动它，读一行握手，然后把地址交给界面。sidecar 的 `go.mod` 钉住引擎版本，当前是 `v0.33.1`。
 
-除了常驻运行，`ollupid` 还有几个一次性模式，主进程用它们校验配置、导入时读技能文件夹、把旧配置搬到现在的样子。规则只有一份，就是后端自己的，界面不重写一遍。
+除了常驻运行，`ollupid` 还有几个一次性模式，主进程用它们把旧数据目录搬到现在的样子、删除身份、导入时读技能文件夹。规则只有一份，就是后端自己的，界面不重写一遍。
 
 ## 启动参数
 
 | 参数 | 默认值 | 含义 |
 |---|---|---|
-| `--home` | `$OLLUPI_HOME`，否则 `~/.ollupi` | 配置和数据目录 |
+| `--home` | `$OLLUPI_HOME`，否则 `~/.ollupi` | 数据目录 |
 | `--listen` | `127.0.0.1:0` | 网关监听地址，端口由系统分配 |
 | `--allow-origin` | 空 | 逗号分隔的额外 WebSocket 源。打包后主进程传 `ollupi`，对应 `app://ollupi` |
 | `--watch-stdin` | `false` | stdin 关闭时退出。主进程总是传，父进程死掉后 sidecar 跟着退 |
-| `--check-config FILE` | | 检查这份配置能否启动，打印结果后退出 |
-| `--config-schema` | | 打印 `--check-config` 输出的 JSON Schema 后退出 |
-| `--import-config` | | 拆开旧版的 `config.yaml`（按身份声明模型，或写着 `skills_dir`）后退出，见[技能](#旧配置里的-skills-dir) |
+| `--import-config` | | 把旧版留下的 `config.yaml` 和 `profiles.json` 搬进 store，再删掉 `config.yaml`，然后退出，见[配置的实现](/zh/desktop/config#旧文件的导入) |
+| `--names FILE` | 空 | 和 `--import-config` 一起用：应用旧版放在自己文件夹里的 `profiles.json`，取身份的名字 |
+| `--delete-profile ID` | | 在后端停着时从 store 删掉一个身份的数据后退出。最后一个身份、或者它还有轮次在跑或排队时拒绝 |
 | `--read-skill DIR` | | 把技能文件夹 DIR 读成 `skill/set` 要的字段，打印后退出。主进程导入文件夹时用 |
 | `--skill-schema` | | 打印 `--read-skill` 输出的 JSON Schema 后退出 |
 
@@ -22,12 +22,15 @@
 
 | 环境变量 | 含义 |
 |---|---|
-| `OLLUPI_GATEWAY_TOKEN` | 网关令牌。常驻模式必需，为空时直接失败 |
+| `OLLUPI_GATEWAY_TOKEN` | 网关密钥。常驻模式必需 |
+| `OLLUPI_OPERATOR_TOKEN` | 运营者密钥。常驻模式必需，不能和网关密钥相同，否则每个用户都成了运营者 |
 | `OLLUPI_HOME` | 覆盖默认的 `--home` |
 | `OLLUPI_BROWSER_URL` | 内置浏览器端点的地址。不设时不注册浏览器工具 |
 | `OLLUPI_BROWSER_TOKEN` | 内置浏览器端点的令牌 |
 
-浏览器端点的两个变量由主进程的 `browser/endpoint.ts` 的 `env()` 给出，每次启动和每次 `--check-config` 都带上，所以检查时注册的工具和真实启动一致。
+连接的 token 是 `<密钥>.<身份>`：拿网关密钥是这个身份，拿运营者密钥是这个身份、同时是运营者，能改模型目录、管理身份，见[配置的实现](/zh/desktop/config#运营者和身份)。
+
+浏览器端点的两个变量由主进程的 `browser/endpoint.ts` 的 `env()` 给出，每次启动都带上。
 
 ## 握手
 
@@ -35,86 +38,64 @@ sidecar 和主进程之间的协议是 stdout 上的一行 JSON。日志全部�
 
 ```go
 type Message struct {
-	Type       string `json:"type"`
-	URL        string `json:"url,omitempty"`
-	Version    string `json:"version,omitempty"`
-	Message    string `json:"message,omitempty"`
-	ConfigPath string `json:"configPath,omitempty"`
+	Type    string `json:"type"`
+	URL     string `json:"url,omitempty"`
+	Version string `json:"version,omitempty"`
+	Message string `json:"message,omitempty"`
+	// Profiles are the users of the store, for the app to act as one.
+	Profiles []string `json:"profiles,omitempty"`
 }
 ```
 
 ```json
-{"type":"ready","url":"ws://127.0.0.1:53421/","version":"dev"}
-{"type":"fatal","message":"models: at least one model is required; the first is the default","configPath":"/Users/me/.ollupi/config.yaml"}
+{"type":"ready","url":"ws://127.0.0.1:53421/","version":"dev","profiles":["default","work"]}
+{"type":"fatal","message":"OLLUPI_GATEWAY_TOKEN and OLLUPI_OPERATOR_TOKEN must both be set"}
 ```
 
-`ready` 只在后端装配完成、并且已经拿到监听地址之后才发，所以启动失败一定报成 `fatal`，不会出现先 `ready` 后失败的情况。`version` 取 `debug.ReadBuildInfo()` 的主模块版本，取不到时是 `"dev"`。`fatal` 带上配置文件路径，界面据此显示"打开配置"按钮。
+`ready` 只在后端装配完成、并且已经拿到监听地址之后才发，所以启动失败一定报成 `fatal`，不会出现先 `ready` 后失败的情况。`version` 取 `debug.ReadBuildInfo()` 的主模块版本，取不到时是 `"dev"`。`profiles` 是 store 里所有身份的 id；主进程记着的身份不在里面时，退回第一个并记下。
 
 ## 启动顺序
 
 ```mermaid
 flowchart TD
-  A["读 OLLUPI_GATEWAY_TOKEN"] --> B["创建 home 目录"]
-  B --> C["config.Load 首次写入模板和技能"]
-  C --> D["host.New 装配，不启动任何东西"]
-  D --> E["net.Listen 拿到端口"]
-  E --> F["watch-stdin 时起 goroutine 等 stdin 结束"]
-  F --> G["handshake.Ready"]
-  G --> H["host.Serve 服务到上下文结束"]
+  A["读两个密钥，检查都有且不同"] --> B["创建 home 目录"]
+  B --> C["host.New 装配，不启动任何东西"]
+  C --> D["net.Listen 拿到端口"]
+  D --> E["watch-stdin 时起 goroutine 等 stdin 结束"]
+  E --> F["handshake.Ready，带上身份列表"]
+  F --> G["host.Serve 服务到上下文结束"]
 ```
 
 退出信号有三种：SIGINT、SIGTERM、stdin 关闭。它们取消同一个上下文。`Serve` 里用 `errgroup` 并行跑引擎的常驻流程和网关，任何一个返回就取消另一个；返回前按相反顺序关闭组件，数据库最后释放。
 
 ## 装配引擎
 
-装配出来的组件大部分在引擎的 host 里。`ollupi.New` 一次建好 store、附件、内置工具、调度器、记忆提炼和用量记录，桌面端只补上引擎不知道的几样：模型客户端、这台机器的运行环境、工作区工具、内置浏览器。`host.New` 只构建，不启动，任何一步失败都会把已打开的组件按相反顺序关掉。
+装配出来的组件大部分在引擎的 host 里。`ollupi.New` 一次建好 store、按模型目录建的模型客户端、附件、内置工具、调度器、记忆提炼和用量记录，桌面端只补上引擎不知道的几样：每个身份的运行环境、工作区工具、内置浏览器、网关的认证。`host.New` 只构建，不启动，任何一步失败都会把已打开的组件按相反顺序关掉。
 
 | 顺序 | 组件 | 说明 |
 |---|---|---|
-| 1 | 模型客户端 | `modelClients`：每个模型一条连接、一个客户端，连接 ID 是 `provider/name`，所以 `calls` 只限这一个模型。按文件顺序排，第一个是默认 |
-| 2 | 记忆模型 | `memory.model` 指向的连接，找不到时为空，不报错 |
-| 3 | 运行环境 | `userBox`：`sandbox.New` 的 `full access` 模式，根目录是 home |
-| 4 | 工作区工具 | `workspace.enabled` 为真时才有。`DenyRead` 加上 `config.yaml`，命令读不到里面的 API 密钥；`EnvMarker` 是 `OLLUPI_SANDBOX` |
-| 5 | 浏览器工具 | 只有 `OLLUPI_BROWSER_URL` 存在时注册 |
-| 6 | 引擎 | `ollupi.New`，带模型、工具、槽位和网关选项 |
+| 1 | 运行环境 | `newUserBoxes`：每个身份一个 `sandbox.New` 的 `full access` Box，根目录是 `<home>/users/<id>`，第一次用到时建 |
+| 2 | 工作区工具 | 总是有。`DenyRead` 是 `<home>/data`，命令读不到 API 密钥和数据库；`EnvMarker` 是 `OLLUPI_SANDBOX`；`BoxIn` 拒绝在别的机器上开的会话 |
+| 3 | 浏览器工具 | 只有 `OLLUPI_BROWSER_URL` 存在时注册 |
+| 4 | 引擎 | `ollupi.New`：名字 `host.Name`（`ollupi`），引擎默认的系统提示和槽位，全部工具，`Boxes`、`Hub: true`，网关的 `Authenticate`、`Welcome` 和允许的源 |
+| 5 | 第一个身份 | `firstProfile`：store 里一个用户都没有时建 `default`，给它随应用发布的技能 |
 
-`ollupi.New` 的两个参数是桌面端特有的：
+桌面端特有的几样：
 
-- `Boxes` 把每个会话都指向同一个 `userBox`。命令在这台机器上跑，所以引擎里指向别的机器的会话会被拒绝，报"start the conversation in …"。
+- `Authenticate` 是 `profileOf`：认出 token 用的是哪个密钥，token 里的身份必须是 store 里已有的用户，否则回 `ErrUnknownToken`，不会当场建。
+- `Welcome`：运营者用 `user/create` 建的身份，也拿到随应用发布的技能。
+- `Boxes` 给每个身份自己的 Box。命令只在这台机器上跑，所以引擎里指向别的机器的会话会被工作区工具拒绝，报"start the conversation in …"。
 - `Hub: true`。应用的 Super Agent 就是引擎的中枢，用户的唯一中枢工作区把活分给项目工作区。中枢本身见 [中枢](/zh/engine/hub)。
 
 ::: info 演进
-早期 store、定时任务、MCP 连接、记忆提炼和网关都由 `host.New` 自己逐个构造，事件还要靠 `agent.Config.OnEvent` 手动分发给网关和各个客户端。现在这些都是引擎 host 的一部分，分发改走 store 的事件流，sidecar 只剩上面六步。
+早期 store、定时任务、MCP 连接、记忆提炼和网关都由 `host.New` 自己逐个构造，事件还要靠 `agent.Config.OnEvent` 手动分发给网关和各个客户端。后来这些都成了引擎 host 的一部分，分发改走 store 的事件流。模型客户端原来由 sidecar 按 `config.yaml` 里的模型逐个建（`modelClients`），引擎 v0.32.0 把模型目录搬进 store 后由引擎自己建（`desktop@8033b6d`）；名字、提示、工具白名单和槽位原来读自 `config.yaml`，现在是常量（`desktop@780d8cc`）。
 :::
 
 ### MCP 服务器
 
-MCP 服务器由用户在界面里添加，存在引擎的 store 里，`config.yaml` 没有对应字段。它们的进程跑在 `userBox` 里：根目录是 home，能拿到后端的环境变量，但去掉两类：`OLLUPI_` 开头的变量（尤其是令牌），以及沙箱拒绝的名字，比如 shell 的 `BASH_FUNC_x%%`。
+MCP 服务器由用户在界面里添加，存在引擎的 store 里，每个身份自己的。它们的进程跑在这个身份的 Box 里：根目录是 `<home>/users/<id>`，能拿到后端的环境变量，但去掉两类：`OLLUPI_` 开头的变量（尤其是两个密钥），以及沙箱拒绝的名字，比如 shell 的 `BASH_FUNC_x%%`。
 
-连接发生在 `Serve` 开头：`go h.ollupi.Users.Tools(ctx, gateway.DefaultUser)`，不在握手的 30 秒时限内。连不上的服务器跳过，原因由 `mcpServer/list` 报告，界面上能看到。
-
-## 能否启动的检查
-
-`--check-config` 先用 `config.LoadFile` 解析文件，再调 `host.Check`：
-
-1. `os.MkdirTemp("", "ollupid-check-")` 建一个临时数据目录，真正的数据库不打开。
-2. 用 `New` 完整装配，和真实启动同一个函数：模型客户端、工作区沙箱、记忆模型都在这一步校验。
-3. `h.close()` 关掉装配出来的东西，`RemoveAll` 删临时目录。
-
-它不走 `Serve`，所以不启动引擎的常驻流程，不开会话，也不连 MCP 服务器。
-
-输出的类型是 `checkResult`：
-
-```go
-type checkResult struct {
-	OK     bool              `json:"ok"`
-	Config *config.Config    `json:"config,omitempty"`
-	Models []config.ModelRef `json:"models,omitempty"`
-	Error  string            `json:"error,omitempty"`
-}
-```
-
-`Config` 是后端解码后的样子：默认值已应用，`workspace_dirs` 这类相对路径已解析成绝对路径。API 密钥保留在输出里，界面要像编辑 Base URL 一样编辑它。
+连接发生在 `Serve` 开头：对 store 里的每个身份各起一个 `h.ollupi.Users.Tools(ctx, user)`，不在握手的 30 秒时限内。连不上的服务器跳过，原因由 `mcpServer/list` 报告，界面上能看到。
 
 ## 技能
 
@@ -128,7 +109,7 @@ type checkResult struct {
 
 `sidecar/skills/` 用 `go:embed` 打进可执行文件，每个子文件夹是一个技能，目前只有 `zhou-shenghua-woodcut-style`，内含风格规则、Python 渲染库和生图提示词。`skills.Starter()` 把它们读成给 `full-main-agent` 和 `compact-main-agent` 的技能：同一个主 agent 的两个角色都有，会话换到另一种大小的模型时技能还在。
 
-一个身份第一次连上时，`profileOf` 在 store 里建这个用户，接着 `giveStarterSkills` 把这些技能给它。只在建用户的那一次给，所以用户删掉的技能不会再回来。
+`giveStarterSkills` 在两处把这些技能给一个身份：后端启动时建第一个身份（`firstProfile`），以及运营者 `user/create` 建新身份（网关的 `Welcome`）。只在建用户的那一次给，所以用户删掉的技能不会再回来。
 
 ### 导入文件夹
 
@@ -147,24 +128,13 @@ type readResult struct {
 
 ### 旧配置里的 `skills_dir`
 
-`--import-config` 在拆完旧的按身份声明模型的配置之后，再看 `config.yaml` 有没有 `skills_dir`（`importSkills`）。有就按角色读 `<skills_dir>/<role>/<skill>`，主 agent 的两个角色先读：
+`--import-config` 在搬完模型和身份之后，再看 `config.yaml` 有没有 `skills_dir`（`importSkills`）。有就按角色读 `<skills_dir>/<role>/<skill>`，主 agent 的两个角色先读：
 
 - 同名的技能合成一个，带上所有有它的角色；内容不同时留先读到的那份，也就是主 agent 的，其余记进 `skipped`。
 - 引擎会拒绝的技能（`Package.Check`）不搬，同样记进 `skipped`，不挡启动。
-- 每个已有用户都得到全部技能，写完再从 `config.yaml` 去掉这一项（`config.SkillsDir` 用 YAML 节点删键，其余注释保留）。文件夹原样留在磁盘上。
+- store 里每个已有用户都得到全部技能，写完再从 `config.yaml` 去掉这一项（`config.SkillsDir` 用 YAML 节点删键，其余注释保留）。文件夹原样留在磁盘上。
 
-每一步都能重跑：没删掉键之前中断，下次启动再写一遍同样的技能。`config.LoadFile` 遇到还写着 `skills_dir` 的文件直接报错，提示先跑 `--import-config`；主进程每次启动都先跑这一步，所以用户看不到这个错误。
-
-## 配置加载和校验
-
-`config.Load` 在 `config.yaml` 不存在时写入模板（权限 `0600`）。
-
-解析分两步走：
-
-1. `Parse` 把 YAML 转成 JSON 再解码，这样文件用的就是引擎在工作区类型上定义的 json 标签。未知字段报错，拼错的键不会被静默忽略。
-2. `Validate` 只检查这份文件的形状能出的错：`name` 必填，提供方名字唯一且不带 `/`，`type` 在 `openai`/`anthropic`/`gemini` 之内，模型名不重复，`calls` 和 `slots` 不为负，`limits` 不能是零值，`memory.model` 指向列出的模型。策略、规则和 `limits` 的取值留给引擎在启动时校验。
-
-`config.yaml` 只放"启动时取一次"的部署参数：模型和提供它们的 API、工作区工具、记忆用什么模型学、槽位。用户运行中改的东西（权限、MCP 服务器、技能、记忆开不开）存在引擎的 store 里，通过网关改，所以改这些不用重启。逐键说明见 [配置](/zh/app/config)。
+每一步都能重跑：没删掉键之前中断，下次启动再写一遍同样的技能。之后 `removeConfig` 删掉整个 `config.yaml`，完整的五步见[配置的实现](/zh/desktop/config#旧文件的导入)。
 
 ## 宿主能力
 
@@ -172,22 +142,22 @@ type readResult struct {
 
 | 包 | 能力 | 文档 |
 |---|---|---|
-| `internal/config` | `config.yaml` 的类型、模板、解析和校验 | [配置](/zh/app/config) |
+| `internal/config` | 拆开旧版的 `config.yaml`（`Legacy`、`Providers`、`SkillsDir`），身份 id 的规则 `ProfileID` | [配置的实现](/zh/desktop/config#旧文件的导入) |
 | `internal/handshake` | stdout 握手行 | 本页 |
+| `internal/skillmd` | 把技能文件夹读成 `skill.Package` | 本页 |
 | `internal/browser` | 把内置浏览器作为工具提供方，请求转发到主进程 | [内置浏览器](/zh/desktop/browser) |
 
 ## 代码位置
 
 | 仓库 | 路径 | 职责 |
 |---|---|---|
-| ollupi-desktop | `sidecar/cmd/ollupid/main.go` | 命令行入口、一次性模式、启动顺序、`checkResult` |
+| ollupi-desktop | `sidecar/cmd/ollupid/main.go` | 命令行入口、两个密钥、一次性模式、启动顺序、`--delete-profile` |
+| ollupi-desktop | `sidecar/cmd/ollupid/import.go` | `--import-config` |
 | ollupi-desktop | `sidecar/cmd/ollupid/skills.go` | `--read-skill` 和它的 `readResult`，`importSkills` 搬旧的 `skills_dir` |
-| ollupi-desktop | `sidecar/internal/host/host.go` | 装配、`Serve`、`Check`、`userBox`、`modelClients`，新身份的 `giveStarterSkills` |
+| ollupi-desktop | `sidecar/internal/host/host.go` | 装配、`Serve`、每个身份的 Box、`profileOf`、`firstProfile`、`giveStarterSkills` |
 | ollupi-desktop | `sidecar/internal/handshake/handshake.go` | 握手行 |
-| ollupi-desktop | `sidecar/internal/config/config.go` | 配置类型、解析、`Validate`、首次写入 |
-| ollupi-desktop | `sidecar/internal/config/skillsdir.go` | 从旧配置里取出并删掉 `skills_dir` |
+| ollupi-desktop | `sidecar/internal/config/` | 拆开旧配置，`ProfileID` |
 | ollupi-desktop | `sidecar/internal/skillmd/` | 把技能文件夹读成 `skill.Package` |
-| ollupi-desktop | `sidecar/internal/config/template.go` | 首次启动写入的模板 |
 | ollupi-desktop | `sidecar/internal/browser/` | 把主进程的浏览器端点包成工具提供方 |
 | ollupi-desktop | `sidecar/skills/` | 随应用发布的技能，`Starter()` |
 | ollupi | `host/host.go` | `New` 装配、`Run` 跑常驻流程、`Close` |

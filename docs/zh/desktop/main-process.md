@@ -7,8 +7,8 @@ Electron 主进程管三件事：后端进程、窗口，以及渲染进程在�
 启动时按这个顺序走：
 
 1. 注册 `app` 协议（必须在 ready 之前），申请单实例锁。拿不到锁就退出，第二个实例的启动转成 `showMainWindow`。
-2. 创建浏览器（带权限存储）、书签、历史、终端、临时附件、工作区改动、后端监督器、配置、技能、更新器。
-3. `app.whenReady` 之后：提供渲染页，清理上次遗留的临时附件，注册 IPC，创建窗口，启动更新器。
+2. 创建浏览器（带权限存储）、书签、历史、终端、临时附件、远程连接设置、后端监督器、`BackendHome`、技能、更新器。监督器从 `profile.json` 读出这台 Mac 选的身份。
+3. `app.whenReady` 之后：提供渲染页，清理上次遗留的临时附件，运行一次 `ollupid --import-config` 把旧数据目录搬进 store（失败只用 `console.error` 记下，照常往下走），注册 IPC，创建窗口，启动更新器。
 4. 浏览器端点监听成功后才启动后端，这样后端的浏览器工具从一开始就能连上。
 
 退出时：
@@ -21,7 +21,7 @@ Electron 主进程管三件事：后端进程、窗口，以及渲染进程在�
 
 ## 后端托管
 
-`BackendSupervisor` 拥有 `ollupid` 进程：用新令牌启动它，读握手行，把输出写进日志文件，留一段尾部给诊断，上报每次状态变化。
+`BackendSupervisor` 拥有 `ollupid` 进程：用新密钥启动它，读握手行，把输出写进日志文件，留一段尾部给诊断，上报每次状态变化。
 
 它从不自动重启。崩溃变成看得见的 `failed` 状态，由用户决定重试。
 
@@ -29,28 +29,31 @@ Electron 主进程管三件事：后端进程、窗口，以及渲染进程在�
 
 状态有四个：`stopped`、`starting`、`ready`、`failed`。`start` 从 `stopped` 或 `failed` 进 `starting`，握手 `ready` 进 `ready`；握手超时、无法启动、`fatal` 或意外退出都进 `failed`；`stop` 从 `starting` 或 `ready` 回 `stopped`，用户重启从 `failed` 再进 `starting`。
 
-`BackendState` 由主进程推给渲染进程，四种状态：`starting`；`ready`，带地址、令牌和版本；`failed`，带失败种类、配置路径和日志尾部；`stopped`。
+`BackendState` 由主进程推给渲染进程，四种状态：`starting`；`ready`，带地址、token、身份和版本；`failed`，带失败种类和日志尾部；`stopped`。
 
 ### 启动
 
 | 步骤 | 细节 |
 |---|---|
 | 去重 | `start()` 共用一个进行中的 Promise，否则读环境变量期间再调一次会多出一个没人管的后端。 |
-| 令牌 | `randomBytes(32).toString('hex')`，放进环境变量 `OLLUPI_GATEWAY_TOKEN` |
+| 密钥 | 两个 `randomBytes(32).toString('hex')`，分别放进环境变量 `OLLUPI_GATEWAY_TOKEN` 和 `OLLUPI_OPERATOR_TOKEN`。交给渲染进程的 token 是 `<运营者密钥>.<身份>`，所以本机的应用是运营者；网关密钥不交给任何人 |
 | 参数 | `--home <home> --watch-stdin`，有允许的源时加 `--allow-origin ollupi` |
 | 环境 | 登录 shell 的环境合并进当前环境，见下节 |
 | 握手 | 30 秒内没有握手行，报 `timeout` 并发 SIGKILL |
+| 身份 | `ready` 行带着 store 里的身份列表；选的身份不在里面时退回第一个，写回 `profile.json` |
 | 握手之后 | stdout 上的其他行当作日志 |
+
+切换身份（`profile.select`）不重启后端：主进程记下选择，`selectProfile` 换掉 `ready` 状态里的 token 和身份，渲染进程用新 token 重连。连另一台机器上的后端时，token 是用户在设置 → 连接里填的，切换只记下选择。
 
 ### 环境变量
 
-从 Finder 或 Dock 启动的应用只拿到 launchd 的最小环境，所以 `backendEnv` 用 `$SHELL -ilc 'env -0'` 读一次登录 shell 的环境，再合并成 `{ ...shell, ...process.env }`，`PATH` 用 shell 的。启动终端里的变量优先于 shell 配置。每次启动和校验都重新读，所以新 export 的变量下一次启动就能拿到。
+从 Finder 或 Dock 启动的应用只拿到 launchd 的最小环境，所以 `backendEnv` 用 `$SHELL -ilc 'env -0'` 读一次登录 shell 的环境，再合并成 `{ ...shell, ...process.env }`，`PATH` 用 shell 的。启动终端里的变量优先于 shell 配置。每次启动都重新读，所以新 export 的变量下一次启动就能拿到。
 
 读取用独立会话（`detached`），否则交互式 shell 会抢走启动终端的前台进程组，让 Ctrl-C 到不了应用。5 秒超时后杀掉，失败时返回空。
 
 ### 停止和重启
 
-`stop()` 先把状态设为 `stopped`，发 SIGTERM 让后端写完，6 秒没退出就 SIGKILL。`restart()` 是 `stop` 加 `start`。改配置要重启时，渲染进程先问：有会话正在跑，确认文案会点出数量，因为重启会停掉正在执行的命令。
+`stop()` 先把状态设为 `stopped`，发 SIGTERM 让后端写完，6 秒没退出就 SIGKILL。`restart()` 是 `stop` 加 `start`。删除身份（后端停着时改 store）和切到远程后端都会停掉本机的后端，渲染进程先问（`confirmRestart`）：有会话正在跑，确认文案会点出数量，因为重启会停掉正在执行的命令。
 
 `stop` 先清掉 `this.child`，随后的 `exit` 不会被当成意外退出。
 
@@ -67,7 +70,7 @@ Electron 主进程管三件事：后端进程、窗口，以及渲染进程在�
 
 ### 错误呈现
 
-`failed` 状态下 `App` 用 `BackendScreen` 占满窗口：原因、配置文件路径（有 `configPath` 时）、"重启后端"和"打开配置"两个按钮，以及可展开的后端日志。
+`failed` 状态下 `App` 用 `BackendScreen` 占满窗口：原因、"重启后端"（连远程后端时是"重试"）和"连接设置"两个按钮，以及可展开的后端日志。
 
 日志来自监督器在内存里留的最后 200 行（`LOG_LINES`）。每次启动清空。
 
@@ -117,15 +120,16 @@ frame-src blob:; connect-src ws://127.0.0.1:*
 
 ## IPC 面
 
-`ipc.ts` 的处理函数校验全部输入：工作区根目录必须是绝对路径，终端尺寸是 1 到 1000 的整数，配置改动只接受键路径和纯 JSON。
+`ipc.ts` 的处理函数校验全部输入：工作区根目录必须是绝对路径，终端尺寸是 1 到 1000 的整数，身份 id 要合 `PROFILE_ID` 的规则。
 
 | 组 | 方法 | 做什么 |
 |---|---|---|
-| 应用 | `info` | 版本、平台、home、配置路径、日志路径 |
-| 后端 | `backend.state`、`restart`、`onState` | 状态和重启 |
-| 配置 | `config.read`、`apply` | 读取和改写 `config.yaml`，见 [配置](/zh/app/config) |
+| 应用 | `info` | 版本、平台、home、日志路径、用户主目录 |
+| 后端 | `backend.state`、`restart`、`check`、`onState` | 状态和重启；`check` 在连远程后端失败后问它为什么，被拒就进 `failed` |
+| 远程 | `remote.read`、`save` | 连另一台机器上的后端时的地址和 token；开关远程或换主机时重启后端、重载窗口 |
+| 身份 | `profile.select`、`delete` | 选这台 Mac 用的身份（写 `profile.json`）；删除一个不在用的身份：`ollupid --delete-profile` 加删它的附件和 `<home>/users/<id>`。身份列表、新建和改名走网关，见 [配置的实现](/zh/desktop/config#运营者和身份) |
 | 技能 | `skills.import` | 让用户选一个技能文件夹，用 `ollupid --read-skill` 读成字段；技能本身经网关读写，见 [配置](/zh/desktop/config#技能) |
-| 中枢 | `superAgentFolder` | 建 `<home>/super-agent` 并给出路径，中枢的 hub 工作区加在这里 |
+| 中枢 | `superAgentFolder` | 建 `<home>/users/<id>/super-agent` 并给出路径，这个身份的 hub 工作区加在这里 |
 | 附件 | `attachments.pathOf`、`writeTemp`、`removeTemp` | 没有路径的文件先写成临时文件 |
 | 文件 | `files.list`、`read`、`kind` | 只读工作区文件，见 [侧边面板](/zh/desktop/side-panels) |
 | 改动 | `changes.list`、`diff`、`stage`、`unstage`、`discard`、`commit` | 工作区的 git 操作 |
@@ -195,7 +199,9 @@ frame-src blob:; connect-src ws://127.0.0.1:*
 | ollupi-desktop | `apps/desktop/src/main/index.ts` | 应用生命周期 |
 | ollupi-desktop | `apps/desktop/src/main/backend/supervisor.ts` | 后端进程、握手、日志 |
 | ollupi-desktop | `apps/desktop/src/main/backend/environment.ts` | 后端路径和登录 shell 环境 |
-| ollupi-desktop | `apps/desktop/src/main/backend/config.ts` | `config.yaml` 的读写 |
+| ollupi-desktop | `apps/desktop/src/main/backend/home.ts` | `BackendHome`：启动前导入旧数据目录，删除身份 |
+| ollupi-desktop | `apps/desktop/src/main/backend/remote.ts` | 远程后端的设置和拒绝原因 |
+| ollupi-desktop | `apps/desktop/src/main/profile.ts` | 这台 Mac 选的身份 |
 | ollupi-desktop | `apps/desktop/src/main/backend/skills.ts` | 导入时读一个技能文件夹 |
 | ollupi-desktop | `apps/desktop/src/main/window.ts` | 主窗口和 `watchTheInterface` |
 | ollupi-desktop | `apps/desktop/src/main/ipc.ts` | IPC 处理和输入校验 |
