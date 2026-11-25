@@ -137,7 +137,7 @@
 | ollupi | `store/sqlite/migrations/0004_tasks.sql`、`0011_usage.sql` | `tasks`、`usage` 两张表和索引 |
 | ollupi | `run/model.go`、`run/tools.go` | 回答、思考时刻、流式增量、脱敏与还原、被抢先的回复整批不写；调用的记录与执行、后台任务的启动与报告 |
 | ollupi | `usage/usage.go` | 从 `modelResponded` 补出 `usage` 表 |
-| ollupi | `prompt/observation.go` | `OutputText`、`clip`、`maxObservationTokens`、`minOutputTokens` |
+| ollupi | `prompt/observation.go` | `OutputText`、`clip`、`maxObservationTokens`、`endedObservationTokens`、`minOutputTokens` |
 | ollupi | `gateway/wire.go`、`gateway/threads.go` | `TurnRow`、`ItemRow`、`ResponseRow`；`thread/read`、`thread/resume` |
 | ollupi | `tool/builtin/outputs/outputs.go` | `read_tool_output` |
 | ollupi | `eval/main.go`、`eval/trace.py` | 评测时留下和查看轨迹 |
