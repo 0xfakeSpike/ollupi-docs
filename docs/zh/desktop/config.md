@@ -1,16 +1,20 @@
 # 配置的实现
 
-桌面端的配置文件是 `~/.ollupi/config.yaml`，字段说明见[配置与数据](/zh/app/config)。它描述的是这个部署，所有身份共用：名字、提示词、模型目录（`providers`，含 API 密钥）、工具白名单、槽位。每个身份自己的东西——新会话默认的模型、学记忆的模型、权限、MCP 服务器、技能、记忆开关——存在引擎的 store 里，经网关读写，不经过这个文件。
+桌面端的配置分在三处，字段说明见[配置与数据](/zh/app/config)：
 
-界面改配置时走一个固定流程：先让后端自己校验，通过后才写入。只改模型目录时，改动直接重载进正在运行的后端；改别的就重启后端。
+| 在哪 | 放什么 | 谁改 |
+|---|---|---|
+| `~/.ollupi/config.yaml` | 部署的名字、提示词、工具白名单、槽位 | 手改文件，重启后端生效 |
+| 引擎 store 里的模型目录（catalog） | 提供方、它们的模型和 API 密钥，所有身份共用 | 运营者经网关 `catalog/set` 整份替换，马上生效 |
+| 引擎 store 里每个用户的数据 | 新会话默认的模型、学记忆的模型、权限、MCP 服务器、技能、记忆开关 | 这个身份自己，经网关改，马上生效 |
+
+身份列表 `~/.ollupi/profiles.json` 不属于其中任何一处：本机部署里应用是身份提供方，列表是主进程的，后端不读。
 
 ## 为什么这样设计
 
-文件可以手改，编辑器、`cp`、git 都行；如果界面自己实现一套校验，两边就会漂移，用户手改出来的文件界面认不出，界面写出来的文件后端又启动不了。让 `ollupid --check-config` 当唯一的裁判，界面只负责给出改动和显示错误。
+引擎是多租户的：模型目录和密钥归部署的运营者，所有用户共用；用户只在目录里选。把目录放进 store、经网关读写，桌面端和服务器部署就是同一套做法：本机的应用以运营者身份连接，远端的后端也一样，只要拿着运营者的 token。改目录不重启后端，不打断正在跑的命令；文件和运行中的后端也不会再对不上，因为已经没有一份要和后端对照的文件。
 
-文件里只放部署的东西，是因为引擎是多租户的：模型目录和密钥归运营者，所有用户共用；用户只在目录里选。放到服务器上时，同一份 `config.yaml` 原样可用，身份来自外部的身份系统。身份列表（`profiles.json`）因此不进这个文件：本机部署里应用是身份提供方，列表是它的，后端不读。
-
-运行中会改的项放在 store 里，是因为它们不需要重启就能生效，放进需要重启的文件会白白打断正在跑的命令。这条分界线写在 `internal/config` 的包注释里：这个包"只描述，`host` 把它变成运行中的组件"。
+剩在 `config.yaml` 里的四项只在启动时取一次，改动本来就要重启，留在文件里可以用编辑器、`cp`、git 管理。这个包"只描述，`host` 把它变成运行中的组件"，写在 `internal/config` 的包注释里。
 
 ## 文件里有什么
 
@@ -18,91 +22,81 @@
 |---|---|---|
 | `name` | 部署的名字，引擎用它在 MCP 握手和日志里标识自己 | 必填，不能为空白 |
 | `prompt` | 系统提示 | 省略时用引擎的默认系统提示 |
-| `providers[]` | 模型目录，每项是一个 API 账号。顺序有意义：没选过模型的身份用第一个提供方的第一个模型 | 可以为空，但没有模型时开不了会话 |
-| `providers[].id` | 提供方名字。模型按 `id/name` 选择，这也是引擎的连接 ID | 必填，1 到 64 个字符，前后无空格，不带 `/`，不重复 |
-| `providers[].type` | 提供方说的 API：`openai`（任何 OpenAI 兼容接口）、`anthropic`、`gemini` | 必填，三种之一 |
-| `providers[].base_url` | API 地址 | 省略时用客户端的默认地址 |
-| `providers[].api_key` | API 密钥，明文写在文件里，像 `base_url` 一样 | 不需要密钥的接口可省；`gemini` 必填 |
-| `providers[].models[].name` | 模型名，同一提供方内唯一 | 必填 |
-| `providers[].models[].calls` | 这个模型同时最多几个请求。每个模型是独立的引擎连接和客户端，所有用户共用这个上限 | 省略用 4，不能为负 |
-| `providers[].models[].thinking` | 是否请求模型的思考。OpenAI 兼容接口据此发 `enable_thinking` | `anthropic`、`gemini` 省略为开；`openai` 省略时不发，由 API 自己决定；设 `false` 关闭 |
-| `providers[].models[].images` | 模型接受图片。为假时引擎不把图片发给它 | 省略为假 |
-| `providers[].models[].limits` | `context` 上下文窗口、`output` 一次回答最多占多少、`input` 可选的输入上限 | `context`、`output` 必须为正，`input` 不能为负 |
 | `tools` | 工具白名单 | 省略即全部放开 |
 | `slots` | 同时跑多少会话 | 省略用引擎默认的 32，不能为负 |
 
-`config.yaml` 里没有身份、MCP、技能、记忆开关，也没有工作区工具的设置：
+`config.Parse` 把 YAML 转成 JSON 后用 `DisallowUnknownFields` 解码，拼错的键报错而不是被忽略；`Config.Validate` 查 `name` 和 `slots`。`LoadFile` 在解析之前还会先看文件里有没有旧版本的键（按身份写的模型、`providers`、`skills_dir`、`workspace`），有就直接拒绝，错误里写明运行 `ollupid --import-config`，而不是报一个让人看不懂的"未知字段"。
 
-- 命令和文件工具（`run_command`、`edit_file`、`write_file`）总是打开，沙箱用引擎 `workspace.Config` 的默认值：工作区可写、不联网、命令默认 30 秒超时（单次最多 600 秒），工作目录是 `<home>/scratch`。桌面端在此之外加两条：`config.yaml` 和 `<home>/data` 禁止读，命令读不到 API 密钥和数据库；环境变量标记是 `OLLUPI_SANDBOX`。引擎自己再让 `AGENTS.md`、`CLAUDE.md`、`.mcp.json` 这类文件名受保护。
-- 每个身份的模型选择在 `settings/read` 的 `model`、`learnModel` 里，经 `settings/update` 改，只能选目录里有的。
-- MCP 服务器和技能在 `mcpServer/list`、`skill/list`，记忆的开关在设置里。
+主进程不读也不写这个文件。应用里没有编辑它的界面，手改后到设置 → 通用重启后端；有轮次在跑时，`domains/restart.ts` 的 `confirmRestart` 先问。
+
+命令和文件工具（`run_command`、`edit_file`、`write_file`）也不在文件里：它们总是打开，沙箱用引擎 `workspace.Config` 的默认值，工作区可写、不联网、命令默认 30 秒超时（单次最多 600 秒），工作目录是 `<home>/scratch`。桌面端在此之外加两条：`config.yaml` 和 `<home>/data` 禁止读，命令读不到 API 密钥和数据库；环境变量标记是 `OLLUPI_SANDBOX`。引擎自己再让 `AGENTS.md`、`CLAUDE.md`、`.mcp.json` 这类文件名受保护。
 
 ::: info 演进
-0.7.53 之前，默认权限、MCP 服务器和记忆的两个开关都写在 `config.yaml` 里，改它们也要重启后端；0.7.53 跟进引擎 v0.17.1 把它们搬进 store（`desktop@795ac1d`）。0.8.17-beta.5 跟进引擎的单一模型目录，`models`、`profiles`、`credentials` 这些按身份写模型的键换成 `providers`（`desktop@1c7ccf0`）。引擎 v0.31.0 让技能进 store，`skills_dir` 去掉（`desktop@41ea52e`）。之后 `workspace` 块也去掉了，命令和文件工具总是打开（`desktop@274e778`）。旧文件里的这些键都由 `--import-config` 在启动时拆掉，见[旧文件的导入](#旧文件的导入)。
+0.7.53 之前，默认权限、MCP 服务器和记忆的两个开关都写在 `config.yaml` 里，改它们也要重启后端；0.7.53 跟进引擎 v0.17.1 把它们搬进 store（`desktop@795ac1d`）。0.8.17-beta.5 把按身份写模型的键换成部署共用的 `providers`（`desktop@1c7ccf0`），界面改它时先用 `ollupid --check-config` 校验候选文件，再 SIGHUP 让后端重载。v0.31.0 让技能进 store，`skills_dir` 去掉（`desktop@41ea52e`）；之后 `workspace` 块也去掉了（`desktop@274e778`）。引擎 v0.32.0 把模型目录搬进 store，`providers` 离开文件，`--check-config`、`--config-schema`、`host.Check`、SIGHUP 重载和文件与后端的不一致检测一起去掉（`desktop@8033b6d`）。旧文件里的这些键都由 `--import-config` 在启动时拆掉，见[旧文件的导入](#旧文件的导入)。
 :::
 
-## 校验分三层
+## 模型目录
 
-| 层 | 在哪 | 查什么 |
+目录存在 store 的 `providers` 和 `provider_models` 两张表里（引擎迁移 0021），按位置排序：没选过模型的用户用第一个提供方的第一个模型。后端启动时读目录，目录变了就换上新的模型客户端，正在调用模型的轮次用旧客户端跑完。
+
+网关上的方法和通知：
+
+| 名字 | 谁能用 | 做什么 |
 |---|---|---|
-| 解析 | `config.Parse` | YAML 语法；转成 JSON 后用 `DisallowUnknownFields` 解码，拼错的键报错而不是被忽略；类型 |
-| 文件形状 | `Config.Validate` | `name` 必填；`slots` 不为负；`providers` 交给引擎的 `account.CheckCatalog`：每个提供方的名字、`type`、`gemini` 的密钥、至少一个模型、模型名不重复、`calls` 不为负、`limits` 取值，以及提供方名字不重复 |
-| 能否启动 | `host.Check` | 完整装配一遍后端：模型客户端、工作区沙箱、浏览器端点 |
+| `catalog/read` | 运营者 | 读整份目录，带密钥和 `seq` |
+| `catalog/set` | 运营者 | 整份替换。用户连接回 `forbidden`（-32022）；引擎的 `account.CheckCatalog` 不通过回 `invalidParams`，目录不变 |
+| `catalog/changed` | 发给运营者连接 | 目录换了，带整份目录和 `seq` |
+| `model/list` | 所有连接 | 目录展开的模型（不带密钥）、这个用户的默认模型、`seq` |
+| `model/changed` | 发给所有连接 | 目录换了之后，这个用户能选的模型和现在的默认：`{data, default, seq}`。用户自己改选择不发这个，界面在设置变了时重读 `model/list` |
 
-`LoadFile` 在解析之前还会先看文件里有没有旧版本的键（按身份写的模型、`skills_dir`、`workspace`），有就直接拒绝，错误里写明运行 `ollupid --import-config`，而不是报一个让人看不懂的"未知字段"。
+目录的每一项：
 
-前两层只看文件，第三层真的装配。`host.Check` 建一个临时数据目录（前缀 `ollupid-check-`），用和真实启动同一个 `New` 装配，然后关掉、删掉目录；它不走 `Serve`，所以不启动引擎、不开会话、不连 MCP 服务器。
+| 字段 | 含义 | 要求 |
+|---|---|---|
+| `id` | 提供方名字。模型按 `id/name` 选择，这也是引擎的连接 ID | 1 到 64 个字符，前后无空格，不带 `/`，不重复 |
+| `api` | `openai`（任何 OpenAI 兼容接口）、`anthropic`、`gemini` | 三种之一 |
+| `baseUrl` | API 地址 | 省略时用客户端的默认地址 |
+| `apiKey` | API 密钥 | 不需要密钥的接口可省；`gemini` 必填 |
+| `models[].name` | 模型名 | 必填，同一提供方内唯一；每个提供方至少一个模型 |
+| `models[].calls` | 这个模型同时最多几个请求，所有用户共用 | 省略用 4，不能为负 |
+| `models[].thinking` | 是否请求思考；OpenAI 兼容接口据此发 `enable_thinking` | `anthropic`、`gemini` 省略为开；`openai` 省略时不发 |
+| `models[].images` | 模型接受图片，为假时引擎不发图片给它 | 省略为假 |
+| `models[].limits` | `context`、`output`、可选的 `input` | `context`、`output` 为正，`input` 不为负 |
 
-## 界面怎么改配置
+## 运营者和身份
 
-`config.yaml` 由主进程拥有。渲染进程只读取并提出改动，不碰文件。
+sidecar 启动时要两个密钥，`OLLUPI_GATEWAY_TOKEN` 和 `OLLUPI_OPERATOR_TOKEN`，两个都要有，而且不能相同，否则每个用户都成了运营者。连接的 token 是 `<密钥>.<身份>`：
 
-改动是按键路径的操作：
+| token | 连上来是 |
+|---|---|
+| `<网关密钥>.<身份>` | 这个身份 |
+| `<运营者密钥>.<身份>` | 这个身份，同时是运营者 |
 
-```ts
-export type ConfigChange =
-  | { kind: 'set'; path: (string | number)[]; value: unknown }
-  | { kind: 'delete'; path: (string | number)[] }
-```
+`host.profileOf` 用常量时间比较认出是哪个密钥，返回 `auth.Identity{User, Operator}`；store 里还没有这个用户时当场建出来，给它自带的技能。
 
-`BackendConfig.apply` 的流程：
+本机的后端由 supervisor 启动：每次启动生成两个随机密钥，交给渲染进程的是 `<运营者密钥>.<身份>`，所以本机的应用就是运营者；网关密钥不交给任何人。连另一台机器上的后端时，设置 → 连接里填什么 token，就是什么身份：填运营者 token 能改模型目录，填普通 token 只能在目录里选。远端怎么配这两个密钥，见 ollupi-desktop 仓库的 `docs/remote-mac-mini.md`。
 
-```mermaid
-flowchart TD
-  A["读 config.yaml"] --> B["editConfigText 应用改动，保留注释"]
-  B --> C["写 config.yaml.candidate，权限 0600"]
-  C --> D["ollupid --check-config candidate，30 秒超时"]
-  D -->|"不通过"| E["返回错误，路径换回 config.yaml，删 candidate"]
-  D -->|"通过"| F["chmod 0600 后 rename 覆盖 config.yaml"]
-  F --> G{"onlyProviders？"}
-  G -->|"是"| H["supervisor.reload：SIGHUP"]
-  G -->|"否"| I["重启后端"]
-  H -->|"后端没在运行、没回应或 reload_failed"| I
-```
+## 界面怎么改模型
 
-候选文件放在真文件旁边，`rename` 才是原子的。校验用和后端相同的环境变量（主进程的 `env()`，含浏览器端点的两个变量），端口、令牌都不另配一份。
-
-**重载。** `onlyProviders` 在每个改动的路径都以 `providers` 开头时为真。后端收到 SIGHUP 后重读文件、调用 `host.Reload`，也就是引擎的 `SetModels`：每个模型换上新的客户端，正在调用模型的轮次用旧客户端跑完，然后在 stdout 上回 `reloaded` 或 `reload_failed`。主进程等这一行，超时、失败或后端本来没在运行时退回重启，重启会读整个文件。
-
-**重启前确认。** 要重启的改动，有轮次在跑时渲染进程先问，因为重启会把正在执行的命令标成中断。确认逻辑在 `domains/backendConfig.ts` 的 `confirmRestart`；`applyProviders` 走重载，不问。重载完成后渲染进程重新读 `model/list`。
-
-**保留注释。** 用 `yaml` 库的 `Document` 编辑，不重新序列化成纯数据。这个库把顶层键上方的注释块存成上一节的结尾注释，写回时会缩进到上一节里。`attachSectionComments` 把最后一个空行之后的部分还给下一个键。
-
-**模型编辑的规则** 在 `domains/providers.ts`：提供方带着它的模型一起加；删掉一个提供方的最后一个模型就删掉这个提供方；不能删目录里的最后一个模型（`cannotRemove`、`cannotRemoveProvider` 返回 `lastModel`）。改提供方的名字会改掉它所有模型的连接 ID，选过这些模型的身份、跑过它们的会话都要重新选，删除和改名前的确认里会说。设为默认（星标）不改文件，是本身份的 `settings/update` 的 `model`。
+- `domains/catalog.ts` 在每次连接时 `snapshot('catalog/read', {}, ['catalog/changed'])`，按 `seq` 合并晚到的通知。回 `forbidden` 时记下 `operator: false`，不报错。`saveCatalog` 用 `catalog/set` 整份写回，被拒时提示原因，目录不变。
+- `domains/providers.ts` 的每个编辑（加提供方、改模型、删除……）都返回改完后的整份目录，不碰文件。规则跟引擎一致：提供方带着模型一起加；删掉最后一个模型就删掉这个提供方；不能删目录里的最后一个模型（`cannotRemove`、`cannotRemoveProvider` 返回 `lastModel`）。改提供方的名字会改掉它所有模型的连接 ID，选过它们的身份要重新选，删除和改名前的确认里会说。
+- `domains/models.ts` 读 `model/list`，再跟着 `model/changed`。
+- 设置 → 模型（`ModelsSection.tsx`）：运营者连接显示可编辑的提供方卡片，保存后马上生效；非运营者连接显示一条说明和模型列表，只能点星标。星标是这个身份的 `settings/update` 的 `model`，不改目录。
 
 ## 旧文件的导入
 
-应用每次启动时，在读配置、选身份之前运行一次 `ollupid --import-config`（`BackendConfig.importOlder`，同一次启动里只跑一次）。每一步都能重复运行，导入中途断了，下次启动接着做完。三步依次是：
+应用每次启动时，在选身份之前运行一次 `ollupid --import-config`（`BackendConfig.importOlder`，同一次启动里只跑一次）。每一步都能重复运行，导入中途断了，下次启动接着做完。四步依次是：
 
 | 步骤 | 处理什么 | 做法 |
 |---|---|---|
 | `dropWorkspace` | `workspace` 块 | 从文件里去掉，不保留任何值 |
-| `runImport` | 按身份写模型的旧键（`config.Legacy`） | 所有身份用过的模型合并进 `providers`；每个身份变成 store 里的用户，`settings` 里记下原来的模型和学习模型；身份写进 `profiles.json`，名字和颜色取自文件或 `--names` 给的应用旧 `profiles.json`；原文件存为 `config.yaml.pre-import` |
+| `runImport` | 按身份写模型的旧键（`config.Legacy`） | 所有身份用过的模型合并成一份目录，直接写进 store；每个身份变成 store 里的用户，`settings` 里记下原来的模型和学习模型；身份写进 `profiles.json`，名字和颜色取自文件或 `--names` 给的应用旧 `profiles.json`；原文件存为 `config.yaml.pre-import` |
+| `importProviders` | `providers`（`config.Providers`） | 按 `CheckCatalog` 检查后用 `SetCatalog` 整份写进 store，再从文件里去掉 |
 | `importSkills` | `skills_dir` | 读文件夹里各角色的技能，同名的合成一个、给所有有它的角色，内容不同时以主 agent 那份为准，写给 store 里的每个用户；去掉这一行，文件夹留着 |
 
-输出是一行 JSON：`{"ok":true,"workspace":true,"imported":[…],"skills":{…}}`，没做的步骤不出现。
+输出是一行 JSON，比如 `{"ok":true,"workspace":true,"providers":["openai"]}`，没做的步骤不出现。
 
-去掉一个键用的是 `config/older.go` 的 `takeKey`：在 `yaml.Node` 树上删掉这个键和它的值，其余节点和注释原样写回。`yaml.v3` 把一个键上方的所有注释段落都算作这个键的 `HeadComment`，段落之间隔着空行，所以只有最后一段是在说这个键的。`takeKey` 删键时只带走最后一段，前面的段落挪到下一个键上方，没有下一个键时挪到文件末尾。比如模板里 `# slots: 32` 这行注释，不会因为下面跟着的 `workspace` 被删而一起消失。
+去掉一个键用的是 `config/older.go` 的 `takeKey`：在 `yaml.Node` 树上删掉这个键和它的值，其余节点和注释原样写回。`yaml.v3` 把一个键上方的所有注释段落都算作这个键的 `HeadComment`，段落之间隔着空行，所以只有最后一段是在说这个键的。`takeKey` 删键时只带走最后一段，前面的段落挪到下一个键上方，没有下一个键时挪到文件末尾。比如 `providers` 前面那段说明会跟着它走，而它下面 `# slots: 32` 那段注释留在原处。
 
 ## 技能
 
@@ -116,11 +110,10 @@ flowchart TD
 
 ## config:generate
 
-渲染进程需要知道 `--check-config` 和 `--read-skill` 输出的类型，而这份类型由 Go 定义。`pnpm config:generate` 让 TypeScript 类型从 Go 生成，不手写第二份。
+渲染进程需要知道 `--read-skill` 输出的类型，而这份类型由 Go 定义。`pnpm config:generate` 让 TypeScript 类型从 Go 生成，不手写第二份：
 
 | 目标文件 | 类型名 | 来自 | 描述 |
 |---|---|---|---|
-| `src/shared/generated/backend-config.ts` | `ConfigCheck` | `ollupid --config-schema` | `--check-config` 的输出 |
 | `src/shared/generated/backend-skills.ts` | `SkillFolder` | `ollupid --skill-schema` | `--read-skill` 的输出 |
 
 过程：
@@ -129,21 +122,13 @@ flowchart TD
 2. sidecar 用 `jsonschema.For[T]` 从 Go 类型得到 JSON Schema，字段名来自 json 标签。
 3. `json-schema-to-typescript` 编译成 TypeScript，写上 `DO NOT EDIT` 的头。
 
-`pnpm config:check` 比较现有文件和生成结果，过期时失败。
-
-`src/shared/ipc.ts` 从这些类型派生出 `BackendConfig` 等名字，并导出 `SkillFolder`，界面都用这些名字。给 `Config` 加字段后，重新生成，界面就能在类型里看到它。
-
-## 不一致检测
-
-用户可以手改 `config.yaml`，这时文件和正在运行的后端不一样。设置 → 模型会检查：连上网关之后，比较 `model/list` 给的连接 ID 和文件里 `providers` 展开的 `id/name`，顺序也算，因为第一个是没选过模型的身份的默认；不一致时显示警告和"重启后端"按钮。
-
-这是唯一还能对不上的地方。身份的选择、MCP 服务器、技能和记忆开关都在引擎的 store 里，界面通过 `settings/*`、`mcpServer/*`、`skill/*` 读写，改完即时生效，没有"文件和运行中的后端不一致"这回事。手改了 `name`、`prompt`、`tools`、`slots`，界面看不出来，要自己重启后端。
+`pnpm config:check` 比较现有文件和生成结果，过期时失败。模型目录的类型（`ModelProviderRow`、`ProviderModel`）来自引擎的协议契约，在 `@ollupi/protocol` 里，不经过这一步。
 
 ## 边界与已知问题
 
-- API 密钥明文写在 `config.yaml` 里，靠文件权限 0600 和沙箱禁读保护，没有进 Keychain。
-- 连接另一台机器上的后端时，设置 → 模型读写的仍是本机的 `config.yaml`，改动到不了远端。
-- `--import-config` 只认得上面三类旧键。0.7.53 之前的 `permissions`、`mcp`、`memory.use`、`memory.generate` 已不在导入之列，文件里还有它们时后端以未知字段拒绝启动，要手动删掉。
+- API 密钥明文存在 `<home>/data/store.sqlite` 里，没有进 Keychain。沙箱里的命令读不到 `data/`，但数据库文件的权限是 0644，同一台 Mac 上的其他系统用户读得到；`config.yaml` 是 0600，现在里面已经没有密钥。
+- `name`、`prompt`、`tools`、`slots` 只能手改文件，改完要重启后端，界面看不出文件和运行中的后端是否一致。
+- `--import-config` 只认得上面四类旧键。0.7.53 之前的 `permissions`、`mcp`、`memory.use`、`memory.generate` 不在导入之列，文件里还有它们时后端以未知字段拒绝启动，要手动删掉。
 
 ## 代码位置
 
@@ -152,21 +137,23 @@ flowchart TD
 | ollupi-desktop | `sidecar/internal/config/config.go` | 类型、`Parse`、`Validate`、`Load`/`LoadFile`、首次写入 |
 | ollupi-desktop | `sidecar/internal/config/template.go` | 首次启动写入的模板 |
 | ollupi-desktop | `sidecar/internal/config/legacy.go` | 按身份写模型的旧文件（`Legacy`） |
-| ollupi-desktop | `sidecar/internal/config/older.go` | `SkillsDir`、`Workspace` 和它们共用的 `takeKey` |
-| ollupi-desktop | `sidecar/cmd/ollupid/main.go` | `--check-config`、`--config-schema`、SIGHUP 重载 |
-| ollupi-desktop | `sidecar/cmd/ollupid/import.go` | `--import-config`：`dropWorkspace`、`runImport`、写 `profiles.json` |
+| ollupi-desktop | `sidecar/internal/config/older.go` | `Providers`、`SkillsDir`、`Workspace` 和它们共用的 `takeKey` |
+| ollupi-desktop | `sidecar/cmd/ollupid/main.go` | 两个密钥、各种模式的入口 |
+| ollupi-desktop | `sidecar/cmd/ollupid/import.go` | `--import-config`：`dropWorkspace`、`runImport`、`importProviders`、写 `profiles.json` |
 | ollupi-desktop | `sidecar/cmd/ollupid/skills.go` | `importSkills`，`--read-skill`、`--skill-schema` 的输出类型 |
-| ollupi-desktop | `sidecar/internal/host/host.go` | `Check`、`Reload`、`New` 里的装配和工作区沙箱 |
-| ollupi-desktop | `apps/desktop/src/main/backend/config.ts` | `BackendConfig`、`editConfigText`、`onlyProviders`、`apply`、`importOlder` |
-| ollupi-desktop | `apps/desktop/src/main/backend/supervisor.ts` | `reload`：SIGHUP 和退回重启 |
+| ollupi-desktop | `sidecar/internal/host/host.go` | `New` 里的装配和工作区沙箱，`profileOf` |
+| ollupi-desktop | `apps/desktop/src/main/backend/config.ts` | `BackendConfig`：`importOlder`、`deleteProfile` |
+| ollupi-desktop | `apps/desktop/src/main/backend/supervisor.ts` | 生成两个密钥，给渲染进程运营者 token |
 | ollupi-desktop | `apps/desktop/src/main/backend/skills.ts` | 导入时用 `--read-skill` 读一个技能文件夹 |
 | ollupi-desktop | `apps/desktop/src/main/profile.ts` | `profiles.json` 和这台 Mac 的选择 |
 | ollupi-desktop | `apps/desktop/scripts/generate-config.mjs` | 类型生成 |
-| ollupi-desktop | `apps/desktop/src/shared/generated/` | 生成的类型 |
-| ollupi-desktop | `apps/desktop/src/renderer/src/domains/backendConfig.ts` | 渲染进程的应用、重载与重启前确认 |
-| ollupi-desktop | `apps/desktop/src/renderer/src/domains/providers.ts` | 模型目录改动的规则 |
-| ollupi-desktop | `apps/desktop/src/renderer/src/views/settings/ModelsSection.tsx` | 模型编辑与不一致警告 |
+| ollupi-desktop | `apps/desktop/src/renderer/src/domains/catalog.ts` | `catalog/read`、`catalog/changed`、`saveCatalog` |
+| ollupi-desktop | `apps/desktop/src/renderer/src/domains/providers.ts` | 目录改动的规则 |
+| ollupi-desktop | `apps/desktop/src/renderer/src/domains/models.ts` | `model/list`、`model/changed` |
+| ollupi-desktop | `apps/desktop/src/renderer/src/domains/restart.ts` | 重启前确认 |
+| ollupi-desktop | `apps/desktop/src/renderer/src/views/settings/ModelsSection.tsx` | 模型编辑，非运营者只能选 |
 | ollupi-desktop | `apps/desktop/src/renderer/src/domains/skills.ts` | 技能列表跟着 `skill/changed`，`skill/read`、`skill/set`、`skill/delete` |
 | ollupi | `account/models.go` | `ProviderModel`、`CheckCatalog` |
+| ollupi | `store/sqlite/migrations/0021_catalog.sql` | 目录的两张表 |
 | ollupi | `pkg/llm/limits.go` | `limits` 的含义与取值检查 |
 | ollupi | `tool/builtin/workspace/config.go` | 工作区工具的默认值和沙箱配置 |
