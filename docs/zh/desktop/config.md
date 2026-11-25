@@ -78,7 +78,7 @@ store 里一个用户都没有时，sidecar 启动时建第一个（`host.FirstP
 - `domains/catalog.ts` 在每次连接时 `snapshot('catalog/read', {}, ['catalog/changed'])`，按 `seq` 合并晚到的通知。回 `forbidden` 时记下 `operator: false`，不报错。`saveCatalog` 用 `catalog/set` 整份写回，被拒时提示原因，目录不变。
 - `domains/providers.ts` 的每个编辑（加提供方、改模型、删除……）都返回改完后的整份目录。规则跟引擎一致：提供方带着模型一起加；删掉最后一个模型就删掉这个提供方；不能删目录里的最后一个模型（`cannotRemove`、`cannotRemoveProvider` 返回 `lastModel`）。改提供方的名字会改掉它所有模型的连接 ID，选过它们的身份要重新选，删除和改名前的确认里会说。
 - `domains/models.ts` 读 `model/list`，再跟着 `model/changed`。
-- 设置 → 模型（`ModelsSection.tsx`）：运营者连接显示可编辑的提供方卡片，保存后马上生效；非运营者连接显示一条说明和模型列表，只能点星标。星标是这个身份的 `settings/update` 的 `model`，不改目录。
+- 模型页（`ModelsSection.tsx`，由 `PlatformScreens.tsx` 的 `ModelsScreen` 套上标题）：运营者连接显示可编辑的提供方卡片，保存后马上生效；非运营者连接显示一条说明和模型列表，只能点星标。星标是这个身份的 `settings/update` 的 `model`，不改目录。
 
 ## 部署参数和沙箱
 
