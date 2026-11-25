@@ -29,7 +29,7 @@ Ollupi 由界面和一个在后台运行的后端组成，会话、模型调用�
 后端启动时检查 `config.yaml`，不合法就不启动，原因显示在"后端无法启动"页上，写明哪个文件、哪一项。例如：
 
 ```text
-models: provider openai lists no models
+providers: invalid model provider: openai serves no models
 ```
 
 ```text
@@ -42,8 +42,8 @@ json: unknown field "permissions"
 |---|---|---|
 | 某个拼错或不认识的字段 | 手改时键名写错。未知字段会报错，不会被悄悄忽略 | 对照[字段表](/zh/app/config#字段)改正 |
 | 不认识 `permissions`、`mcp`、`use` 或 `generate` | 跳过 0.7.53 直接升级，文件里还留着这几项。它们现在在应用里设置 | 删掉这几项，重启后端后到应用里重新设置，见[在应用里设置的](/zh/app/config#在应用里设置的) |
-| `models` | 提供方没有模型、名字重复、缺 `limits` | 按原因补上或删掉 |
-| `memory.model` | 指定的学习模型不在 `models` 里 | 在记忆页选一个已有的模型，或删掉这一项 |
+| `providers` | 提供方没有模型、名字重复或带 `/`、Gemini 没填密钥、`limits` 不是正数 | 对照[providers 的字段](/zh/app/config#providers)补上或删掉 |
+| `--import-config` | 文件里还有旧版本的写法，比如按身份写的模型、`skills_dir` 或 `workspace` | 退出 Ollupi 再打开：应用启动时会把它们改成现在的写法，见[升级时自动处理的](/zh/app/config#升级时自动处理的) |
 
 点 **打开配置** 改好文件，保存后点 **重启后端**。
 
@@ -51,9 +51,9 @@ json: unknown field "permissions"
 
 ## 改了配置或技能，没有生效
 
-后端只在启动时读 `config.yaml`。直接改了这个文件里的模型之后，**设置 → 模型** 会提示「config.yaml 中的模型与后端正在使用的不同。」，点提示旁的 **重启后端** 就会生效。在应用里保存的模型改动会自动重启后端，不需要这一步。
+后端只在启动时读 `config.yaml`。直接改了这个文件里的模型之后，**设置 → 模型** 会提示「config.yaml 中的模型与后端正在使用的不同。」，点提示旁的 **重启后端** 就会生效。改了模型以外的字段，界面不会提示，到 **设置 → 通用** 重启后端。在 **设置 → 模型** 里保存的改动直接交给正在运行的后端，不需要这一步，也不打断进行中的会话。
 
-技能、权限、MCP 服务器和记忆、学习两个开关不在 `config.yaml` 里，在应用里保存就生效，不用重启后端：agent 每一步开始时都重新读技能。
+默认模型、学习记忆的模型、技能、权限、MCP 服务器和记忆、学习两个开关不在 `config.yaml` 里，在应用里保存就生效，不用重启后端：agent 每一步开始时都重新读技能。
 
 ## 模型调用出错
 
