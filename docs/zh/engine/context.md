@@ -9,7 +9,7 @@
 - **条目存全文，裁剪只作用于视图。** 省略的部分能用 `read_tool_output` 读回。
 - **前缀稳定优先。** 系统提示词按稳定程度排列、不含当前时间；记忆快照只在压缩后重新召回；放不下时只缩最近一次回答的工具结果（[设计决策 14](/zh/reference/decisions#_14-记忆快照与稳定前缀)）。
 - **窗口小的模型换角色运行。** 输入预算不足 16384 token 时用 `compact-main-agent`（[设计决策 13](/zh/reference/decisions#_13-精简模式)）。
-- **结束的轮次只留工具结果的头尾。** 一轮里读过的网页、文档、搜索结果，到下一轮基本只剩结论有用，结论已经在回答里。已结束轮次的每个工具结果最多 512 token，要细节就用 `read_tool_output` 读回；当前这一轮照旧。
+- **结束的轮次只留工具结果的头尾。** 一轮里读过的网页、文档、搜索结果，到下一轮基本只剩结论有用，结论已经在回答里。已结束轮次的每个工具结果最多 512 token，要细节就用 `read_tool_output` 读回；当前这一轮照旧。只有这样能省下窗口的 10% 以上才缩：缩短会让下一轮第一次请求从被缩的地方起不命中缓存，输出都很短的会话缩了反而亏。
 - **压缩是最后一步且要有收益。** 先缩工具结果，不够再压缩；要求超过 80% 且至少省下 10%，否则这一轮报错（[设计决策 18](/zh/reference/decisions#_18-出错即暴露)）。
 - **每一轮自己判断放不放得下。** 启动时不预检，`Build` 在什么都压不了时报错。
 
@@ -56,7 +56,7 @@ answer  = min(Output, max(reserve, Context - 估算输入))
 
 工具结果完整写在日志里（`ToolResult`），每次组装按预算裁剪，同一个结果在不同请求里长度可以不同；这是三层输出截断的最后一层，见[工具系统](/zh/engine/tools#输出交给模型)。`prompt.OutputText` 把结果变成文字（字符串去首尾空白，其他转缩进 JSON），`read_tool_output` 也用它。
 
-单个结果的预算是 `observationBudget(calls, limit)`：同一回答的调用共享输入预算的 25%，每个不超过八分之一、不低于 512（`minPooledTokens`）、不超过 `limit`（默认 6000，`maxObservationTokens`）。`fitted` 在提示词超过 `input` 时重新组装，`limit` 依次 6000、3000、1500、750、375、256（`minOutputTokens`），只作用于最近一次回答的工具结果；当前轮次里更早的回答始终 6000，已结束轮次的回答不超过 512（`endedObservationTokens`），也不超过 `limit`。当前轮次是传进来的最后一个条目所在的轮次。子 agent 的报告按一个调用、6000 渲染，不看轮次；压缩请求里所有结果都按 `limit`，不看轮次。`clip` 二分找到放得下的长度，保留开头和结尾，中间换成带 `output_id`、`offset` 的提示，切点由 `redact.Cuts` 调整，不落在 `redact.Spans` 找出的敏感值中间；空结果显示 `(no output)`，没结束的显示 `error: the call did not finish`，失败调用的错误文本裁剪后不能读回。
+单个结果的预算是 `observationBudget(calls, limit)`：同一回答的调用共享输入预算的 25%，每个不超过八分之一、不低于 512（`minPooledTokens`）、不超过 `limit`（默认 6000，`maxObservationTokens`）。`fitted` 在提示词超过 `input` 时重新组装，`limit` 依次 6000、3000、1500、750、375、256（`minOutputTokens`），只作用于最近一次回答的工具结果；当前轮次里更早的回答始终 6000，已结束轮次的回答不超过 512（`endedObservationTokens`），也不超过 `limit`；`clipsEnded` 先按缩与不缩各组装一遍，省下的不到 `input` 的 10%（`compactMinPercent`）就不缩。省下的只随轮次结束变多，开始缩之后就一直缩。当前轮次是传进来的最后一个条目所在的轮次。子 agent 的报告按一个调用、6000 渲染，不看轮次；压缩请求里所有结果都按 `limit`，不看轮次。`clip` 二分找到放得下的长度，保留开头和结尾，中间换成带 `output_id`、`offset` 的提示，切点由 `redact.Cuts` 调整，不落在 `redact.Spans` 找出的敏感值中间；空结果显示 `(no output)`，没结束的显示 `error: the call did not finish`，失败调用的错误文本裁剪后不能读回。
 
 技能内容随 `activate_skill` 的结果进上下文（`ToolResult.Artifacts`），渲染和预算的规则见[技能与 MCP](/zh/engine/skills-mcp#技能如何进入上下文)。
 
@@ -125,7 +125,7 @@ r.NeedsCompaction = natural > r.Stats.CompactAtTokens &&
 | 系统提示词按稳定程度排序、不含当前时间 | 不同会话和子 agent 共享开头；时间写在每条用户消息里，重新组装时不变 |
 | 工具按提供者和名字排序、列表只增不减 | 已载入的工具接在末尾 |
 | 记忆快照只在压缩后重新召回 | 快照是日志里的第一条消息，不会每轮都变 |
-| 旧工具结果用固定预算渲染 | `limit` 只影响最近一次回答；一轮结束后，它的工具结果在下一轮开始时缩到 512，只变这一次，更早的轮次已经缩过、不再变 |
+| 旧工具结果用固定预算渲染 | `limit` 只影响最近一次回答；缩短生效后，一轮结束时它的工具结果在下一轮开始缩到 512，只变这一次，更早的轮次已经缩过、不再变；省不到窗口 10% 时不缩，前缀不变 |
 | 脱敏占位符稳定 | 每个用户一个 `redaction_key`，重启后同一值仍得到同一占位符 |
 
 压缩换掉前缀，这是它的代价，所以 80% 才触发。Anthropic 请求带顶层 `cache_control`（自动断点），OpenAI 兼容接口和 Gemini 用隐式缓存；每次调用的用量记下 `cachedInputTokens`、`cacheWriteInputTokens`，见[模型接入](/zh/engine/models#缓存断点)。

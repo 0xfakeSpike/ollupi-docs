@@ -93,7 +93,7 @@
 
 工具的输出原样进入提示词：`prompt.OutputText` 把字符串去掉首尾空白后照原样给出，其他 JSON 缩进排版后给出，不加引号与围栏。
 
-写进日志的是完整结果，只在超出输入预算时才在提示词里裁剪（`prompt/observation.go`）：单条最多 6000 token，已结束轮次的最多 512，最少 256，超出时保留开头与结尾，中间换成一句写清楚怎么读回的提示：
+写进日志的是完整结果，只在超出输入预算时才在提示词里裁剪（`prompt/observation.go`）：单条最多 6000 token，已结束轮次的最多 512（能省下窗口 10% 以上时），最少 256，超出时保留开头与结尾，中间换成一句写清楚怎么读回的提示：
 
 ```text
 [... characters 8000-52000 of this output omitted; call read_tool_output with output_id "<条目 ID>" and offset 8000 to read them ...]
